@@ -1,0 +1,36 @@
+{
+  
+    "video": [
+      { "formatId": "136", "formatType": "mp4", "quality": "1280x720", "label": "720p MP4" },
+      { "formatId": "137", "formatType": "mp4", "quality": "1920x1080", "label": "1080p MP4" },
+      { "formatId": "22", "formatType": "mp4", "quality": "1280x720", "label": "720p MP4 (Most compatible)" },
+      { "formatId": "18", "formatType": "mp4", "quality": "640x360", "label": "360p MP4 (Smaller size)" },
+      { "formatId": "248", "formatType": "webm", "quality": "1920x1080", "label": "1080p WebM (Better quality, no audio)" },
+      { "formatId": "242", "formatType": "webm", "quality": "426x240", "label": "240p WebM" },
+      { "formatId": "243", "formatType": "webm", "quality": "640x360", "label": "360p WebM" },
+      { "formatId": "244", "formatType": "webm", "quality": "854x480", "label": "480p WebM" },
+      { "formatId": "247", "formatType": "webm", "quality": "1280x720", "label": "720p WebM" },
+      { "formatId": "271", "formatType": "webm", "quality": "2560x1440", "label": "1440p WebM (Better quality, no audio)" },
+      { "formatId": "278", "formatType": "webm", "quality": "144p", "label": "144p WebM (Low quality)" },
+      { "formatId": "302", "formatType": "webm", "quality": "1280x720", "label": "720p WebM (60fps)" },
+      { "formatId": "303", "formatType": "webm", "quality": "1920x1080", "label": "1080p WebM (60fps)" },
+      { "formatId": "308", "formatType": "webm", "quality": "2560x1440", "label": "1440p WebM (60fps)" },
+      { "formatId": "315", "formatType": "webm", "quality": "3840x2160", "label": "2160p WebM (4K, 60fps)" },
+      { "formatId": "399", "formatType": "av01", "quality": "1280x720", "label": "720p AV1 (Better compression)" },
+      { "formatId": "400", "formatType": "av01", "quality": "1920x1080", "label": "1080p AV1 (Better compression)" },
+      { "formatId": "401", "formatType": "av01", "quality": "2560x1440", "label": "1440p AV1 (Better compression)" },
+      { "formatId": "402", "formatType": "av01", "quality": "3840x2160", "label": "2160p AV1 (Better compression, 4K)" }
+    ],
+    "audio": [
+      { "formatId": "140", "formatType": "m4a", "quality": "128kbps", "label": "128kbps M4A Audio" },
+      { "formatId": "251", "formatType": "m4a", "quality": "256kbps", "label": "256kbps M4A Audio" },
+      { "formatId": "250", "formatType": "webm", "quality": "64kbps", "label": "64kbps WebM Audio" },
+      { "formatId": "249", "formatType": "webm", "quality": "50kbps", "label": "50kbps WebM Audio" },
+      { "formatId": "171", "formatType": "opus", "quality": "128kbps", "label": "128kbps Opus Audio" },
+      { "formatId": "172", "formatType": "opus", "quality": "192kbps", "label": "192kbps Opus Audio" },
+      { "formatId": "249", "formatType": "opus", "quality": "50kbps", "label": "50kbps Opus Audio" },
+      { "formatId": "250", "formatType": "opus", "quality": "64kbps", "label": "64kbps Opus Audio" },
+      { "formatId": "251", "formatType": "opus", "quality": "160kbps", "label": "160kbps Opus Audio" }
+    ]
+  
+}

@@ -1,0 +1,210 @@
+.form-select{
+    width: unset;
+}
+.form-select:focus{
+    box-shadow:unset
+}
+.transition {
+    transition: transform 0.3s ease;
+  }
+  .rotate-180 {
+    transform: rotate(180deg);
+  }
+  .dropdown-toggle::after{
+    display: none;
+  }
+  .btn{
+    background-color: white;
+    border: none;
+  }
+  
+  .bottom-container {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 87%;
+    background-color: #f8f9fa;
+    text-align: center;
+    padding: 15px;
+
+    /* Center content vertically & horizontally */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centers vertically */
+    align-items: center; /* Centers horizontally */
+}
+
+h1 {
+    font-size: 22px;
+    margin-bottom: 20px;
+    color: #333;
+    text-align: center;
+}
+
+/* Centering the icons */
+.icon-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap; /* Makes sure icons wrap properly */
+    margin-top: 10px;
+}
+
+/* Improve icon styles */
+.platform-icon {
+    font-size: 40px; /* Bigger icon size */
+    cursor: pointer;
+    transition: transform 0.3s ease-in-out;
+}
+
+.platform-icon:hover {
+    transform: scale(1.2); /* Slight hover effect */
+}
+
+/* YouTube specific icon */
+.youtube-icon {
+    color: #ff0000;
+    font-size: 2.5rem;
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.webview-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Close button positioning */
+.close-webview-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: #BB4F28;
+    color: white;
+   
+   border: none;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-webview-btn:hover {
+    background: darkred;
+}
+.download-btn {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    background: #28A745;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.download-btn:hover {
+    background: #218838;
+}
+.download-card {
+    width: 100%;
+    max-width: 500px;
+    background: #222;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    color: #ffffff;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+  }
+  
+  .download-card:hover {
+    transform: scale(1.02);
+  }
+  
+  .title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 15px;
+  }
+  
+  .thumbnail {
+    width: 100%;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+  
+  .status-text {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #cccccc;
+  }
+  
+  .progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #444;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  
+  .progress-bar {
+    height: 8px;
+    background: #00ff7f;
+    transition: width 0.5s ease-in-out;
+  }
+  
+  .progress-info {
+    font-size: 14px;
+    color: #ddd;
+  }
+  
+  .success-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(0, 255, 127, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    color: #00ff7f;
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 10px;
+  }
+  
+  .error-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255, 0, 0, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    color: #ff4c4c;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  
+  .error-text {
+    color: red;
+    font-size: 14px;
+  }
+  
