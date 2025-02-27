@@ -14,7 +14,7 @@ function DownloadList({ url, downloadType, quality, format }) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState("");
   const [isPaused, setIsPaused] = useState(false);
-console.log(downloadProgress);
+
 
   useEffect(() => {
     if (!url || isDownloading) return;
@@ -38,14 +38,23 @@ console.log(downloadProgress);
     fetchAndDownload();
 
     window.api.onDownloadProgress((progressData) => {
-      console.log("progressData",progressData);
-      
-      setDownloadProgress(progressData.progress);
-      setFileSize(progressData.fileSize);
-      setSpeed(progressData.speed);
-      setEta(progressData.eta);
-      setDownloadStatus(progressData.status);
-      if (progressData.progress >= 100) setIsCompleted(true);
+    
+      const parseMessage = progressData.message.match(/(\d+\.\d+)% of\s+(\d+\.\d+MiB) at\s+(\d+\.\d+KiB\/s) ETA\s+(\d+:\d+)/);
+      if (parseMessage) {
+        const [_, progress, fileSize, speed, eta] = parseMessage;
+    
+        setDownloadProgress(parseFloat(progress));
+        setFileSize(fileSize);
+        setSpeed(speed);
+        setEta(eta);
+        setDownloadStatus('Downloading');
+    
+        // Check if download is completed
+        if (parseFloat(progress) >= 100) {
+          setIsCompleted(true);
+          setDownloadStatus('Completed');
+        }
+      }
     });
 
   }, [url]);

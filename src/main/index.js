@@ -239,7 +239,7 @@ ipcMain.handle("downloadVideo", async (event, options) => {
       : `-f ${finalFormat}[height<=${finalQuality}]+bestaudio/${finalFormat}+bestaudio/best`;
 
     const downloadDir = app.getPath("downloads");
-    const downloadPath =  join(downloadDir, "%(title)s.%(ext)s");
+    const downloadPath = join(downloadDir, "%(title)s.%(ext)s");
 
     const args = [
       ...formatSpecifier.split(" "),
@@ -250,37 +250,33 @@ ipcMain.handle("downloadVideo", async (event, options) => {
 
     downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
 
+    // Send every line of output to the frontend without filtering it
     downloadProcess.stdout.on("data", (data) => {
       const line = data.toString().trim();
       console.log("yt-dlp Output:", line); // Debugging line
 
-      // Regex to extract progress, file size, speed, and ETA
-      const regex = /\[download\]\s+([\d.]+)% of ([\d.]+\w+) at\s+([\d.]+\w+\/s)\s+ETA\s+([\d:]+)/;
-      const match = line.match(regex);
-      if (match) {
-        lastProgress = {
-          progress: parseFloat(match[1]) || 0,
-          fileSize: match[2] || "",
-          speed: match[3] || "",
-          eta: match[4] || "",
-          status: isAudioOnly ? "Downloading audio..." : "Downloading video...",
-          file: downloadPath,
-        };
-        event.sender.send("download-progress", line);
-        saveDownloadState(line);
-      }
+      // Send every output line directly to the frontend
+      event.sender.send("download-progress", { message: line });
+    });
+
+    downloadProcess.stderr.on("data", (data) => {
+      const errorMessage = data.toString().trim();
+      console.error("yt-dlp Error:", errorMessage);
+      event.sender.send("download-progress", { error: errorMessage });
     });
 
     downloadProcess.on("close", (code) => {
       downloadProcess = null;
-      event.sender.send("download-progress", { progress: 100, status: "Download complete!", file: downloadPath });
+      event.sender.send("download-progress", { status: "Download complete!", file: downloadPath });
     });
 
   } catch (err) {
     console.error("Download error:", err);
+    event.sender.send("download-progress", { error: err.message });
     throw err;
   }
 });
+
 
 ipcMain.handle("pauseDownload", () => {
   if (downloadProcess) {
