@@ -216,13 +216,9 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
 if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
   console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
 }
+let downloadProcess = null;
 
-let downloadProcess = null
-let lastProgress = null // Store last progress in memory
-
-ipcMain.handle("downloadVideo", async (event, options) => {
-  console.log("options", options);
-
+const startDownload = async (event, options) => {
   try {
     if (downloadProcess) {
       event.sender.send("download-progress", { status: "A download is already in progress!" });
@@ -234,34 +230,31 @@ ipcMain.handle("downloadVideo", async (event, options) => {
 
     if (!url || typeof url !== "string") throw new Error("Invalid URL.");
 
-    // Ensure selectedQuality is properly formatted
-    const finalQualityVideo = selectedQuality.replace(/[pP]$/, ""); // Removes 'p' from '1080p' to get '1080'
+    const finalQualityVideo = selectedQuality.replace(/[pP]$/, "");
 
     const formatSpecifier = isAudioOnly
       ? `--extract-audio --audio-format mp3 --audio-quality best`
       : `-f bestvideo[height<=${finalQualityVideo}]+bestaudio/best`;
 
-    // Determine the save location based on `saveTo` property
     let downloadDir;
     if (saveTo === "Desktop") {
-      downloadDir = join(app.getPath("desktop"), "pnutdownloader"); // Save to Desktop
+      downloadDir = join(app.getPath("desktop"), "pnutdownloader");
     } else {
-      downloadDir = join(app.getPath("downloads"), "pnutdownloader"); // Default to Downloads
+      downloadDir = join(app.getPath("downloads"), "pnutdownloader");
     }
 
-    // Create folder if it does not exist
     if (!existsSync(downloadDir)) {
       mkdirSync(downloadDir, { recursive: true });
     }
 
-    // Set download path inside the selected folder
     const downloadPath = join(downloadDir, "%(title)s.%(ext)s");
 
     const args = [
+      "--continue",
       ...formatSpecifier.split(" "),
       "--ffmpeg-location", ffmpegPath,
       "-o", downloadPath,
-      "--cookies", cookiesPath, // Corrected placement
+      "--cookies", cookiesPath,
       url, "--newline", "--ignore-errors", "--progress"
     ];
 
@@ -269,7 +262,7 @@ ipcMain.handle("downloadVideo", async (event, options) => {
 
     downloadProcess.stdout.on("data", (data) => {
       const line = data.toString().trim();
-      console.log("yt-dlp Output:", line); // Debugging line
+      console.log("yt-dlp Output:", line);
       event.sender.send("download-progress", { message: line });
     });
 
@@ -289,24 +282,39 @@ ipcMain.handle("downloadVideo", async (event, options) => {
     event.sender.send("download-progress", { error: err.message });
     throw err;
   }
+};
+
+ipcMain.handle("downloadVideo", async (event, options) => {
+  console.log("Starting download...");
+  await startDownload(event, options);
 });
 
-ipcMain.handle('pauseDownload', () => {
-  if (downloadProcess) {
-    downloadProcess.kill()
-    downloadProcess = null
-    return true
-  }
-  return false
-})
-
 ipcMain.handle('resumeDownload', async (event, options) => {
-  if (!downloadProcess && lastProgress) {
-    return ipcMain.handle('downloadVideo', event, options)
+  if (!downloadProcess) {
+    console.log("Resuming download...");
+    await startDownload(event, options);
+    return true;
   }
-  return false
-})
-
+  return false;
+});
+const treeKill = require('tree-kill');
+ipcMain.handle('pauseDownload', () => {
+  console.log("Attempting to pause download...");
+  if (downloadProcess) {
+    console.log("Killing download process with PID:", downloadProcess.pid);
+    treeKill(downloadProcess.pid, 'SIGKILL', (err) => {
+      if (err) {
+        console.error("Failed to kill process tree:", err);
+      } else {
+        console.log("Process tree killed successfully.");
+      }
+    });
+    downloadProcess = null;
+    return true;
+  }
+  console.log("No active download to pause.");
+  return false;
+});
 function saveDownloadState(state) {
   const filePath = join(app.getPath('userData'), 'downloadState.json')
   fs.writeFileSync(filePath, JSON.stringify(state))

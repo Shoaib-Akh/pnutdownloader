@@ -10,8 +10,8 @@ const api = {
     ipcRenderer.invoke("downloadVideo", { url, isAudioOnly, selectedFormat, selectedQuality,saveTo }),
 
   pauseDownload: () => ipcRenderer.invoke("pauseDownload"),
-  resumeDownload: () => ipcRenderer.invoke("resumeDownload"),
-  
+  resumeDownload: ({ url, isAudioOnly, selectedFormat, selectedQuality ,saveTo}) =>
+    ipcRenderer.invoke("resumeDownload", { url, isAudioOnly, selectedFormat, selectedQuality,saveTo }),
   saveDownloadState: (state) => ipcRenderer.invoke("save-download-state", state),
   loadDownloadState: () => ipcRenderer.invoke("load-download-state"),
 

@@ -42,7 +42,10 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
 
     window.api.onDownloadProgress((progressData) => {
       console.log("progressDataprogressData",progressData.message);
-      
+      if (progressData.message && progressData.message.includes("has already been downloaded")) {
+        alert("The file has already been downloaded.");
+        return;
+      }
       if (!progressData.message) return;
 
       const parseMessage = progressData.message.match(/(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/);
@@ -66,7 +69,7 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
 
   const handlePauseResume = async () => {
     if (isPaused) {
-      await window.api.resumeDownload();
+      await window.api.resumeDownload({ url, isAudioOnly: downloadType === "Audio", selectedFormat: format, selectedQuality: quality, saveTo });
       setIsPaused(false);
     } else {
       await window.api.pauseDownload();
@@ -117,9 +120,12 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
 
       {/* Action Button & Status Icons */}
       <div className="d-flex align-items-center gap-2 ms-3">
-        <button onClick={handlePauseResume} className="btn btn-light border rounded-circle p-2">
+        {speed !=="Unknown" &&
+          <button onClick={handlePauseResume} className="btn btn-light border rounded-circle p-2">
           {isPaused ? <FaPlay className="text-secondary" /> : <FaPause className="text-secondary" />}
         </button>
+        }
+      
         {isCompleted && <FaCheckCircle className="text-success fs-4" />}
         {error && <FaExclamationTriangle className="text-danger fs-4" />}
       </div>
