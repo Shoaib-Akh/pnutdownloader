@@ -6,8 +6,8 @@ const api = {
   getYoutubeCookies: () => ipcRenderer.invoke("getYoutubeCookies"),
   fetchVideoInfo: (url) => ipcRenderer.invoke("fetch-video-info", url),
   
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality }) =>
-    ipcRenderer.invoke("downloadVideo", { url, isAudioOnly, selectedFormat, selectedQuality }),
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality ,saveTo}) =>
+    ipcRenderer.invoke("downloadVideo", { url, isAudioOnly, selectedFormat, selectedQuality,saveTo }),
 
   pauseDownload: () => ipcRenderer.invoke("pauseDownload"),
   resumeDownload: () => ipcRenderer.invoke("resumeDownload"),

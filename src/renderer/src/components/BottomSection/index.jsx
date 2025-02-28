@@ -14,6 +14,7 @@ function BottomSection({ downloadType, quality, format, saveTo }) {
   const [videoThumbnail, setVideoThumbnail] = useState("");
   const [downloading, setDownloading] = useState(false);
   const webviewRef = useRef(null);
+console.log(lastUrl);
 
   useEffect(() => {
     if (webviewRef.current) {
@@ -32,12 +33,21 @@ function BottomSection({ downloadType, quality, format, saveTo }) {
         webview.removeEventListener("did-navigate-in-page", handleNavigation);
       };
     }
+  
+    
   }, [showWebView]);
-
+  useEffect(() => {
+    if ( currentWebViewUrl) {
+      window.api.getYoutubeCookies();
+    }
+  }, [ currentWebViewUrl]);
+ 
+  
   const handlePlatformClick = (platformUrl) => {
     setUrl(platformUrl);
     setShowWebView(true);
     setIsDownloadable(false);
+  
   };
 
   const handleCloseWebView = () => {
@@ -80,7 +90,7 @@ function BottomSection({ downloadType, quality, format, saveTo }) {
               saveTo={saveTo}
               url={currentWebViewUrl}
               />
-              
+            
               {lastUrl && (
                 <button className="close-webview-btn" onClick={handleResumeBrowser}>
                   Resume Browser
@@ -104,7 +114,7 @@ function BottomSection({ downloadType, quality, format, saveTo }) {
           <webview ref={webviewRef} src={url} style={{ height: "100%", width: "100%" }} />
           <button className="close-webview-btn" onClick={handleCloseWebView}>Close Browser</button>
           {isDownloadable && (
-            <button className="download-btn" onClick={() => {setDownloadListOpen(true); setShowWebView(false)}}>
+            <button className="download-btn" onClick={() => {setDownloadListOpen(true); setShowWebView(!showWebView)}}>
               {downloading ? "Downloading..." : <><FaDownload /> Download</>}
             </button>
           )}

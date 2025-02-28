@@ -217,45 +217,59 @@ if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
   console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
 }
 
-
-let downloadProcess = null;
-let lastProgress = null; // Store last progress in memory
+let downloadProcess = null
+let lastProgress = null // Store last progress in memory
 
 ipcMain.handle("downloadVideo", async (event, options) => {
+  console.log("options", options);
+
   try {
     if (downloadProcess) {
       event.sender.send("download-progress", { status: "A download is already in progress!" });
       return;
     }
 
-    const { url, isAudioOnly, selectedFormat, selectedQuality } = options;
+    const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
+    console.log(saveTo);
+
     if (!url || typeof url !== "string") throw new Error("Invalid URL.");
 
-    const finalQuality = /^\d+$/.test(selectedQuality) ? selectedQuality : "720"; // Default 720p
-    const finalFormat = selectedFormat?.toLowerCase() || "mp4";
+    // Ensure selectedQuality is properly formatted
+    const finalQualityVideo = selectedQuality.replace(/[pP]$/, ""); // Removes 'p' from '1080p' to get '1080'
 
     const formatSpecifier = isAudioOnly
-      ? `--extract-audio --audio-format ${finalFormat} --audio-quality best`
-      : `-f ${finalFormat}[height<=${finalQuality}]+bestaudio/${finalFormat}+bestaudio/best`;
+      ? `--extract-audio --audio-format mp3 --audio-quality best`
+      : `-f bestvideo[height<=${finalQualityVideo}]+bestaudio/best`;
 
-    const downloadDir = app.getPath("downloads");
+    // Determine the save location based on `saveTo` property
+    let downloadDir;
+    if (saveTo === "Desktop") {
+      downloadDir = join(app.getPath("desktop"), "pnutdownloader"); // Save to Desktop
+    } else {
+      downloadDir = join(app.getPath("downloads"), "pnutdownloader"); // Default to Downloads
+    }
+
+    // Create folder if it does not exist
+    if (!existsSync(downloadDir)) {
+      mkdirSync(downloadDir, { recursive: true });
+    }
+
+    // Set download path inside the selected folder
     const downloadPath = join(downloadDir, "%(title)s.%(ext)s");
 
     const args = [
       ...formatSpecifier.split(" "),
       "--ffmpeg-location", ffmpegPath,
       "-o", downloadPath,
+      "--cookies", cookiesPath, // Corrected placement
       url, "--newline", "--ignore-errors", "--progress"
     ];
 
     downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
 
-    // Send every line of output to the frontend without filtering it
     downloadProcess.stdout.on("data", (data) => {
       const line = data.toString().trim();
       console.log("yt-dlp Output:", line); // Debugging line
-
-      // Send every output line directly to the frontend
       event.sender.send("download-progress", { message: line });
     });
 
@@ -277,29 +291,28 @@ ipcMain.handle("downloadVideo", async (event, options) => {
   }
 });
 
-
-ipcMain.handle("pauseDownload", () => {
+ipcMain.handle('pauseDownload', () => {
   if (downloadProcess) {
-    downloadProcess.kill();
-    downloadProcess = null;
-    return true;
+    downloadProcess.kill()
+    downloadProcess = null
+    return true
   }
-  return false;
-});
+  return false
+})
 
-ipcMain.handle("resumeDownload", async (event, options) => {
+ipcMain.handle('resumeDownload', async (event, options) => {
   if (!downloadProcess && lastProgress) {
-    return ipcMain.handle("downloadVideo", event, options);
+    return ipcMain.handle('downloadVideo', event, options)
   }
-  return false;
-});
+  return false
+})
 
 function saveDownloadState(state) {
-  const filePath =  join(app.getPath("userData"), "downloadState.json");
-  fs.writeFileSync(filePath, JSON.stringify(state));
+  const filePath = join(app.getPath('userData'), 'downloadState.json')
+  fs.writeFileSync(filePath, JSON.stringify(state))
 }
 
-ipcMain.handle("load-download-state", () => {
-  const filePath =  join(app.getPath("userData"), "downloadState.json");
-  return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, "utf-8")) : null;
-});
+ipcMain.handle('load-download-state', () => {
+  const filePath = join(app.getPath('userData'), 'downloadState.json')
+  return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : null
+})

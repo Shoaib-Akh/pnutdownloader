@@ -2,19 +2,18 @@ import React, { useState, useEffect } from "react";
 import { FaCheckCircle, FaExclamationTriangle, FaPause, FaPlay } from "react-icons/fa";
 import "../common.css";
 
-function DownloadList({ url, downloadType, quality, format }) {
+function DownloadList({ url, downloadType, quality, format, saveTo }) {
   const [videoTitle, setVideoTitle] = useState("");
   const [videoThumbnail, setVideoThumbnail] = useState("");
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [fileSize, setFileSize] = useState("");
-  const [speed, setSpeed] = useState("");
-  const [eta, setEta] = useState("");
+  const [fileSize, setFileSize] = useState("Unknown");
+  const [speed, setSpeed] = useState("Unknown");
+  const [eta, setEta] = useState("Unknown");
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState("");
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState("");
   const [isPaused, setIsPaused] = useState(false);
-
 
   useEffect(() => {
     if (!url || isDownloading) return;
@@ -23,12 +22,15 @@ function DownloadList({ url, downloadType, quality, format }) {
       try {
         setDownloadStatus("Fetching video info...");
         setIsDownloading(true);
+
         const info = await window.api.fetchVideoInfo(url);
         setVideoTitle(info.title);
         setVideoThumbnail(info.thumbnail);
+
         setDownloadStatus("Starting download...");
-        await window.api.downloadVideo({ url, isAudioOnly: downloadType === "audio", selectedFormat: format, selectedQuality: quality });
+        await window.api.downloadVideo({ url, isAudioOnly: downloadType === "Audio", selectedFormat: format, selectedQuality: quality, saveTo });
         setDownloadStatus("Downloading...");
+
       } catch (error) {
         setError(error.message);
         setDownloadStatus("Error occurred.");
@@ -38,21 +40,25 @@ function DownloadList({ url, downloadType, quality, format }) {
     fetchAndDownload();
 
     window.api.onDownloadProgress((progressData) => {
-    
-      const parseMessage = progressData.message.match(/(\d+\.\d+)% of\s+(\d+\.\d+MiB) at\s+(\d+\.\d+KiB\/s) ETA\s+(\d+:\d+)/);
+      console.log("progressData", progressData);
+
+      if (!progressData.message) return;
+
+      // Improved regex to handle different speed formats and optional ETA
+      const parseMessage = progressData.message.match(/(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/);
+
       if (parseMessage) {
-        const [_, progress, fileSize, speed, eta] = parseMessage;
-    
+        const [, progress, fileSize, speed, eta] = parseMessage;
+
         setDownloadProgress(parseFloat(progress));
-        setFileSize(fileSize);
-        setSpeed(speed);
-        setEta(eta);
-        setDownloadStatus('Downloading');
-    
-        // Check if download is completed
+        setFileSize(fileSize || "Unknown");
+        setSpeed(speed || "Unknown");
+        setEta(eta || "Unknown");
+        setDownloadStatus("Downloading");
+
         if (parseFloat(progress) >= 100) {
           setIsCompleted(true);
-          setDownloadStatus('Completed');
+          setDownloadStatus("Completed");
         }
       }
     });
@@ -73,14 +79,24 @@ function DownloadList({ url, downloadType, quality, format }) {
     <div className="download-card">
       <h3>{videoTitle || "Fetching Video..."}</h3>
       <img src={videoThumbnail} alt="Thumbnail" />
+      
       <div className="progress-bar-container">
         <div className="progress-bar" style={{ width: `${downloadProgress}%` }}></div>
       </div>
+
       <p className="progress-info">
-        Progress: {downloadProgress?.toFixed(2)}% | File Size: {fileSize} | Speed: {speed} | ETA: {eta}
+        <strong>Progress:</strong> {downloadProgress.toFixed(2)}% <br />
+        <strong>File Size:</strong> {fileSize} <br />
+        <strong>Speed:</strong> {speed} <br />
+        <strong>ETA:</strong> {eta} <br />
       </p>
-      <button onClick={handlePauseResume}>{isPaused ? <FaPlay /> : <FaPause />} {isPaused ? "Resume" : "Pause"}</button>
+
+      <button onClick={handlePauseResume}>
+        {isPaused ? <FaPlay /> : <FaPause />} {isPaused ? "Resume" : "Pause"}
+      </button>
+
       {isCompleted && <FaCheckCircle color="green" />}
+      {error && <p className="error"><FaExclamationTriangle color="red" /> {error}</p>}
     </div>
   );
 }

@@ -4,8 +4,8 @@ import BottomSection from "./components/BottomSection";
 
 function App() {
   const [downloadType, setDownloadType] = useState("Video");
-  const [quality, setQuality] = useState("Best");
-  const [format, setFormat] = useState("MP4");
+  const [quality, setQuality] = useState("1080p");
+  const [format, setFormat] = useState("");
   const [saveTo, setSaveTo] = useState("Downloads");
   return (
     <div className="d-flex flex-column vh-100">

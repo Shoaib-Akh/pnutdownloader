@@ -2,14 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Dropdown, DropdownButton } from "react-bootstrap";
 import { FaCheck, FaAngleDown } from "react-icons/fa";
 
-function CustomDropdown({ label, options, defaultSelected, onSelect }) {
-  const [selected, setSelected] = useState(defaultSelected);
+function CustomDropdown({ label, options, selected, onSelect }) {
   const [isOpen, setIsOpen] = useState(false);
-
-  // Update parent component when selected value changes
-  useEffect(() => {
-    onSelect(selected);
-  }, [selected, onSelect]);
 
   return (
     <DropdownButton
@@ -27,7 +21,7 @@ function CustomDropdown({ label, options, defaultSelected, onSelect }) {
       onToggle={(isOpen) => setIsOpen(isOpen)}
     >
       {options.map((option, index) => (
-        <Dropdown.Item key={index} onClick={() => setSelected(option)}>
+        <Dropdown.Item key={index} onClick={() => onSelect(option)}>
           {option} {selected === option && <FaCheck className="float-end" />}
         </Dropdown.Item>
       ))}
