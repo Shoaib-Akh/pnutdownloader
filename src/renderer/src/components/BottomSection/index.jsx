@@ -77,11 +77,11 @@ console.log(lastUrl);
   };
 
   return (
-    <div className="bottom-container">
+    <div>
       {!showWebView ? (
         <>
           {downloadListOpen ? (
-            <div className="video-preview">
+            <div className="video-preview m-4">
               {/* <h3>Video Preview</h3> */}
               <DownloadList
               downloadType={downloadType}
@@ -98,7 +98,7 @@ console.log(lastUrl);
               )}
             </div>
           ) : (
-            <>
+            <div className="bottom-container">
               <h1>Select a service below and enter your search query</h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
@@ -106,10 +106,11 @@ console.log(lastUrl);
                   Resume Browser
                 </button>
               )}
-            </>
+            </div>
           )}
         </>
       ) : (
+        <div className="bottom-container">
         <div className="webview-container">
           <webview ref={webviewRef} src={url} style={{ height: "100%", width: "100%" }} />
           <button className="close-webview-btn" onClick={handleCloseWebView}>Close Browser</button>
@@ -119,6 +120,8 @@ console.log(lastUrl);
             </button>
           )}
         </div>
+        </div>
+
       )}
     </div>
   );

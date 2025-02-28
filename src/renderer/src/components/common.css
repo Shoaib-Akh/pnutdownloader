@@ -207,4 +207,28 @@ h1 {
     color: red;
     font-size: 14px;
   }
+  .skeleton {
+    background-color: #eee;
+    border-radius: 4px;
+    animation: shimmer 1.5s infinite linear;
+  }
   
+  @keyframes shimmer {
+    0% {
+      background-position: -100%;
+    }
+    100% {
+      background-position: 100%;
+    }
+  }
+  
+  .skeleton-text {
+    height: 16px;
+    margin: 5px 0;
+    width: 80%;
+  }
+  
+  .skeleton-box {
+    width: 90px;
+    height: 90px;
+  }

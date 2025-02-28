@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaCheckCircle, FaExclamationTriangle, FaPause, FaPlay } from "react-icons/fa";
+import { FaCheckCircle, FaExclamationTriangle, FaPause, FaPlay, FaSpinner } from "react-icons/fa";
 import "../common.css";
 
 function DownloadList({ url, downloadType, quality, format, saveTo }) {
@@ -34,19 +34,18 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
       } catch (error) {
         setError(error.message);
         setDownloadStatus("Error occurred.");
+        setIsDownloading(false);
       }
     };
 
     fetchAndDownload();
 
     window.api.onDownloadProgress((progressData) => {
-      console.log("progressData", progressData);
-
+      console.log("progressDataprogressData",progressData.message);
+      
       if (!progressData.message) return;
 
-      // Improved regex to handle different speed formats and optional ETA
       const parseMessage = progressData.message.match(/(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/);
-
       if (parseMessage) {
         const [, progress, fileSize, speed, eta] = parseMessage;
 
@@ -76,28 +75,58 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
   };
 
   return (
-    <div className="download-card">
-      <h3>{videoTitle || "Fetching Video..."}</h3>
-      <img src={videoThumbnail} alt="Thumbnail" />
+    <>
+    <div className="d-flex align-items-center bg-white p-3 shadow-lg rounded w-100 border border-secondary mb-3" >
+      {/* Loading Spinner */}
+      {/* {isDownloading && !isCompleted && <FaSpinner className="spinner ms-2 text-primary" style={{ animation: "spin 1s linear infinite" }} />} */}
       
-      <div className="progress-bar-container">
-        <div className="progress-bar" style={{ width: `${downloadProgress}%` }}></div>
+      {/* Thumbnail or Skeleton */}
+      <div className="flex-shrink-0 me-3">
+        {videoThumbnail ? (
+          <img src={videoThumbnail} alt="Thumbnail" className="rounded object-fit-cover" style={{ width: "90px", height: "90px" }} />
+        ) : (
+          <div className="skeleton skeleton-box"></div>
+        )}
       </div>
 
-      <p className="progress-info">
-        <strong>Progress:</strong> {downloadProgress.toFixed(2)}% <br />
-        <strong>File Size:</strong> {fileSize} <br />
-        <strong>Speed:</strong> {speed} <br />
-        <strong>ETA:</strong> {eta} <br />
-      </p>
+      {/* Video Info or Skeleton */}
+      <div className="flex-grow-1">
+        {videoTitle ? (
+          <>
+            <h5 className="fw-semibold text-dark text-truncate">{videoTitle}</h5>
+            <p className="text-muted mb-2 small">
+              <strong>Progress:</strong> {downloadProgress.toFixed(2)}% •
+              <strong> File Size:</strong> {fileSize} •
+              <strong> Speed:</strong> {speed} •
+              <strong> ETA:</strong> {eta}
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="skeleton skeleton-text"></div>
+            <div className="skeleton skeleton-text"></div>
+            <div className="skeleton skeleton-text"></div>
+          </>
+        )}
+        
+        {/* Progress Bar */}
+        <div className="progress" style={{ height: "6px" }}>
+          <div className="progress-bar bg-primary" role="progressbar" style={{ width: `${downloadProgress}%` }}></div>
+        </div>
+      </div>
 
-      <button onClick={handlePauseResume}>
-        {isPaused ? <FaPlay /> : <FaPause />} {isPaused ? "Resume" : "Pause"}
-      </button>
-
-      {isCompleted && <FaCheckCircle color="green" />}
-      {error && <p className="error"><FaExclamationTriangle color="red" /> {error}</p>}
+      {/* Action Button & Status Icons */}
+      <div className="d-flex align-items-center gap-2 ms-3">
+        <button onClick={handlePauseResume} className="btn btn-light border rounded-circle p-2">
+          {isPaused ? <FaPlay className="text-secondary" /> : <FaPause className="text-secondary" />}
+        </button>
+        {isCompleted && <FaCheckCircle className="text-success fs-4" />}
+        {error && <FaExclamationTriangle className="text-danger fs-4" />}
+      </div>
     </div>
+    
+    </>
+    
   );
 }
 
