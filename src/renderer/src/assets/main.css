@@ -3,3 +3,24 @@ body {
     margin: 0 !important;;
     font-family: Arial, sans-serif !important;;
   }
+  ::-webkit-scrollbar {
+    width: 10px; /* Scrollbar width */
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #f1f1f1; /* Track background */
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #BB4F28; /* Scrollbar color */
+    border-radius: 5px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a14020; /* Darker shade on hover */
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #BB4F28 #f1f1f1;
+  }  

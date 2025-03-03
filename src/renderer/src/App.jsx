@@ -9,7 +9,7 @@ function App() {
   const [format, setFormat] = useState('')
   const [saveTo, setSaveTo] = useState('Downloads')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-const [selectedItem, setSelectedItem] = useState("All Files");
+const [selectedItem, setSelectedItem] = useState("");
   return (
     <div className=" vh-100">
       {/* Sidebar Component */}
@@ -38,6 +38,7 @@ const [selectedItem, setSelectedItem] = useState("All Files");
         <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} 
         setSelectedItem={setSelectedItem}
         selectedItem={selectedItem}
+        
         />
 
         <BottomSection
@@ -47,6 +48,8 @@ const [selectedItem, setSelectedItem] = useState("All Files");
           saveTo={saveTo}
           selectedItem={selectedItem}
           setIsSidebarOpen={setIsSidebarOpen}
+          isSidebarOpen={isSidebarOpen}
+          setSelectedItem={setSelectedItem}
         />
       </div>
     </div>
