@@ -1,46 +1,135 @@
-import React, { useState } from 'react';
-import { FaEllipsisV, FaPlay, FaPause, FaTrash, FaRegClock, FaTimesCircle, FaCheckCircle } from 'react-icons/fa';
-import { ProgressBar } from 'react-bootstrap';
-import '../common.css';
+import React, { useState, useEffect } from 'react'
+import {
+  FaCheckCircle,
+  FaExclamationTriangle,
+  FaPause,
+  FaPlay,
+  FaEllipsisV,
+  FaTrash,
+  FaRegClock,
+  FaTimesCircle
+} from 'react-icons/fa'
+import { ProgressBar } from 'react-bootstrap'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
+import '../common.css'
 
-const DownloadList = () => {
-  const [dropdownOpen, setDropdownOpen] = useState(null);
+function DownloadList({ url, downloadType, quality, format, saveTo, selectedItem }) {
+  const [videoTitle, setVideoTitle] = useState('')
+  const [videoThumbnail, setVideoThumbnail] = useState('')
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [fileSize, setFileSize] = useState('Unknown')
+  const [speed, setSpeed] = useState('Unknown')
+  const [eta, setEta] = useState('Unknown')
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [downloadStatus, setDownloadStatus] = useState('')
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [error, setError] = useState('')
+  const [isPaused, setIsPaused] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(null)
+
+  useEffect(() => {
+    if (!url || isDownloading) return
+
+    const fetchAndDownload = async () => {
+      try {
+        setDownloadStatus('Fetching video info...')
+        setIsDownloading(true)
+
+        const info = await window.api.fetchVideoInfo(url)
+        setVideoTitle(info.title)
+        setVideoThumbnail(info.thumbnail)
+
+        setDownloadStatus('Starting download...')
+        await window.api.downloadVideo({
+          url,
+          isAudioOnly: downloadType === 'Audio',
+          selectedFormat: format,
+          selectedQuality: quality,
+          saveTo
+        })
+        setDownloadStatus('Downloading...')
+      } catch (error) {
+        setError(error.message)
+        setDownloadStatus('Error occurred.')
+        setIsDownloading(false)
+      }
+    }
+
+    fetchAndDownload()
+
+    window.api.onDownloadProgress((progressData) => {
+      if (progressData.message && progressData.message.includes('has already been downloaded')) {
+        alert('The file has already been downloaded.')
+        return
+      }
+      if (!progressData.message) return
+
+      const parseMessage = progressData.message.match(
+        /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
+      )
+      if (parseMessage) {
+        const [, progress, fileSize, speed, eta] = parseMessage
+
+        setDownloadProgress(parseFloat(progress))
+        setFileSize(fileSize || 'Unknown')
+        setSpeed(speed || 'Unknown')
+        setEta(eta || 'Unknown')
+        setDownloadStatus('Downloading')
+
+        if (parseFloat(progress) >= 100) {
+          setIsCompleted(true)
+          setDownloadStatus('Completed')
+        }
+      }
+    })
+  }, [url])
+
+  const handlePauseResume = async () => {
+    if (isPaused) {
+      await window.api.resumeDownload({
+        url,
+        isAudioOnly: downloadType === 'Audio',
+        selectedFormat: format,
+        selectedQuality: quality,
+        saveTo
+      })
+      setIsPaused(false)
+    } else {
+      await window.api.pauseDownload()
+      setIsPaused(true)
+    }
+  }
 
   const toggleDropdown = (id) => {
-    setDropdownOpen(dropdownOpen === id ? null : id);
-  };
+    setDropdownOpen(dropdownOpen === id ? null : id)
+  }
 
-  const files = [
-    { id: 1, duration: '02:06', quality: '720p', status: '60%', action: 'Details' },
-    { id: 2, duration: '02:06', quality: '1080p', status: '10%', action: '' },
-    { id: 3, duration: '02:06', quality: '720p', status: 'Completed', action: '' },
-    { id: 4, duration: '02:06', quality: '720p', status: '100%', action: '' },
-    { id: 5, duration: '02:06', quality: '720p', status: 'Canceled', action: '' },
-    { id: 6, duration: '02:06', quality: '720p', status: '40%', action: '' },
-    { id: 7, duration: '02:06', quality: '720p', status: '40%', action: '' },
-    { id: 8, duration: '02:06', quality: '720p', status: '40%', action: '' },
-  
-
-  ];
-
-  const getStatusDisplay = (status) => {
-    if (status === 'Completed') {
-      return <><FaCheckCircle className="text-success" /> Completed</>;
+  const getStatusDisplay = () => {
+    if (isCompleted) {
+      return (
+        <>
+          <FaCheckCircle className="text-success" /> Completed
+        </>
+      )
     }
-    if (status === 'Canceled') {
-      return <><FaTimesCircle className="text-danger" /> Canceled</>;
+    if (error) {
+      return (
+        <>
+          <FaTimesCircle className="text-danger" /> Error
+        </>
+      )
     }
-    if (status.includes('%')) {
-      const percentage = parseInt(status);
+    if (downloadProgress > 0) {
       return (
         <div className="d-flex align-items-center gap-2">
           <FaRegClock className="text-primary" />
-          <ProgressBar now={percentage} className="flex-grow-1" style={{height:4}} />
+          <ProgressBar now={downloadProgress} className="flex-grow-1" style={{ height: 4 }} />
         </div>
-      );
+      )
     }
-    return status;
-  };
+    return 'Pending'
+  }
 
   return (
     <div className="container-fluid p-0">
@@ -56,44 +145,46 @@ const DownloadList = () => {
             </tr>
           </thead>
           <tbody>
-            {files.map((file) => (
-              <tr key={file.id} className="data-row">
-                <td className="data-cell">#{file.id}</td>
-                <td className="data-cell">{file.duration}</td>
-                <td className="data-cell">{file.quality}</td>
-                <td className="data-cell status-cell">
-                  {getStatusDisplay(file.status)}
-                </td>
-                <td className="data-cell action-cell">
-                  <div className="dropdown">
-                    <button
-                      className="three-dots-btn"
-                      onClick={() => toggleDropdown(file.id)}
-                    >
-                      <FaEllipsisV />
-                    </button>
-                    {dropdownOpen === file.id && (
-                      <div className="dropdown-menu show">
-                        <button className="dropdown-item">
-                          <FaPlay className="me-2" /> Play
-                        </button>
-                        <button className="dropdown-item">
-                          <FaPause className="me-2" /> Pause
-                        </button>
-                        <button className="dropdown-item">
-                          <FaTrash className="me-2" /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+            <tr className="data-row">
+              <td className="data-cell">
+                <img
+                  src={videoThumbnail}
+                  style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }}
+                  alt="Video Thumbnail"
+                />
+                {videoTitle ? (
+                  `#${videoTitle.split(' ').slice(0, 5).join(' ')}${videoTitle.split(' ').length > 5 ? '...' : ''}`
+                ) : (
+                  <Skeleton width={50} />
+                )}{' '}
+              </td>
+              <td className="data-cell">{videoTitle ? '02:06' : <Skeleton width={50} />}</td>
+              <td className="data-cell">{videoTitle ? quality : <Skeleton width={50} />}</td>
+              <td className="data-cell status-cell">{getStatusDisplay()}</td>
+              <td className="data-cell action-cell">
+                <div className="dropdown">
+                  <button className="three-dots-btn" onClick={() => toggleDropdown(1)}>
+                    <FaEllipsisV />
+                  </button>
+                  {dropdownOpen === 1 && (
+                    <div className="dropdown-menu show">
+                      <button className="dropdown-item" onClick={handlePauseResume}>
+                        {isPaused ? <FaPlay className="me-2" /> : <FaPause className="me-2" />}
+                        {isPaused ? 'Resume' : 'Pause'}
+                      </button>
+                      <button className="dropdown-item">
+                        <FaTrash className="me-2" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DownloadList;
+export default DownloadList
