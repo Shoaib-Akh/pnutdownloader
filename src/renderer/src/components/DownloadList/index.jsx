@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaCheckCircle, FaExclamationTriangle, FaPause, FaPlay, FaSpinner } from "react-icons/fa";
 import "../common.css";
 
-function DownloadList({ url, downloadType, quality, format, saveTo }) {
+function DownloadList({ url, downloadType, quality, format, saveTo,selectedItem }) {
   const [videoTitle, setVideoTitle] = useState("");
   const [videoThumbnail, setVideoThumbnail] = useState("");
   const [downloadProgress, setDownloadProgress] = useState(0);
@@ -14,6 +14,7 @@ function DownloadList({ url, downloadType, quality, format, saveTo }) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [error, setError] = useState("");
   const [isPaused, setIsPaused] = useState(false);
+console.log("selectedItemselectedItemselectedItem",selectedItem);
 
   useEffect(() => {
     if (!url || isDownloading) return;

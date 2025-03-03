@@ -4,7 +4,7 @@ import "../common.css";
 import PlatformIcons from "../PlatformIcons";
 import DownloadList from "../DownloadList";
 
-function BottomSection({ downloadType, quality, format, saveTo }) {
+function BottomSection({ downloadType, quality, format, saveTo,selectedItem,setIsSidebarOpen }) {
   const [url, setUrl] = useState("");
   const [lastUrl, setLastUrl] = useState("");
   const [showWebView, setShowWebView] = useState(false);
@@ -40,6 +40,7 @@ console.log(lastUrl);
     if ( currentWebViewUrl) {
       window.api.getYoutubeCookies();
     }
+   
   }, [ currentWebViewUrl]);
  
   
@@ -47,6 +48,7 @@ console.log(lastUrl);
     setUrl(platformUrl);
     setShowWebView(true);
     setIsDownloadable(false);
+    setIsSidebarOpen(false)
   
   };
 
@@ -55,12 +57,14 @@ console.log(lastUrl);
     setUrl("");
     setShowWebView(false);
     setIsDownloadable(false);
+    setIsSidebarOpen(true)
   };
 
   const handleResumeBrowser = () => {
     if (lastUrl) {
       setUrl(lastUrl);
       setShowWebView(true);
+      setIsSidebarOpen(false)
     }
   };
 
@@ -80,7 +84,7 @@ console.log(lastUrl);
     <div>
       {!showWebView ? (
         <>
-          {downloadListOpen ? (
+          {downloadListOpen && selectedItem ? (
             <div className="video-preview m-4">
               {/* <h3>Video Preview</h3> */}
               <DownloadList
@@ -89,6 +93,7 @@ console.log(lastUrl);
               format={format}
               saveTo={saveTo}
               url={currentWebViewUrl}
+              selectedItem={selectedItem}
               />
             
               {lastUrl && (
@@ -110,17 +115,17 @@ console.log(lastUrl);
           )}
         </>
       ) : (
-        <div className="bottom-container">
+        // <div className="bottom-container">
         <div className="webview-container">
           <webview ref={webviewRef} src={url} style={{ height: "100%", width: "100%" }} />
           <button className="close-webview-btn" onClick={handleCloseWebView}>Close Browser</button>
           {isDownloadable && (
-            <button className="download-btn" onClick={() => {setDownloadListOpen(true); setShowWebView(!showWebView)}}>
+            <button className="download-btn" onClick={() => {setDownloadListOpen(true); setShowWebView(!showWebView), setIsSidebarOpen(true)}}>
               {downloading ? "Downloading..." : <><FaDownload /> Download</>}
             </button>
           )}
         </div>
-        </div>
+        // </div>
 
       )}
     </div>
