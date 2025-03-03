@@ -8,6 +8,7 @@ function CustomDropdown({ label, options, selected, onSelect }) {
   return (
     <DropdownButton
       id="custom-dropdown"
+
       title={
         <>
           <span style={{ color: "#A1A1A1" }}>{label}</span> {selected}
@@ -18,6 +19,7 @@ function CustomDropdown({ label, options, selected, onSelect }) {
       }
       variant="light"
       className="border-0"
+      style={{fontSize:"12px"}}
       onToggle={(isOpen) => setIsOpen(isOpen)}
     >
       {options.map((option, index) => (

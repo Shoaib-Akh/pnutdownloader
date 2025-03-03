@@ -25,15 +25,15 @@ function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format,setD
   };
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light justify-content-between p-2">
+    <nav className="navbar navbar-expand-lg navbar-light justify-content-between p-4" style={{gap:70}}>
       {/* Left Side - Logo */}
-      <a className="navbar-brand d-flex align-items-center" href="#">
+      <a className="navbar-brand d-flex align-items-center" href="#" style={{cursor:"pointer"}}>
         <img src={Logo} alt="PNUT Logo" className="me-2" width={150} />
       </a>
 
       {/* Center Section - Options */}
-      <div className="d-flex flex-grow-1 justify-content-center shadow-sm p-3 bg-body rounded">
-        <div className="d-flex flex-grow-1 justify-content-around">
+      <div className="d-flex flex-grow-1 justify-content-center shadow-sm  bg-body " style={{padding:10}}>
+        <div className="d-flex flex-grow-1 " style={{gap:10}}>
           {/* Paste Link Button */}
           <button className="btn btn-danger d-flex align-items-center me-3" style={{ background: "#BB4F28" }}>
             <FaPaste className="me-2" /> Paste Link
