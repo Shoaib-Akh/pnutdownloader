@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -161,56 +161,63 @@ ipcMain.handle('getYoutubeCookies', async () => {
   await updateCookiesFile()
   return cookiesPath
 })
-
+// function formatDuration(seconds) {
+//   const minutes = Math.floor(seconds / 60);
+//   const remainingSeconds = seconds % 60;
+//   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+// }
 ipcMain.handle('fetch-video-info', async (event, url) => {
   return new Promise((resolve, reject) => {
-    // Dump JSON metadata (-J) for a single video
-    const args = ['-J', url]
+    const args = ['-J', url];
+    const proc = spawn(ytdlpPath, args);
 
-    const proc = spawn(ytdlpPath, args)
-
-    let stdout = ''
-    let stderr = ''
+    let stdout = '';
+    let stderr = '';
 
     proc.stdout.on('data', (data) => {
-      stdout += data.toString()
-    })
+      stdout += data.toString();
+    });
 
     proc.stderr.on('data', (data) => {
-      stderr += data.toString()
-    })
+      stderr += data.toString();
+    });
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        // Something went wrong
-        reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`))
-        return
+        reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`));
+        return;
       }
 
       try {
-        // Parse the JSON output from yt-dlp
-        const json = JSON.parse(stdout)
+        const json = JSON.parse(stdout);
 
-        // Extract title
-        const title = json.title || ''
-
-        // Extract thumbnail (last one is often the largest)
-        let thumbnail = ''
+        const title = json.title || '';
+        let thumbnail = '';
         if (Array.isArray(json.thumbnails) && json.thumbnails.length > 0) {
-          thumbnail = json.thumbnails[json.thumbnails.length - 1].url
+          thumbnail = json.thumbnails[json.thumbnails.length - 1].url;
         }
 
-        // Construct a filename based on title and extension (if available)
-        // Note: The title may need sanitization for actual file usage.
-        const filename = title && json.ext ? `${title}.${json.ext}` : title
+        const timeDuration = json.duration || 0; 
+        
+        // Duration in seconds
+        const duration = formatDuration(timeDuration); // Format duration
 
-        resolve({ title, thumbnail, filename })
+        const filename = title && json.ext ? `${title}.${json.ext}` : title;
+
+        resolve({ title, thumbnail, filename, duration, duration });
       } catch (err) {
-        reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`))
+        reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`));
       }
-    })
-  })
-})
+    });
+  });
+});
+
+// Helper function to format duration
+function formatDuration(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
 
 // 🛠 Ensure ffmpeg & ffprobe exist
 if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
@@ -226,7 +233,6 @@ const startDownload = async (event, options) => {
     }
 
     const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
-    console.log(saveTo);
 
     if (!url || typeof url !== "string") throw new Error("Invalid URL.");
 
@@ -262,7 +268,6 @@ const startDownload = async (event, options) => {
 
     downloadProcess.stdout.on("data", (data) => {
       const line = data.toString().trim();
-      console.log("yt-dlp Output:", line);
       event.sender.send("download-progress", { message: line });
     });
 
@@ -283,7 +288,9 @@ const startDownload = async (event, options) => {
     throw err;
   }
 };
-
+ipcMain.handle('show-message-box', async (_, options) => {
+  return dialog.showMessageBox(mainWindow, options);
+});
 ipcMain.handle("downloadVideo", async (event, options) => {
   console.log("Starting download...");
   await startDownload(event, options);

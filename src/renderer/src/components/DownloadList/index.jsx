@@ -1,135 +1,138 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FaCheckCircle,
-  FaExclamationTriangle,
-  FaPause,
-  FaPlay,
-  FaEllipsisV,
-  FaTrash,
-  FaRegClock,
-  FaTimesCircle
-} from 'react-icons/fa'
-import { ProgressBar } from 'react-bootstrap'
-import Skeleton from 'react-loading-skeleton'
-import 'react-loading-skeleton/dist/skeleton.css'
-import '../common.css'
+  FaCheckCircle, FaTimesCircle, FaRegClock,
+  FaPause, FaPlay, FaEllipsisV, FaTrash
+} from 'react-icons/fa';
+import { ProgressBar } from 'react-bootstrap';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
+import '../common.css';
 
-function DownloadList({ url, downloadType, quality, format, saveTo, selectedItem }) {
-  const [videoTitle, setVideoTitle] = useState('')
-  const [videoThumbnail, setVideoThumbnail] = useState('')
-  const [downloadProgress, setDownloadProgress] = useState(0)
-  const [fileSize, setFileSize] = useState('Unknown')
-  const [speed, setSpeed] = useState('Unknown')
-  const [eta, setEta] = useState('Unknown')
-  const [isDownloading, setIsDownloading] = useState(false)
-  const [downloadStatus, setDownloadStatus] = useState('')
-  const [isCompleted, setIsCompleted] = useState(false)
-  const [error, setError] = useState('')
-  const [isPaused, setIsPaused] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(null)
+function DownloadList({ url, downloadType, quality, format, saveTo }) {
+  const [downloadList, setDownloadList] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  console.log("downloadList",downloadList);
+  
+  useEffect(() => {
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+    setDownloadList(storedDownloads);
+  }, []);
 
   useEffect(() => {
-    if (!url || isDownloading) return
-
-    const fetchAndDownload = async () => {
-      try {
-        setDownloadStatus('Fetching video info...')
-        setIsDownloading(true)
-
-        const info = await window.api.fetchVideoInfo(url)
-        setVideoTitle(info.title)
-        setVideoThumbnail(info.thumbnail)
-
-        setDownloadStatus('Starting download...')
-        await window.api.downloadVideo({
-          url,
-          isAudioOnly: downloadType === 'Audio',
-          selectedFormat: format,
-          selectedQuality: quality,
-          saveTo
-        })
-        setDownloadStatus('Downloading...')
-      } catch (error) {
-        setError(error.message)
-        setDownloadStatus('Error occurred.')
-        setIsDownloading(false)
+    if (url) {
+      
+        startDownload(url);
       }
+    
+  }, [url]);
+;
+  
+const startDownload = useCallback(async (url) => {
+  try {
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+    const existingDownload = storedDownloads.some((item) => item.url === url);
+
+    if (existingDownload) {
+      if (!window.alertShown) {
+        window.api.showMessageBox({
+          type: "warning",
+          title: "Duplicate Download",
+          message: "This URL is already in the download list."
+        });
+        window.alertShown = true;
+        setTimeout(() => (window.alertShown = false), 1000);
+      }
+      return;
     }
 
-    fetchAndDownload()
+    // Add loading state while fetching info
+    setDownloadList((prev) => [{ url, loading: true }, ...prev]);
 
+    var info = await window.api.fetchVideoInfo(url);
+
+    setDownloadList((prev) => prev.map(item => item.url === url ? { ...item, loading: false } : item));
+
+    const newDownload = {
+      url,
+      title: info.title,
+      thumbnail: info.thumbnail,
+      quality,
+      format,
+      duration: info.duration,
+      progress: 0,
+      fileSize: 'Unknown',
+      speed: 'Unknown',
+      eta: 'Unknown',
+      status: 'Downloading',
+      isCompleted: false,
+      isPaused: false,
+    };
+    
+    const updatedList = [newDownload, ...storedDownloads];
+    localStorage.setItem('downloadList', JSON.stringify(updatedList));
+    setDownloadList(updatedList);
+    await window.api.downloadVideo({
+      url,
+      isAudioOnly: downloadType === 'Audio',
+      selectedFormat: format,
+      selectedQuality: quality,
+      saveTo
+    })
     window.api.onDownloadProgress((progressData) => {
-      if (progressData.message && progressData.message.includes('has already been downloaded')) {
-        alert('The file has already been downloaded.')
-        return
-      }
-      if (!progressData.message) return
+      if (!progressData.message) return;
 
       const parseMessage = progressData.message.match(
         /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
-      )
+      );
+
       if (parseMessage) {
-        const [, progress, fileSize, speed, eta] = parseMessage
+        const [, progress, fileSize, speed, eta] = parseMessage;
 
-        setDownloadProgress(parseFloat(progress))
-        setFileSize(fileSize || 'Unknown')
-        setSpeed(speed || 'Unknown')
-        setEta(eta || 'Unknown')
-        setDownloadStatus('Downloading')
-
-        if (parseFloat(progress) >= 100) {
-          setIsCompleted(true)
-          setDownloadStatus('Completed')
-        }
+        setDownloadList((prev) => {
+          const updatedList = prev.map((item) =>
+            item.url === url
+              ? { ...item, progress: parseFloat(progress), fileSize, speed, eta, status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading', isCompleted: parseFloat(progress) >= 100 }
+              : item
+          );
+          localStorage.setItem('downloadList', JSON.stringify(updatedList));
+          return updatedList;
+        });
       }
-    })
-  }, [url])
+    });
+  } catch (error) {
+    console.error('Download error:', error);
+    setDownloadList((prev) =>
+      prev.map((item) => (item.url === url ? { ...item, status: 'Error', loading: false } : item))
+    );
+  }
+}, [downloadType, quality, format, saveTo]);
 
-  const handlePauseResume = async () => {
-    if (isPaused) {
-      await window.api.resumeDownload({
-        url,
-        isAudioOnly: downloadType === 'Audio',
-        selectedFormat: format,
-        selectedQuality: quality,
-        saveTo
+  
+  
+  
+  
+
+  const handlePauseResume = (url) => {
+    setDownloadList((prev) =>
+      prev.map((item) => {
+        if (item.url === url) {
+          item.isPaused
+            ? window.api.resumeDownload({ url, isAudioOnly: downloadType === 'Audio', selectedFormat: item.format, selectedQuality: item.quality, saveTo })
+            : window.api.pauseDownload();
+          return { ...item, isPaused: !item.isPaused };
+        }
+        return item;
       })
-      setIsPaused(false)
-    } else {
-      await window.api.pauseDownload()
-      setIsPaused(true)
-    }
-  }
+    );
+  };
 
-  const toggleDropdown = (id) => {
-    setDropdownOpen(dropdownOpen === id ? null : id)
-  }
-
-  const getStatusDisplay = () => {
-    if (isCompleted) {
-      return (
-        <>
-          <FaCheckCircle className="text-success" /> Completed
-        </>
-      )
-    }
-    if (error) {
-      return (
-        <>
-          <FaTimesCircle className="text-danger" /> Error
-        </>
-      )
-    }
-    if (downloadProgress > 0) {
-      return (
-        <div className="d-flex align-items-center gap-2">
-          <FaRegClock className="text-primary" />
-          <ProgressBar now={downloadProgress} className="flex-grow-1" style={{ height: 4 }} />
-        </div>
-      )
-    }
-    return 'Pending'
-  }
+  const handleDelete = (url) => {
+    setDownloadList((prev) => {
+      const updatedList = prev.filter((item) => item.url !== url);
+      localStorage.setItem('downloadList', JSON.stringify(updatedList));
+      return updatedList;
+    });
+  };
 
   return (
     <div className="container-fluid p-0">
@@ -145,46 +148,49 @@ function DownloadList({ url, downloadType, quality, format, saveTo, selectedItem
             </tr>
           </thead>
           <tbody>
-            <tr className="data-row">
-              <td className="data-cell">
-                <img
-                  src={videoThumbnail}
-                  style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }}
-                  alt="Video Thumbnail"
-                />
-                {videoTitle ? (
-                  `#${videoTitle.split(' ').slice(0, 5).join(' ')}${videoTitle.split(' ').length > 5 ? '...' : ''}`
-                ) : (
-                  <Skeleton width={50} />
-                )}{' '}
-              </td>
-              <td className="data-cell">{videoTitle ? '02:06' : <Skeleton width={50} />}</td>
-              <td className="data-cell">{videoTitle ? quality : <Skeleton width={50} />}</td>
-              <td className="data-cell status-cell">{getStatusDisplay()}</td>
-              <td className="data-cell action-cell">
-                <div className="dropdown">
-                  <button className="three-dots-btn" onClick={() => toggleDropdown(1)}>
+          {downloadList.map((item) => (
+              <tr key={item.url} className="data-row">
+                <td className="data-cell">
+                  {item.loading ? <Skeleton width={100} height={50} /> : (
+                    <>
+                      <img src={item.thumbnail} style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }} alt="Thumbnail" />
+                      {item.title || <Skeleton width={50} />}
+                    </>
+                  )}
+                </td>
+                <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.duration}</td>
+                <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.quality}</td>
+                <td className="data-cell status-cell">
+                  {item.loading ? <Skeleton width={100} /> : item.isCompleted ? <FaCheckCircle className="text-success" /> :
+                    item.isPaused ? <FaPause className="text-warning" /> :
+                      <ProgressBar now={item.progress} className="flex-grow-1" style={{ height: 4 }} />}
+                </td>
+              
+                <td className="data-cell action-cell">
+                  <button className="three-dots-btn" onClick={() => setDropdownOpen(dropdownOpen === item.url ? null : item.url)}>
                     <FaEllipsisV />
                   </button>
-                  {dropdownOpen === 1 && (
+                  {dropdownOpen === item.url && (
                     <div className="dropdown-menu show">
-                      <button className="dropdown-item" onClick={handlePauseResume}>
-                        {isPaused ? <FaPlay className="me-2" /> : <FaPause className="me-2" />}
-                        {isPaused ? 'Resume' : 'Pause'}
-                      </button>
-                      <button className="dropdown-item">
+                      {!item.isCompleted &&
+                       <button className="dropdown-item" onClick={() => handlePauseResume(item.url)}>
+                       {item.isPaused ? <FaPlay className="me-2" /> : <FaPause className="me-2" />} {item.isPaused ? 'Resume' : 'Pause'}
+                     </button>
+                      }
+                     
+                      <button className="dropdown-item" onClick={() => handleDelete(item.url)}>
                         <FaTrash className="me-2" /> Delete
                       </button>
                     </div>
                   )}
-                </div>
-              </td>
-            </tr>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 }
 
-export default DownloadList
+export default DownloadList;

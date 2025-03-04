@@ -5,7 +5,7 @@ const api = {
   openWebview: (url) => ipcRenderer.send("open-webview", url),
   getYoutubeCookies: () => ipcRenderer.invoke("getYoutubeCookies"),
   fetchVideoInfo: (url) => ipcRenderer.invoke("fetch-video-info", url),
-  
+  showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
   downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality ,saveTo}) =>
     ipcRenderer.invoke("downloadVideo", { url, isAudioOnly, selectedFormat, selectedQuality,saveTo }),
 

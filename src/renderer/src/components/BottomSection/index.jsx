@@ -23,7 +23,6 @@ function BottomSection({
   const [videoThumbnail, setVideoThumbnail] = useState('')
   const [downloading, setDownloading] = useState(false)
   const webviewRef = useRef(null)
-  console.log(showWebView)
 
   useEffect(() => {
     if (webviewRef.current) {
@@ -91,7 +90,6 @@ function BottomSection({
       setIsSidebarOpen(true)
     }
   }, [selectedItem])
-  console.log('selectedItem', selectedItem)
 
   return (
     <div>
