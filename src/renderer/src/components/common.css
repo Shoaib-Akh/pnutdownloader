@@ -246,7 +246,7 @@ h1 {
   position: relative; /* Important to set the context for absolute positioned children */
   overflow: auto; 
   /* Enables scrolling */
-  max-height: 450px;
+height: 450px;
 }
 
 .file-table {

@@ -1,12 +1,10 @@
-import React, { useState } from "react";
+import React from "react";
 import { FaPaste, FaCog, FaUser } from "react-icons/fa";
 import Logo from "../../assets/Images/logo.png";
 import "../common.css";
 import CustomDropdown from "../CustomDropdown";
 
-function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format,setDownloadType ,downloadType}) {
-  
-
+function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format, setDownloadType, downloadType }) {
   // Format options based on download type
   const formatOptions = {
     Video: ["MP4", "AVI", "MKV"],
@@ -14,26 +12,23 @@ function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format,setD
     Subtitles: ["SRT"],
   };
 
-  const [selectedFormat, setSelectedFormat] = useState(formatOptions[downloadType][0]);
-
-  // Handle download type selection
-  const handleDownloadTypeChange = (value) => {
-    setDownloadType(value);
-    const newFormat = formatOptions[value][0];
-    setSelectedFormat(newFormat);
-    setFormat(newFormat);
-  };
+  // Ensure format is always in sync with the selected download type
+  React.useEffect(() => {
+    if (downloadType && formatOptions[downloadType]) {
+      setFormat(formatOptions[downloadType][0]); // Set the first format option as default
+    }
+  }, [downloadType, setFormat]);
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light justify-content-between p-4" style={{gap:70}}>
+    <nav className="navbar navbar-expand-lg navbar-light justify-content-between p-4" style={{ gap: 70 }}>
       {/* Left Side - Logo */}
-      <a className="navbar-brand d-flex align-items-center" href="#" style={{cursor:"pointer"}}>
+      <a className="navbar-brand d-flex align-items-center" href="#" style={{ cursor: "pointer" }}>
         <img src={Logo} alt="PNUT Logo" className="me-2" width={150} />
       </a>
 
       {/* Center Section - Options */}
-      <div className="d-flex flex-grow-1 justify-content-center shadow-sm  bg-body " style={{padding:10}}>
-        <div className="d-flex flex-grow-1 " style={{gap:10}}>
+      <div className="d-flex flex-grow-1 justify-content-center shadow-sm bg-body " style={{ padding: 10 }}>
+        <div className="d-flex flex-grow-1 " style={{ gap: 10 }}>
           {/* Paste Link Button */}
           <button className="btn btn-danger d-flex align-items-center me-3" style={{ background: "#BB4F28" }}>
             <FaPaste className="me-2" /> Paste Link
@@ -44,7 +39,9 @@ function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format,setD
             label="Download"
             options={Object.keys(formatOptions)}
             selected={downloadType}
-            onSelect={handleDownloadTypeChange}
+            onSelect={(value) => {
+              setDownloadType(value);
+            }}
           />
 
           {/* Quality Dropdown (Not applicable for Audio and Subtitles) */}
@@ -62,12 +59,8 @@ function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format,setD
             <CustomDropdown
               label="Format"
               options={formatOptions[downloadType]}
-            
-              selected={selectedFormat} // Now properly updates when `downloadType` changes
-              onSelect={(value) => {
-                setSelectedFormat(value);
-                setFormat(value);
-              }}
+              selected={format}
+              onSelect={setFormat}
             />
           )}
 

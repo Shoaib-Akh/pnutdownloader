@@ -235,6 +235,7 @@ const startDownload = async (event, options) => {
     const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
 
     if (!url || typeof url !== "string") throw new Error("Invalid URL.");
+console.log("options",options);
 
     const finalQualityVideo = selectedQuality.replace(/[pP]$/, "");
 

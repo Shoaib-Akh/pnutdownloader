@@ -8,10 +8,14 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import '../common.css';
 
-function DownloadList({ url, downloadType, quality, format, saveTo }) {
+function DownloadList({ url, downloadType, quality, format, saveTo,selectedItem }) {
   const [downloadList, setDownloadList] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(null);
-  console.log("downloadList",downloadList);
+  
+  console.log("selectedItem",selectedItem);
+  
+  console.log("format",format);
+
   
   useEffect(() => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
@@ -49,6 +53,7 @@ const startDownload = useCallback(async (url) => {
     setDownloadList((prev) => [{ url, loading: true }, ...prev]);
 
     var info = await window.api.fetchVideoInfo(url);
+console.log("info",info);
 
     setDownloadList((prev) => prev.map(item => item.url === url ? { ...item, loading: false } : item));
 
@@ -57,7 +62,7 @@ const startDownload = useCallback(async (url) => {
       title: info.title,
       thumbnail: info.thumbnail,
       quality,
-      format,
+      format:format,
       duration: info.duration,
       progress: 0,
       fileSize: 'Unknown',
@@ -107,25 +112,6 @@ const startDownload = useCallback(async (url) => {
   }
 }, [downloadType, quality, format, saveTo]);
 
-  
-  
-  
-  
-
-  const handlePauseResume = (url) => {
-    setDownloadList((prev) =>
-      prev.map((item) => {
-        if (item.url === url) {
-          item.isPaused
-            ? window.api.resumeDownload({ url, isAudioOnly: downloadType === 'Audio', selectedFormat: item.format, selectedQuality: item.quality, saveTo })
-            : window.api.pauseDownload();
-          return { ...item, isPaused: !item.isPaused };
-        }
-        return item;
-      })
-    );
-  };
-
   const handleDelete = (url) => {
     setDownloadList((prev) => {
       const updatedList = prev.filter((item) => item.url !== url);
@@ -133,7 +119,13 @@ const startDownload = useCallback(async (url) => {
       return updatedList;
     });
   };
-
+  const filteredList = downloadList.filter(item => 
+    selectedItem === "Video" ? item.format === "MP4" :
+    selectedItem === "Audio" ? item.format === "MP3" :
+    selectedItem === "Recent Download" ? true : false
+  );
+  console.log("filteredList",filteredList);
+  
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -142,24 +134,25 @@ const startDownload = useCallback(async (url) => {
             <tr>
               <th className="header-cell">Files</th>
               <th className="header-cell">DURATION</th>
-              <th className="header-cell">Quality</th>
+              <th className="header-cell">Format</th>
               <th className="header-cell">Status</th>
               <th className="header-cell">Action</th>
             </tr>
           </thead>
           <tbody>
-          {downloadList.map((item) => (
+
+          {filteredList.map((item) => (
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
                   {item.loading ? <Skeleton width={100} height={50} /> : (
                     <>
                       <img src={item.thumbnail} style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }} alt="Thumbnail" />
-                      {item.title || <Skeleton width={50} />}
+                      {item.title?  `#${item.title.split(' ').slice(0, 5).join(' ')}${item.title.split(' ').length > 5 ? '...' : ''}`:"" || <Skeleton width={50} />}
                     </>
                   )}
                 </td>
                 <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.duration}</td>
-                <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.quality}</td>
+                <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.format}</td>
                 <td className="data-cell status-cell">
                   {item.loading ? <Skeleton width={100} /> : item.isCompleted ? <FaCheckCircle className="text-success" /> :
                     item.isPaused ? <FaPause className="text-warning" /> :
@@ -183,9 +176,9 @@ const startDownload = useCallback(async (url) => {
                       </button>
                     </div>
                   )}
-                </td>
-              </tr>
-            ))}
+              </td>
+            </tr>
+))}
           </tbody>
         </table>
       </div>
