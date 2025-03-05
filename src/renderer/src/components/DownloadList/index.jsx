@@ -8,13 +8,13 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import '../common.css';
 
-function DownloadList({ url, downloadType, quality, format, saveTo,selectedItem }) {
+function DownloadList({ url, downloadType, quality, format, saveTo,selectedItem,download,
+  setdownload, }) {
   const [downloadList, setDownloadList] = useState([]);
   const [dropdownOpen, setDropdownOpen] = useState(null);
   
-  console.log("selectedItem",selectedItem);
-  
-  console.log("format",format);
+console.log("download",download);
+
 
   
   useEffect(() => {
@@ -22,13 +22,13 @@ function DownloadList({ url, downloadType, quality, format, saveTo,selectedItem 
     setDownloadList(storedDownloads);
   }, []);
 
-  useEffect(() => {
-    if (url) {
+  // useEffect(() => {
+  //   if (url) {
       
-        startDownload(url);
-      }
+  //       startDownload(url);
+  //     }
     
-  }, [url]);
+  // }, [url]);
 ;
   
 const startDownload = useCallback(async (url) => {
@@ -125,7 +125,11 @@ console.log("info",info);
     selectedItem === "Recent Download" ? true : false
   );
   console.log("filteredList",filteredList);
-  
+  useEffect(() => {
+    if (url && download) {
+      startDownload(url);
+    }
+  }, [url, download]);
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -154,9 +158,15 @@ console.log("info",info);
                 <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.duration}</td>
                 <td className="data-cell">{item.loading ? <Skeleton width={50} /> : item.format}</td>
                 <td className="data-cell status-cell">
-                  {item.loading ? <Skeleton width={100} /> : item.isCompleted ? <FaCheckCircle className="text-success" /> :
-                    item.isPaused ? <FaPause className="text-warning" /> :
-                      <ProgressBar now={item.progress} className="flex-grow-1" style={{ height: 4 }} />}
+                  
+                  {item.loading ?
+                  
+                  <Skeleton width={100} /> : item.isCompleted    ? <><FaCheckCircle className="text-success" /> {item.status}</> :
+                    <div>
+                      {item.status}
+                      <ProgressBar now={item.progress} className="flex-grow-1" style={{ height: 4 }} />
+                    </div>
+  }
                 </td>
               
                 <td className="data-cell action-cell">

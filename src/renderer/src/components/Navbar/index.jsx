@@ -67,7 +67,7 @@ function Navbar({ saveTo, setSaveTo, setQuality, setFormat, quality, format, set
           {/* Dropdown for Save Location */}
           <CustomDropdown
             label="Save To"
-            options={["Downloads", "Desktop", "Custom Location..."]}
+            options={["Downloads", "Desktop",]}
             selected={saveTo}
             onSelect={setSaveTo}
           />

@@ -20,7 +20,7 @@ function BottomSection({
   const [isDownloadable, setIsDownloadable] = useState(false)
   const [currentWebViewUrl, setCurrentWebViewUrl] = useState('')
   const [downloadListOpen, setDownloadListOpen] = useState(false)
-  const [videoThumbnail, setVideoThumbnail] = useState('')
+  const [download, setDownload] = useState(false);
   const [downloading, setDownloading] = useState(false)
   const webviewRef = useRef(null)
 console.log("format",format);
@@ -48,6 +48,7 @@ console.log("format",format);
       window.api.getYoutubeCookies()
     }
     setLastUrl(currentWebViewUrl)
+    setDownload(false)
   }, [currentWebViewUrl])
 
   const handlePlatformClick = (platformUrl) => {
@@ -91,7 +92,13 @@ console.log("format",format);
       setIsSidebarOpen(true)
     }
   }, [selectedItem])
-
+  const handleDownloadClick = () => {
+    setDownloadListOpen(true)
+    setShowWebView(false)
+    setIsSidebarOpen(true)
+    setSelectedItem("Recent Download")
+    setDownload(true); 
+  }
   return (
     <div>
       {!showWebView ? (
@@ -106,7 +113,8 @@ console.log("format",format);
                 saveTo={saveTo}
                 url={currentWebViewUrl}
                 selectedItem={selectedItem}
-               
+                download={download} // Pass the state to start download
+                setDownload={setDownload}
               />
 
               {lastUrl ? (
@@ -154,11 +162,7 @@ console.log("format",format);
           {isDownloadable && (
             <button
               className="download-btn"
-              onClick={() => {
-                setDownloadListOpen(true)
-                setShowWebView(!showWebView), setIsSidebarOpen(true),
-                setSelectedItem("Recent Download")
-              }}
+              onClick={handleDownloadClick}
             >
               {downloading ? (
                 'Downloading...'
