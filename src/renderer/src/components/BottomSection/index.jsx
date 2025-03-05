@@ -12,18 +12,23 @@ function BottomSection({
   selectedItem,
   setIsSidebarOpen,
   isSidebarOpen,
-  setSelectedItem
+  setSelectedItem,
+  download,
+  setDownload,
+  setShowWebView,
+  showWebView
+
+  
 }) {
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
-  const [showWebView, setShowWebView] = useState(false)
+ 
   const [isDownloadable, setIsDownloadable] = useState(false)
   const [currentWebViewUrl, setCurrentWebViewUrl] = useState('')
   const [downloadListOpen, setDownloadListOpen] = useState(false)
-  const [download, setDownload] = useState(false);
   const [downloading, setDownloading] = useState(false)
   const webviewRef = useRef(null)
-console.log("format",format);
+
 
   useEffect(() => {
     if (webviewRef.current) {

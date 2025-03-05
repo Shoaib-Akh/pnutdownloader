@@ -26,20 +26,42 @@ function DownloadList({
   const [downloadList, setDownloadList] = useState([])
   const [dropdownOpen, setDropdownOpen] = useState(null)
 
-  console.log('download', download)
-
   useEffect(() => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
     setDownloadList(storedDownloads)
   }, [])
 
-  // useEffect(() => {
-  //   if (url) {
-
-  //       startDownload(url);
-  //     }
-
-  // }, [url]);
+  useEffect(() => {
+    async function fetchDownloadedFiles() {
+      const desktopPath = await window.api.getPath('downloads')
+      const downloadDir = `${desktopPath}/pnutdownloader`
+      try {
+        const files = await window.api.readDirectory(downloadDir)
+        const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+        const updatedList = storedDownloads.map((item) => {
+          const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
+          const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi']
+          const fileExists = files.some((file) => {
+            return possibleExtensions.some((ext) => {
+              const expectedFilename = `${normalizedTitle}.${ext}`
+              return file === expectedFilename
+            })
+          })
+          if (fileExists) {
+            return { ...item, status: 'Completed', isCompleted: true, progress: 100 }
+          }
+          return item
+        })
+        setDownloadList(updatedList)
+        localStorage.setItem('downloadList', JSON.stringify(updatedList))
+      } catch (error) {
+        console.error('❌ Error reading directory:', error)
+      }
+    }
+    if (!download) {
+      fetchDownloadedFiles()
+    }
+  }, [])
   const startDownload = useCallback(
     async (url) => {
       try {
@@ -62,9 +84,7 @@ function DownloadList({
         // Add loading state while fetching info
         setDownloadList((prev) => [{ url, loading: true }, ...prev])
 
-        var info = await window.api.fetchVideoInfo(url)
-        console.log('info', info)
-
+        const info = await window.api.fetchVideoInfo(url)
         setDownloadList((prev) =>
           prev.map((item) => (item.url === url ? { ...item, loading: false } : item))
         )
@@ -73,6 +93,7 @@ function DownloadList({
           url,
           title: info.title,
           thumbnail: info.thumbnail,
+          filename: info.filename,
           quality,
           format: format,
           duration: info.duration,
@@ -88,6 +109,9 @@ function DownloadList({
         const updatedList = [newDownload, ...storedDownloads]
         localStorage.setItem('downloadList', JSON.stringify(updatedList))
         setDownloadList(updatedList)
+
+        // Check if the file already exists in the download directory
+
         await window.api.downloadVideo({
           url,
           isAudioOnly: downloadType === 'Audio',
@@ -95,6 +119,7 @@ function DownloadList({
           selectedQuality: quality,
           saveTo
         })
+
         window.api.onDownloadProgress((progressData) => {
           if (!progressData.message) return
 
@@ -152,7 +177,6 @@ function DownloadList({
           ? true
           : false
   )
-  console.log('filteredList', filteredList)
   useEffect(() => {
     if (url && download) {
       startDownload(url)
@@ -216,7 +240,6 @@ function DownloadList({
                   {item.loading ? <Skeleton width={50} /> : item.format}
                 </td>
                 <td className="data-cell status-cell">
-                  {console.log('item', item.status)}
                   {item.loading ? (
                     <Skeleton width={100} />
                   ) : item.isCompleted ? (

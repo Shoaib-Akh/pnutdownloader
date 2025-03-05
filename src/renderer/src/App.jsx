@@ -9,7 +9,9 @@ function App() {
   const [format, setFormat] = useState('')
   const [saveTo, setSaveTo] = useState('Downloads')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-const [selectedItem, setSelectedItem] = useState("");
+  const [selectedItem, setSelectedItem] = useState('')
+  const [download, setDownload] = useState(false)
+  const [showWebView, setShowWebView] = useState(false)
   return (
     <div className=" vh-100">
       {/* Sidebar Component */}
@@ -35,10 +37,15 @@ const [selectedItem, setSelectedItem] = useState("");
           transition: 'margin-left 0.3s ease-in-out'
         }}
       >
-        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} 
-        setSelectedItem={setSelectedItem}
-        selectedItem={selectedItem}
-        
+        <Sidebar
+          isOpen={isSidebarOpen}
+          setIsOpen={setIsSidebarOpen}
+          setSelectedItem={setSelectedItem}
+          selectedItem={selectedItem}
+          setDownload={setDownload}
+          download={download}
+          setShowWebView={setShowWebView}
+          showWebView={showWebView}
         />
 
         <BottomSection
@@ -50,6 +57,10 @@ const [selectedItem, setSelectedItem] = useState("");
           setIsSidebarOpen={setIsSidebarOpen}
           isSidebarOpen={isSidebarOpen}
           setSelectedItem={setSelectedItem}
+          setDownload={setDownload}
+          download={download}
+          setShowWebView={setShowWebView}
+          showWebView={showWebView}
         />
       </div>
     </div>

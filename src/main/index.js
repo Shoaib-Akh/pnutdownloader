@@ -4,7 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { spawn } from 'child_process'
-
+import fs from 'fs/promises'
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
   : join(__dirname, '../../public/ffmpeg.exe')
@@ -168,169 +168,176 @@ ipcMain.handle('getYoutubeCookies', async () => {
 // }
 ipcMain.handle('fetch-video-info', async (event, url) => {
   return new Promise((resolve, reject) => {
-    const args = ['-J', url];
-    const proc = spawn(ytdlpPath, args);
+    const args = ['-J', url]
+    const proc = spawn(ytdlpPath, args)
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = ''
+    let stderr = ''
 
     proc.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
+      stdout += data.toString()
+    })
 
     proc.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
+      stderr += data.toString()
+    })
 
     proc.on('close', (code) => {
       if (code !== 0) {
-        reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`));
-        return;
+        reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`))
+        return
       }
 
       try {
-        const json = JSON.parse(stdout);
+        const json = JSON.parse(stdout)
 
-        const title = json.title || '';
-        let thumbnail = '';
+        const title = json.title || ''
+        let thumbnail = ''
         if (Array.isArray(json.thumbnails) && json.thumbnails.length > 0) {
-          thumbnail = json.thumbnails[json.thumbnails.length - 1].url;
+          thumbnail = json.thumbnails[json.thumbnails.length - 1].url
         }
 
-        const timeDuration = json.duration || 0; 
-        
+        const timeDuration = json.duration || 0
+
         // Duration in seconds
-        const duration = formatDuration(timeDuration); // Format duration
+        const duration = formatDuration(timeDuration) // Format duration
 
-        const filename = title && json.ext ? `${title}.${json.ext}` : title;
+        const filename = title && json.ext ? `${title}.${json.ext}` : title
 
-        resolve({ title, thumbnail, filename, duration, duration });
+        resolve({ title, thumbnail, filename, duration, duration })
       } catch (err) {
-        reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`));
+        reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`))
       }
-    });
-  });
-});
+    })
+  })
+})
 
 // Helper function to format duration
 function formatDuration(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
 // 🛠 Ensure ffmpeg & ffprobe exist
 if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
   console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
 }
-let downloadProcess = null;
+let downloadProcess = null
 
 const startDownload = async (event, options) => {
   try {
     if (downloadProcess) {
-      event.sender.send("download-progress", { status: "A download is already in progress!" });
-      return;
+      event.sender.send('download-progress', { status: 'A download is already in progress!' })
+      return
     }
 
-    const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
+    const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options
 
-    if (!url || typeof url !== "string") throw new Error("Invalid URL.");
-    console.log("options", options);
+    if (!url || typeof url !== 'string') throw new Error('Invalid URL.')
+    console.log('options', options)
 
-    const finalQualityVideo = selectedQuality.replace(/[pP]$/, "");
-    const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
+    const finalQualityVideo = selectedQuality.replace(/[pP]$/, '')
+    const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4'
     const formatSpecifier = isAudioOnly
-  ? `--extract-audio --audio-format mp3 --audio-quality best`
-  : `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
-    console.log("formatSpecifier", formatSpecifier);
+      ? `--extract-audio --audio-format mp3 --audio-quality best`
+      : `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`
+    console.log('formatSpecifier', formatSpecifier)
 
-    let downloadDir;
-    if (saveTo === "Desktop") {
-      downloadDir = join(app.getPath("desktop"), "pnutdownloader");
+    let downloadDir
+    if (saveTo === 'Desktop') {
+      downloadDir = join(app.getPath('desktop'), 'pnutdownloader')
     } else {
-      downloadDir = join(app.getPath("downloads"), "pnutdownloader");
+      downloadDir = join(app.getPath('downloads'), 'pnutdownloader')
     }
 
     if (!existsSync(downloadDir)) {
-      mkdirSync(downloadDir, { recursive: true });
+      mkdirSync(downloadDir, { recursive: true })
     }
 
-    const downloadPath = join(downloadDir, "%(title)s.%(ext)s");
+    const downloadPath = join(downloadDir, '%(title)s.%(ext)s')
 
     const args = [
-      "--continue",
-      ...formatSpecifier.split(" "),
-      "--ffmpeg-location", ffmpegPath,
-      "-o", downloadPath,
-      "--cookies", cookiesPath,
-      url, "--newline", "--ignore-errors", "--progress"
-    ];
+      '--continue',
+      ...formatSpecifier.split(' '),
+      '--ffmpeg-location',
+      ffmpegPath,
+      '-o',
+      downloadPath,
+      '--cookies',
+      cookiesPath,
+      url,
+      '--newline',
+      '--ignore-errors',
+      '--progress'
+    ]
 
-    console.log("Downloading with args:", args); // Debugging
+    console.log('Downloading with args:', args) // Debugging
 
-    downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
+    downloadProcess = spawn(ytdlpPath, args, { windowsHide: true })
 
-    downloadProcess.stdout.on("data", (data) => {
-      const line = data.toString().trim();
-      console.log("output-ytlp", line);
-      event.sender.send("download-progress", { message: line });
-    });
+    downloadProcess.stdout.on('data', (data) => {
+      const line = data.toString().trim()
+      console.log('output-ytlp', line)
+      event.sender.send('download-progress', { message: line })
+    })
 
-    downloadProcess.stderr.on("data", (data) => {
-      const errorMessage = data.toString().trim();
-      console.error("yt-dlp Error:", errorMessage);
-      if (errorMessage.includes("Requested format is not available")) {
-        event.sender.send("download-progress", { error: "Requested format not available. Please try a different format or quality." });
+    downloadProcess.stderr.on('data', (data) => {
+      const errorMessage = data.toString().trim()
+      console.error('yt-dlp Error:', errorMessage)
+      if (errorMessage.includes('Requested format is not available')) {
+        event.sender.send('download-progress', {
+          error: 'Requested format not available. Please try a different format or quality.'
+        })
       } else {
-        event.sender.send("download-progress", { error: errorMessage });
+        event.sender.send('download-progress', { error: errorMessage })
       }
-    });
+    })
 
-    downloadProcess.on("close", (code) => {
-      downloadProcess = null;
-      event.sender.send("download-progress", { status: "Download complete!", file: downloadPath });
-    });
-
+    downloadProcess.on('close', (code) => {
+      downloadProcess = null
+      event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath })
+    })
   } catch (err) {
-    console.error("Download error:", err);
-    event.sender.send("download-progress", { error: err.message });
-    throw err;
+    console.error('Download error:', err)
+    event.sender.send('download-progress', { error: err.message })
+    throw err
   }
-};
+}
 ipcMain.handle('show-message-box', async (_, options) => {
-  return dialog.showMessageBox(mainWindow, options);
-});
-ipcMain.handle("downloadVideo", async (event, options) => {
-  console.log("Starting download...");
-  await startDownload(event, options);
-});
+  return dialog.showMessageBox(mainWindow, options)
+})
+ipcMain.handle('downloadVideo', async (event, options) => {
+  console.log('Starting download...')
+  await startDownload(event, options)
+})
 
 ipcMain.handle('resumeDownload', async (event, options) => {
   if (!downloadProcess) {
-    console.log("Resuming download...");
-    await startDownload(event, options);
-    return true;
+    console.log('Resuming download...')
+    await startDownload(event, options)
+    return true
   }
-  return false;
-});
-const treeKill = require('tree-kill');
+  return false
+})
+const treeKill = require('tree-kill')
 ipcMain.handle('pauseDownload', () => {
-  console.log("Attempting to pause download...");
+  console.log('Attempting to pause download...')
   if (downloadProcess) {
-    console.log("Killing download process with PID:", downloadProcess.pid);
+    console.log('Killing download process with PID:', downloadProcess.pid)
     treeKill(downloadProcess.pid, 'SIGKILL', (err) => {
       if (err) {
-        console.error("Failed to kill process tree:", err);
+        console.error('Failed to kill process tree:', err)
       } else {
-        console.log("Process tree killed successfully.");
+        console.log('Process tree killed successfully.')
       }
-    });
-    downloadProcess = null;
-    return true;
+    })
+    downloadProcess = null
+    return true
   }
-  console.log("No active download to pause.");
-  return false;
-});
+  console.log('No active download to pause.')
+  return false
+})
 function saveDownloadState(state) {
   const filePath = join(app.getPath('userData'), 'downloadState.json')
   fs.writeFileSync(filePath, JSON.stringify(state))
@@ -339,4 +346,28 @@ function saveDownloadState(state) {
 ipcMain.handle('load-download-state', () => {
   const filePath = join(app.getPath('userData'), 'downloadState.json')
   return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : null
+})
+
+ipcMain.handle('get-path', async (_event, name) => {
+  return app.getPath(name)
+})
+
+// ✅ Handle directory reading request
+ipcMain.handle('read-directory', async (_event, dirPath) => {
+  try {
+    return await fs.readdir(dirPath) // Reads all files inside the directory
+  } catch (error) {
+    console.error('Failed to read directory:', error)
+    return []
+  }
+})
+
+// ✅ Handle file existence check
+ipcMain.handle('file-exists', async (_event, filePath) => {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
 })
