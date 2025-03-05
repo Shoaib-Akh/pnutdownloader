@@ -235,13 +235,14 @@ const startDownload = async (event, options) => {
     const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
 
     if (!url || typeof url !== "string") throw new Error("Invalid URL.");
-console.log("options",options);
+    console.log("options", options);
 
     const finalQualityVideo = selectedQuality.replace(/[pP]$/, "");
-
+    const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
     const formatSpecifier = isAudioOnly
-      ? `--extract-audio --audio-format mp3 --audio-quality best`
-      : `-f bestvideo[height<=${finalQualityVideo}]+bestaudio/best`;
+  ? `--extract-audio --audio-format mp3 --audio-quality best`
+  : `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
+    console.log("formatSpecifier", formatSpecifier);
 
     let downloadDir;
     if (saveTo === "Desktop") {
@@ -265,17 +266,24 @@ console.log("options",options);
       url, "--newline", "--ignore-errors", "--progress"
     ];
 
+    console.log("Downloading with args:", args); // Debugging
+
     downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
 
     downloadProcess.stdout.on("data", (data) => {
       const line = data.toString().trim();
+      console.log("output-ytlp", line);
       event.sender.send("download-progress", { message: line });
     });
 
     downloadProcess.stderr.on("data", (data) => {
       const errorMessage = data.toString().trim();
       console.error("yt-dlp Error:", errorMessage);
-      event.sender.send("download-progress", { error: errorMessage });
+      if (errorMessage.includes("Requested format is not available")) {
+        event.sender.send("download-progress", { error: "Requested format not available. Please try a different format or quality." });
+      } else {
+        event.sender.send("download-progress", { error: errorMessage });
+      }
     });
 
     downloadProcess.on("close", (code) => {
