@@ -29,7 +29,8 @@
     "react-bootstrap": "^2.10.9",
     "react-icons": "^5.5.0",
     "react-loading-skeleton": "^3.5.0",
-    "tree-kill": "^1.2.2"
+    "tree-kill": "^1.2.2",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.0.0",

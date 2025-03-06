@@ -21,15 +21,15 @@ function DownloadList({
   saveTo,
   selectedItem,
   download,
-  setdownload
+  setdownload,
+  setDownloadList,
+  downloadList
 }) {
-  const [downloadList, setDownloadList] = useState([])
+ 
   const [dropdownOpen, setDropdownOpen] = useState(null)
+console.log("downloadList",downloadList);
 
-  useEffect(() => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-    setDownloadList(storedDownloads)
-  }, [])
+ 
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -62,104 +62,7 @@ function DownloadList({
       fetchDownloadedFiles()
     }
   }, [])
-  const startDownload = useCallback(
-    async (url) => {
-      try {
-        const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-        const existingDownload = storedDownloads.some((item) => item.url === url)
-
-        if (existingDownload) {
-          if (!window.alertShown) {
-            window.api.showMessageBox({
-              type: 'warning',
-              title: 'Duplicate Download',
-              message: 'This URL is already in the download list.'
-            })
-            window.alertShown = true
-            setTimeout(() => (window.alertShown = false), 1000)
-          }
-          return
-        }
-
-        // Add loading state while fetching info
-        setDownloadList((prev) => [{ url, loading: true }, ...prev])
-
-        const info = await window.api.fetchVideoInfo(url)
-        setDownloadList((prev) =>
-          prev.map((item) => (item.url === url ? { ...item, loading: false } : item))
-        )
-
-        const newDownload = {
-          url,
-          title: info.title,
-          thumbnail: info.thumbnail,
-          filename: info.filename,
-          quality,
-          format: format,
-          duration: info.duration,
-          progress: 0,
-          fileSize: 'Unknown',
-          speed: 'Unknown',
-          eta: 'Unknown',
-          status: 'Downloading',
-          isCompleted: false,
-          isPaused: false
-        }
-
-        const updatedList = [newDownload, ...storedDownloads]
-        localStorage.setItem('downloadList', JSON.stringify(updatedList))
-        setDownloadList(updatedList)
-
-        // Check if the file already exists in the download directory
-
-        await window.api.downloadVideo({
-          url,
-          isAudioOnly: downloadType === 'Audio',
-          selectedFormat: format,
-          selectedQuality: quality,
-          saveTo
-        })
-
-        window.api.onDownloadProgress((progressData) => {
-          if (!progressData.message) return
-
-          const parseMessage = progressData.message.match(
-            /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
-          )
-
-          if (parseMessage) {
-            const [, progress, fileSize, speed, eta] = parseMessage
-
-            setDownloadList((prev) => {
-              const updatedList = prev.map((item) =>
-                item.url === url
-                  ? {
-                      ...item,
-                      progress: parseFloat(progress),
-                      fileSize,
-                      speed,
-                      eta,
-                      status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading',
-                      isCompleted: parseFloat(progress) >= 100
-                    }
-                  : item
-              )
-              localStorage.setItem('downloadList', JSON.stringify(updatedList))
-              return updatedList
-            })
-          }
-        })
-      } catch (error) {
-        console.error('Download error:', error)
-        setDownloadList((prev) =>
-          prev.map((item) =>
-            item.url === url ? { ...item, status: 'Error', loading: false } : item
-          )
-        )
-      }
-    },
-    [downloadType, quality, format, saveTo]
-  )
+  
 
   const handleDelete = (url) => {
     setDownloadList((prev) => {
@@ -177,11 +80,7 @@ function DownloadList({
           ? true
           : false
   )
-  useEffect(() => {
-    if (url && download) {
-      startDownload(url)
-    }
-  }, [url, download])
+  
   const handlePauseResume = (url) => {
     setDownloadList((prev) =>
       prev.map((item) => {
@@ -247,8 +146,10 @@ function DownloadList({
                       <FaCheckCircle className="text-success" /> {item.status}
                     </>
                   ) : (
+                    
                     <div>
                       <FaRegClock className="text-primary" /> {item.status}
+                      
                       <ProgressBar
                         now={item.progress}
                         className="flex-grow-1"
