@@ -29,7 +29,7 @@ function BottomSection({
   const webviewRef = useRef(null);
   const downloadQueue = useRef([]);
   const isDownloading = useRef(false);
-
+  const [isFetchingInfo, setIsFetchingInfo] = useState(false)
   // Handle webview navigation
   useEffect(() => {
     if (webviewRef.current) {
@@ -144,7 +144,10 @@ function BottomSection({
       processQueue();
     }, 500); // Wait 500ms before processing the next one
   };
-
+  useEffect(() => {
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+    setDownloadList(storedDownloads)
+  }, [])
   // Start downloading a URL
   const startDownload = useCallback(async (urls) => {
     try {
@@ -191,6 +194,8 @@ function BottomSection({
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
         setDownloadList((prev) => [newDownload, ...prev]);
   
+        setIsFetchingInfo(true); // Set loading state to true
+  
         let retries = 3;
         let info = null;
         while (retries > 0) {
@@ -205,10 +210,13 @@ function BottomSection({
               );
               localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
               setDownloadList(storedDownloads);
+              setIsFetchingInfo(false); // Set loading state to false on failure
               return;
             }
           }
         }
+  
+        setIsFetchingInfo(false); // Set loading state to false after fetching info
   
         const updatedDownload = {
           ...newDownload,
@@ -229,48 +237,39 @@ function BottomSection({
   
         try {
           const handleProgress = (progressData) => {
-
-  
-            // if (!progressData.message || item.id !== newId) {
-            //   console.log('Skipping progress update for mismatched ID or missing message');
-            //   return;
-            // }
-  
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
             );
   
-           
-              console.log('Download ID:', newId);
-              
+            if (parseMessage) {
               const [, progress, fileSize, speed, eta] = parseMessage;
-              // console.log('Parsed Progress:', { progress, fileSize, speed, eta });
-            
+  
               setDownloadList((prev) => {
                 const updatedList = prev.map((item) => {
-                  console.log(`Checking item ID: ${item.id} === ${newId} ->`, item.id === newId);
-                  
-                  return item.id === newId
-                    ? {
-                        ...item,
-                        progress: parseFloat(progress),
-                        fileSize,
-                        speed,
-                        eta,
-                        status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading',
-                        isCompleted: parseFloat(progress) >= 100,
-                      }
-                    : item;
+                  if (item.id === newId && item.status !== "Completed") {
+                    return {
+                      ...item,
+                      progress: parseFloat(progress),
+                      fileSize,
+                      speed,
+                      eta,
+                      status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading',
+                      isCompleted: parseFloat(progress) >= 100,
+                    };
+                  }
+                  return item;
                 });
-            
+  
                 localStorage.setItem('downloadList', JSON.stringify(updatedList));
                 return updatedList;
               });
-            
+            }
           };
   
+          // Attach the progress handler
           window.api.onDownloadProgress(handleProgress);
   
+          // Start the download
           await window.api.downloadVideo({
             id: newId,
             url,
@@ -280,6 +279,7 @@ function BottomSection({
             saveTo,
           });
   
+          // Mark the download as completed
           storedDownloads = storedDownloads.map((item) =>
             item.id === newId ? { ...item, status: 'Completed', isCompleted: true } : item
           );
@@ -295,6 +295,7 @@ function BottomSection({
       }
     } catch (error) {
       console.error('❌ Download error:', error);
+      setIsFetchingInfo(false); // Set loading state to false on error
     }
   }, [downloadType, format, quality, saveTo]);
   // Render the component
@@ -315,6 +316,7 @@ function BottomSection({
                 setDownload={setDownload}
                 setDownloadList={setDownloadList}
                 downloadList={downloadList}
+                isFetchingInfo={isFetchingInfo}
                 
               />
 

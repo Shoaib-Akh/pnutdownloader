@@ -23,7 +23,8 @@ function DownloadList({
   download,
   setdownload,
   setDownloadList,
-  downloadList
+  downloadList,
+  isFetchingInfo
 }) {
  
   const [dropdownOpen, setDropdownOpen] = useState(null)
@@ -117,7 +118,7 @@ console.log("downloadList",downloadList);
             {filteredList.map((item) => (
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
-                  {item.loading ? (
+                  {isFetchingInfo? (
                     <Skeleton width={100} height={50} />
                   ) : (
                     <>
@@ -133,13 +134,13 @@ console.log("downloadList",downloadList);
                   )}
                 </td>
                 <td className="data-cell">
-                  {item.loading ? <Skeleton width={50} /> : item.duration}
+                  {isFetchingInfo ? <Skeleton width={50} /> : item.duration}
                 </td>
                 <td className="data-cell">
-                  {item.loading ? <Skeleton width={50} /> : item.format}
+                  {isFetchingInfo ? <Skeleton width={50} /> : item.format}
                 </td>
                 <td className="data-cell status-cell">
-                  {item.loading ? (
+                  {isFetchingInfo ? (
                     <Skeleton width={100} />
                   ) : item.isCompleted ? (
                     <>
