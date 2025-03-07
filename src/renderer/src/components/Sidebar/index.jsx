@@ -10,7 +10,8 @@ function Sidebar({
   setSelectedItem,
   download,
   setDownload,
-  setShowWebView
+  setShowWebView,
+  setDownloadListOpen
 }) {
   const menuItems = [
     { icon: IoMdDownload, label: 'Recent Download' },
@@ -76,7 +77,7 @@ function Sidebar({
               setSelectedItem(item.label)
               setDownload(false)
               setShowWebView(false)
-              setDownloadListOpen(false)
+              setDownloadListOpen(true)
             }}
             style={{
               display: 'flex',

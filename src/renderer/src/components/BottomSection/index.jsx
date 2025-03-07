@@ -18,18 +18,20 @@ function BottomSection({
   setDownload,
   setShowWebView,
   showWebView,
+  setDownloadListOpen,
+  downloadListOpen
 }) {
   const [url, setUrl] = useState('');
   const [lastUrl, setLastUrl] = useState('');
   const [isDownloadable, setIsDownloadable] = useState(false);
   const [currentWebViewUrl, setCurrentWebViewUrl] = useState('');
-  const [downloadListOpen, setDownloadListOpen] = useState(false);
+ 
   const [downloading, setDownloading] = useState(false);
   const [downloadList, setDownloadList] = useState([]);
   const webviewRef = useRef(null);
   const downloadQueue = useRef([]);
   const isDownloading = useRef(false);
-  const [isFetchingInfo, setIsFetchingInfo] = useState(false)
+  const [fetchingInfoMap, setFetchingInfoMap] = useState(new Map());
   // Handle webview navigation
   useEffect(() => {
     if (webviewRef.current) {
@@ -175,11 +177,11 @@ function BottomSection({
         const newDownload = {
           id: newId,
           url,
-          title: 'Fetching...',
+          title: '',
           thumbnail: '',
           filename: '',
-          quality: '',
-          format: '',
+          quality:quality ,
+          format: format,
           duration: '',
           progress: 0,
           fileSize: 'Unknown',
@@ -194,7 +196,8 @@ function BottomSection({
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
         setDownloadList((prev) => [newDownload, ...prev]);
   
-        setIsFetchingInfo(true); // Set loading state to true
+        // Set loading state for this specific download
+        setFetchingInfoMap((prev) => new Map(prev).set(newId, true));
   
         let retries = 3;
         let info = null;
@@ -210,21 +213,20 @@ function BottomSection({
               );
               localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
               setDownloadList(storedDownloads);
-              setIsFetchingInfo(false); // Set loading state to false on failure
+              setFetchingInfoMap((prev) => new Map(prev).set(newId, false)); // Reset loading state on failure
               return;
             }
           }
         }
   
-        setIsFetchingInfo(false); // Set loading state to false after fetching info
+        // Reset loading state after fetching info
+        setFetchingInfoMap((prev) => new Map(prev).set(newId, false));
   
         const updatedDownload = {
           ...newDownload,
           title: info?.title || 'Unknown',
           thumbnail: info?.thumbnail || '',
           filename: info?.filename || '',
-          quality: info?.quality || 'Unknown',
-          format: info?.format || 'Unknown',
           duration: info?.duration || 'Unknown',
           status: 'Downloading',
         };
@@ -256,6 +258,9 @@ function BottomSection({
                       status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading',
                       isCompleted: parseFloat(progress) >= 100,
                     };
+                  } else {
+                    console.log("progress");
+                    
                   }
                   return item;
                 });
@@ -295,7 +300,6 @@ function BottomSection({
       }
     } catch (error) {
       console.error('❌ Download error:', error);
-      setIsFetchingInfo(false); // Set loading state to false on error
     }
   }, [downloadType, format, quality, saveTo]);
   // Render the component
@@ -316,7 +320,7 @@ function BottomSection({
                 setDownload={setDownload}
                 setDownloadList={setDownloadList}
                 downloadList={downloadList}
-                isFetchingInfo={isFetchingInfo}
+                fetchingInfoMap={fetchingInfoMap}
                 
               />
 

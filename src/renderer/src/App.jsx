@@ -12,6 +12,7 @@ function App() {
   const [selectedItem, setSelectedItem] = useState('')
   const [download, setDownload] = useState(false)
   const [showWebView, setShowWebView] = useState(false)
+   const [downloadListOpen, setDownloadListOpen] = useState(false);
   return (
     <div className=" vh-100">
       {/* Sidebar Component */}
@@ -46,6 +47,7 @@ function App() {
           download={download}
           setShowWebView={setShowWebView}
           showWebView={showWebView}
+          setDownloadListOpen={setDownloadListOpen}
         />
 
         <BottomSection
@@ -61,6 +63,8 @@ function App() {
           download={download}
           setShowWebView={setShowWebView}
           showWebView={showWebView}
+          downloadListOpen={downloadListOpen}
+          setDownloadListOpen={setDownloadListOpen}
         />
       </div>
     </div>

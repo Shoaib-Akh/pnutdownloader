@@ -24,13 +24,10 @@ function DownloadList({
   setdownload,
   setDownloadList,
   downloadList,
-  isFetchingInfo
+  fetchingInfoMap
 }) {
- 
   const [dropdownOpen, setDropdownOpen] = useState(null)
-console.log("downloadList",downloadList);
-
- 
+  console.log('downloadList', downloadList)
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -63,7 +60,6 @@ console.log("downloadList",downloadList);
       fetchDownloadedFiles()
     }
   }, [])
-  
 
   const handleDelete = (url) => {
     setDownloadList((prev) => {
@@ -81,7 +77,7 @@ console.log("downloadList",downloadList);
           ? true
           : false
   )
-  
+
   const handlePauseResume = (url) => {
     setDownloadList((prev) =>
       prev.map((item) => {
@@ -118,7 +114,7 @@ console.log("downloadList",downloadList);
             {filteredList.map((item) => (
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
-                  {isFetchingInfo? (
+                  {fetchingInfoMap.get(item.id) ? (
                     <Skeleton width={100} height={50} />
                   ) : (
                     <>
@@ -127,30 +123,31 @@ console.log("downloadList",downloadList);
                         style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }}
                         alt="Thumbnail"
                       />
-                      {item.title
-                        ? `#${item.title.split(' ').slice(0, 5).join(' ')}${item.title.split(' ').length > 5 ? '...' : ''}`
-                        : '' || <Skeleton width={50} />}
+                      {fetchingInfoMap.get(item.id) ? (
+                        <Skeleton width={50} />
+                       
+                      ) : (
+                         `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
+                      )}
                     </>
                   )}
                 </td>
                 <td className="data-cell">
-                  {isFetchingInfo ? <Skeleton width={50} /> : item.duration}
+                  {fetchingInfoMap.get(item.id) ? <Skeleton width={50} /> : item.duration}
                 </td>
                 <td className="data-cell">
-                  {isFetchingInfo ? <Skeleton width={50} /> : item.format}
+                  {fetchingInfoMap.get(item.id) ? <Skeleton width={50} /> : item.format}
                 </td>
                 <td className="data-cell status-cell">
-                  {isFetchingInfo ? (
+                  {fetchingInfoMap.get(item.id) ? (
                     <Skeleton width={100} />
                   ) : item.isCompleted ? (
                     <>
                       <FaCheckCircle className="text-success" /> {item.status}
                     </>
                   ) : (
-                    
                     <div>
                       <FaRegClock className="text-primary" /> {item.status}
-                      
                       <ProgressBar
                         now={item.progress}
                         className="flex-grow-1"
@@ -161,12 +158,17 @@ console.log("downloadList",downloadList);
                 </td>
 
                 <td className="data-cell action-cell">
-                  <button
-                    className="three-dots-btn"
-                    onClick={() => setDropdownOpen(dropdownOpen === item.url ? null : item.url)}
-                  >
-                    <FaEllipsisV />
-                  </button>
+                  {fetchingInfoMap.get(item.id) ? (
+                    <Skeleton width={40} height={40} borderRadius={100} />
+                  ) : (
+                    <button
+                      className="three-dots-btn"
+                      onClick={() => setDropdownOpen(dropdownOpen === item.url ? null : item.url)}
+                    >
+                      <FaEllipsisV />
+                    </button>
+                  )}
+
                   {dropdownOpen === item.url && (
                     <div className="dropdown-menu show">
                       {!item.isCompleted && (
