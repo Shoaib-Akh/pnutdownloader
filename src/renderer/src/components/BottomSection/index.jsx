@@ -243,13 +243,13 @@ function BottomSection({
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
             );
-          
+  
             if (parseMessage) {
               const [, progress, fileSize, speed, eta] = parseMessage;
-          
+  
               setDownloadList((prev) => {
                 const updatedList = prev.map((item) => {
-                  if (item.id === newId && item.status !== "Completed") {
+                  if (item.id === newId && item.status !== "Completed" && !item.isPaused) {
                     return {
                       ...item,
                       progress: parseFloat(progress),
@@ -262,13 +262,12 @@ function BottomSection({
                   }
                   return item;
                 });
-          
+  
                 localStorage.setItem('downloadList', JSON.stringify(updatedList));
                 return updatedList;
               });
             }
           };
-          
   
           // Attach the progress handler
           window.api.onDownloadProgress(handleProgress);
@@ -291,7 +290,7 @@ function BottomSection({
           setDownloadList(storedDownloads);
         } catch (error) {
           console.log("error", error);
-          
+  
           if (error.message.includes("Error invoking remote method 'downloadVideo': Error: Download failed with code")) {
             storedDownloads = storedDownloads.map((item) =>
               item.id === newId ? { ...item, status: 'Paused', isPaused: true } : item
@@ -301,7 +300,7 @@ function BottomSection({
               item.id === newId ? { ...item, status: 'Failed', isFailed: true } : item
             );
           }
-          
+  
           localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
           setDownloadList(storedDownloads);
         }

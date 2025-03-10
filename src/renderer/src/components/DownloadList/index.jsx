@@ -61,38 +61,43 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
   )
 
   const handlePauseResume = async (id) => {
-    setDownloadList((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          if (item.isPaused) {
-            window.api.resumeDownload({
-              url: item.url,
-              isAudioOnly: item.downloadType === "Audio",
-              selectedFormat: item.format,
-              selectedQuality: item.quality,
-              saveTo: item.saveTo,
-            });
-            return { ...item, isPaused: false, status: "Downloading" };
-          } else {
-            window.api.showConfirmDialog(
-              "Pause Download",
-              "If you pause the download, resuming may start from the beginning. Do you want to continue?"
-            ).then((response) => {
-              if (response === 0) {
-                window.api.pauseDownload(item.id);
-                setDownloadList((prevState) =>
-                  prevState.map((itm) =>
-                    itm.id === id ? { ...itm, isPaused: true, status: "Paused" } : itm
-                  )
-                );
-              }
-            });
-          }
-        }
-        return item;
-      })
-    );
+    const item = downloadList.find((itm) => itm.id === id);
+    if (!item) return; // If item is not found, do nothing
+  
+    if (item.isPaused) {
+      // Resume the download
+      window.api.resumeDownload({
+        url: item.url,
+        isAudioOnly: item.downloadType === "Audio",
+        selectedFormat: item.format,
+        selectedQuality: item.quality,
+        saveTo: item.saveTo,
+      });
+  
+      setDownloadList((prev) =>
+        prev.map((itm) =>
+          itm.id === id ? { ...itm, isPaused: false, status: "Downloading" } : itm
+        )
+      );
+    } else {
+      // Pause confirmation
+      const response = await window.api.showConfirmDialog(
+        "Pause Download",
+        "If you pause the download, resuming may start from the beginning. Do you want to continue?"
+      );
+  
+      if (response === 0) {
+        window.api.pauseDownload(id);
+        setDownloadList((prev) =>
+          prev.map((itm) =>
+            itm.id === id ? { ...itm, isPaused: true, status: "Paused" } : itm
+          )
+        );
+      }
+    }
   };
+  
+  
   const getThumbnailUrl = (videoId, quality) => 
     videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
 
@@ -200,7 +205,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                         {!item.isCompleted && (
                         <button
                           className="dropdown-item"
-                          onClick={() => handlePauseResume(item.id)}
+                          onClick={() => {handlePauseResume(item.id); setDropdownOpen(false)}}
                         >
                           {item.isPaused ? (
                             <FaPlay className="me-2" />
