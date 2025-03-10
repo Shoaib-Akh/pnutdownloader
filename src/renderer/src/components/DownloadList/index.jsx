@@ -1,64 +1,47 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from "react";
 import {
   FaCheckCircle,
-  FaTimesCircle,
   FaRegClock,
   FaPause,
   FaPlay,
   FaEllipsisV,
-  FaTrash
-} from 'react-icons/fa'
-import { ProgressBar } from 'react-bootstrap'
-import Skeleton from 'react-loading-skeleton'
-import 'react-loading-skeleton/dist/skeleton.css'
-import '../common.css'
+  FaTrash,
+  FaDownload,
+} from "react-icons/fa";
+import { ProgressBar } from "react-bootstrap";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
+import "../common.css";
 
-function DownloadList({
-  url,
-  downloadType,
-  quality,
-  format,
-  saveTo,
-  selectedItem,
-  download,
-  setdownload,
-  setDownloadList,
-  downloadList,
-  fetchingInfoMap
-}) {
-  const [dropdownOpen, setDropdownOpen] = useState(null)
+function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInfoMap }) {
+  const [dropdownOpen, setDropdownOpen] = useState(null);
+  const [imageErrors, setImageErrors] = useState({});
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
-      const desktopPath = await window.api.getPath('downloads')
-      const downloadDir = `${desktopPath}/pnutdownloader`
       try {
-        const files = await window.api.readDirectory(downloadDir)
-        const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+        const desktopPath = await window.api.getPath("downloads");
+        const downloadDir = `${desktopPath}/pnutdownloader`;
+        const files = await window.api.readDirectory(downloadDir);
+        const storedDownloads = JSON.parse(localStorage.getItem("downloadList")) || [];
+
         const updatedList = storedDownloads.map((item) => {
-          const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
-          const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi']
-          const fileExists = files.some((file) => {
-            return possibleExtensions.some((ext) => {
-              const expectedFilename = `${normalizedTitle}.${ext}`
-              return file === expectedFilename
-            })
-          })
-          if (fileExists) {
-            return { ...item, status: 'Completed', isCompleted: true, progress: 100 }
-          }
-          return item
-        })
-        setDownloadList(updatedList)
-        localStorage.setItem('downloadList', JSON.stringify(updatedList))
+          const normalizedTitle = item.title.replace(/\|/g, "｜").trim();
+          const possibleExtensions = ["mp4", "webm", "mkv", "avi"];
+          const fileExists = files.some((file) =>
+            possibleExtensions.some((ext) => file === `${normalizedTitle}.${ext}`)
+          );
+          return fileExists ? { ...item, status: "Completed", isCompleted: true, progress: 100 } : item;
+        });
+
+        setDownloadList(updatedList);
+        localStorage.setItem("downloadList", JSON.stringify(updatedList));
       } catch (error) {
-        console.error('❌ Error reading directory:', error)
+        console.error("❌ Error reading directory:", error);
       }
     }
-    if (!download) {
-      fetchDownloadedFiles()
-    }
-  }, [])
+    fetchDownloadedFiles();
+  }, [setDownloadList]);
 
   const handleDelete = (url) => {
     setDownloadList((prev) => {
@@ -78,52 +61,53 @@ function DownloadList({
   )
 
   const handlePauseResume = async (id) => {
-    setDownloadList((prev) => {
-      return prev.map((item) => {
+    setDownloadList((prev) =>
+      prev.map((item) => {
         if (item.id === id) {
           if (item.isPaused) {
-            console.log(`Resuming download: ${item.url}`);
             window.api.resumeDownload({
               url: item.url,
-              isAudioOnly: item.downloadType === 'Audio',
+              isAudioOnly: item.downloadType === "Audio",
               selectedFormat: item.format,
               selectedQuality: item.quality,
               saveTo: item.saveTo,
             });
-  
-            return { ...item, isPaused: false, status: 'Downloading' };
+            return { ...item, isPaused: false, status: "Downloading" };
           } else {
-            // Show confirmation dialog before pausing
             window.api.showConfirmDialog(
               "Pause Download",
               "If you pause the download, resuming may start from the beginning. Do you want to continue?"
             ).then((response) => {
-              if (response === 0) { // 0 means 'Yes' was clicked
-                console.log(`Pausing download: ${item.url}`);
+              if (response === 0) {
                 window.api.pauseDownload(item.id);
-                
                 setDownloadList((prevState) =>
                   prevState.map((itm) =>
-                    itm.id === id ? { ...itm, isPaused: true, status: 'Paused' } : itm
+                    itm.id === id ? { ...itm, isPaused: true, status: "Paused" } : itm
                   )
                 );
-  
-                // Update localStorage after state change
-                setTimeout(() => {
-                  localStorage.setItem('downloadList', JSON.stringify(downloadList));
-                  console.log("Updated download list in localStorage", downloadList);
-                }, 100);
               }
             });
           }
         }
         return item;
-      });
+      })
+    );
+  };
+  const getThumbnailUrl = (videoId, quality) => 
+    videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
+
+  const handleImageError = (videoId) => {
+    setImageErrors((prevErrors) => {
+      const fallbackQualities = ["hqdefault", "mqdefault", "default"];
+      const currentIndex = prevErrors[videoId] || 0;
+
+      if (currentIndex < fallbackQualities.length) {
+        return { ...prevErrors, [videoId]: currentIndex + 1 };
+      } else {
+        return { ...prevErrors, [videoId]: "error" }; // Mark as failed
+      }
     });
   };
-  
-  
-  
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -138,18 +122,33 @@ function DownloadList({
             </tr>
           </thead>
           <tbody>
-            {filteredList.map((item) => (
+            {filteredList.map((item) => {
+                const imageQuality =
+                ["maxresdefault", "hqdefault", "mqdefault", "default"][
+                  imageErrors[item.videoId] || 0
+                ];
+              const imageSrc =
+                imageErrors[item.videoId] === "error"
+                  ? null
+                  : getThumbnailUrl(item.videoId, imageQuality);
+                  return(
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
                   {fetchingInfoMap.get(item.id) ? (
                     <Skeleton width={100} height={50} />
                   ) : (
                     <>
-                      <img
-                        src={item.thumbnail}
-                        style={{ width: 50, height: 50, borderRadius: 10, marginRight: 5 }}
-                        alt="Thumbnail"
-                      />
+                       {imageSrc ? (
+              <img
+                src={imageSrc}
+                onError={handleImageError}
+                style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
+                alt="Thumbnail"
+              />
+            ) : (
+              <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
+            )}   
+
                       {fetchingInfoMap.get(item.id) ? (
                         <Skeleton width={50} />
                        
@@ -158,7 +157,7 @@ function DownloadList({
                       )}
                     </>
                   )}
-                </td>
+                  </td>
                 <td className="data-cell">
                   {fetchingInfoMap.get(item.id) ? <Skeleton width={50} /> : item.duration}
                 </td>
@@ -172,17 +171,17 @@ function DownloadList({
                     <>
                       <FaCheckCircle className="text-success" /> {item.status}
                     </>
-                  ) : (
-                    <div>
-                      <FaRegClock className="text-primary" /> {item.status}
+                    ) : (
+                      <div>
+                        <FaRegClock className="text-primary" /> {item.status}
                       <ProgressBar
                         now={item.progress}
                         className="flex-grow-1"
                         style={{ height: 4 }}
                       />
-                    </div>
-                  )}
-                </td>
+                      </div>
+                    )}
+                  </td>
 
                 <td className="data-cell action-cell">
                   {fetchingInfoMap.get(item.id) ? (
@@ -196,9 +195,9 @@ function DownloadList({
                     </button>
                   )}
 
-                  {dropdownOpen === item.url && (
+                    {dropdownOpen === item.url && (
                     <div className="dropdown-menu show">
-                      {!item.isCompleted && (
+                        {!item.isCompleted && (
                         <button
                           className="dropdown-item"
                           onClick={() => handlePauseResume(item.id)}
@@ -209,17 +208,18 @@ function DownloadList({
                             <FaPause className="me-2" />
                           )}{' '}
                           {item.isPaused ? 'Resume' : 'Pause'}
-                        </button>
-                      )}
+                          </button>
+                        )}
 
                       <button className="dropdown-item" onClick={() => handleDelete(item.url)}>
                         <FaTrash className="me-2" /> Delete
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+            )})}
+          
           </tbody>
         </table>
       </div>
