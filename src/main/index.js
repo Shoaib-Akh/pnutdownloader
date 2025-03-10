@@ -225,7 +225,7 @@ if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
 }
 
 let downloadProcess = null; // Track the current download process
-
+const activeDownloads = {};
 const startDownload = async (event, options) => {
   return new Promise((resolve, reject) => {
     try {
@@ -234,9 +234,13 @@ const startDownload = async (event, options) => {
         reject(new Error('A download is already in progress.'));
         return;
       }
+      const downloadId = options.id;
 
+      if (activeDownloads[downloadId]) {
+        console.log(`Download already in progress for ${url}`);
+        return { success: false, message: 'Download already in progress.' };
+      }
       const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
-
       if (!url || typeof url !== 'string') throw new Error('Invalid URL.');
       console.log('options', options);
 
@@ -394,3 +398,14 @@ ipcMain.handle('file-exists', async (_event, filePath) => {
     return false
   }
 })
+ipcMain.handle('show-confirm-dialog', async (event, options) => {
+  const result = await dialog.showMessageBox({
+    type: 'warning',
+    title: options.title || "Confirm",
+    message: options.message || "Are you sure?",
+    buttons: options.buttons || ["Yes", "No"],
+    defaultId: 0, // Default to "Yes"
+    cancelId: 1, // Cancel on "No"
+  });
+  return result.response; // Returns index of clicked button
+});

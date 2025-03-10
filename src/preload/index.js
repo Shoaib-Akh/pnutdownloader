@@ -7,25 +7,29 @@ const api = {
   fetchVideoInfo: (url) => ipcRenderer.invoke('fetch-video-info', url),
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo }) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id }) =>
     ipcRenderer.invoke('downloadVideo', {
       url,
       isAudioOnly,
       selectedFormat,
       selectedQuality,
-      saveTo
+      saveTo,
+      id
     }),
 
-  pauseDownload: () => ipcRenderer.invoke('pauseDownload'),
-  resumeDownload: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo }) =>
+    pauseDownload: (downloadId) => ipcRenderer.invoke('pauseDownload', downloadId),
+  resumeDownload: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id }) =>
     ipcRenderer.invoke('resumeDownload', {
       url,
       isAudioOnly,
       selectedFormat,
       selectedQuality,
-      saveTo
+      saveTo,
+      id
     }),
-
+    showConfirmDialog: (title, message) => {
+      return ipcRenderer.invoke('show-confirm-dialog', { title, message });
+    },
   saveDownloadState: (state) => ipcRenderer.invoke('save-download-state', state),
   loadDownloadState: () => ipcRenderer.invoke('load-download-state'),
 

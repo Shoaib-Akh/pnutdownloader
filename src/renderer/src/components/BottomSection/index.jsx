@@ -190,6 +190,7 @@ function BottomSection({
           status: 'Fetching Info...',
           isCompleted: false,
           isFailed: false,
+          isPaused:false
         };
   
         storedDownloads = [newDownload, ...storedDownloads];
@@ -242,10 +243,10 @@ function BottomSection({
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
             );
-  
+          
             if (parseMessage) {
               const [, progress, fileSize, speed, eta] = parseMessage;
-  
+          
               setDownloadList((prev) => {
                 const updatedList = prev.map((item) => {
                   if (item.id === newId && item.status !== "Completed") {
@@ -255,21 +256,19 @@ function BottomSection({
                       fileSize,
                       speed,
                       eta,
-                      status: parseFloat(progress) >= 100 ? 'Completed' : 'Downloading',
+                      status: item.isPaused ? 'Paused' : (parseFloat(progress) >= 100 ? 'Completed' : 'Downloading'),
                       isCompleted: parseFloat(progress) >= 100,
                     };
-                  } else {
-                    console.log("progress");
-                    
                   }
                   return item;
                 });
-  
+          
                 localStorage.setItem('downloadList', JSON.stringify(updatedList));
                 return updatedList;
               });
             }
           };
+          
   
           // Attach the progress handler
           window.api.onDownloadProgress(handleProgress);
@@ -291,9 +290,18 @@ function BottomSection({
           localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
           setDownloadList(storedDownloads);
         } catch (error) {
-          storedDownloads = storedDownloads.map((item) =>
-            item.id === newId ? { ...item, status: 'Failed', isFailed: true } : item
-          );
+          console.log("error", error);
+          
+          if (error.message.includes("Error invoking remote method 'downloadVideo': Error: Download failed with code")) {
+            storedDownloads = storedDownloads.map((item) =>
+              item.id === newId ? { ...item, status: 'Paused', isPaused: true } : item
+            );
+          } else {
+            storedDownloads = storedDownloads.map((item) =>
+              item.id === newId ? { ...item, status: 'Failed', isFailed: true } : item
+            );
+          }
+          
           localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
           setDownloadList(storedDownloads);
         }

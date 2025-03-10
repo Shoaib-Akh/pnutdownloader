@@ -27,7 +27,6 @@ function DownloadList({
   fetchingInfoMap
 }) {
   const [dropdownOpen, setDropdownOpen] = useState(null)
-  console.log('downloadList', downloadList)
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -78,25 +77,53 @@ function DownloadList({
           : false
   )
 
-  const handlePauseResume = (url) => {
-    setDownloadList((prev) =>
-      prev.map((item) => {
-        if (item.url === url) {
-          item.isPaused
-            ? window.api.resumeDownload({
-                url,
-                isAudioOnly: downloadType === 'Audio',
-                selectedFormat: item.format,
-                selectedQuality: item.quality,
-                saveTo
-              })
-            : window.api.pauseDownload()
-          return { ...item, isPaused: !item.isPaused }
+  const handlePauseResume = async (id) => {
+    setDownloadList((prev) => {
+      return prev.map((item) => {
+        if (item.id === id) {
+          if (item.isPaused) {
+            console.log(`Resuming download: ${item.url}`);
+            window.api.resumeDownload({
+              url: item.url,
+              isAudioOnly: item.downloadType === 'Audio',
+              selectedFormat: item.format,
+              selectedQuality: item.quality,
+              saveTo: item.saveTo,
+            });
+  
+            return { ...item, isPaused: false, status: 'Downloading' };
+          } else {
+            // Show confirmation dialog before pausing
+            window.api.showConfirmDialog(
+              "Pause Download",
+              "If you pause the download, resuming may start from the beginning. Do you want to continue?"
+            ).then((response) => {
+              if (response === 0) { // 0 means 'Yes' was clicked
+                console.log(`Pausing download: ${item.url}`);
+                window.api.pauseDownload(item.id);
+                
+                setDownloadList((prevState) =>
+                  prevState.map((itm) =>
+                    itm.id === id ? { ...itm, isPaused: true, status: 'Paused' } : itm
+                  )
+                );
+  
+                // Update localStorage after state change
+                setTimeout(() => {
+                  localStorage.setItem('downloadList', JSON.stringify(downloadList));
+                  console.log("Updated download list in localStorage", downloadList);
+                }, 100);
+              }
+            });
+          }
         }
-        return item
-      })
-    )
-  }
+        return item;
+      });
+    });
+  };
+  
+  
+  
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -174,7 +201,7 @@ function DownloadList({
                       {!item.isCompleted && (
                         <button
                           className="dropdown-item"
-                          onClick={() => handlePauseResume(item.url)}
+                          onClick={() => handlePauseResume(item.id)}
                         >
                           {item.isPaused ? (
                             <FaPlay className="me-2" />
