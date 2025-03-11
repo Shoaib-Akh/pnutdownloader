@@ -98,21 +98,26 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
   };
   
   
-  const getThumbnailUrl = (videoId, quality) => 
-    videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
+  // const getThumbnailUrl = (videoId, quality) => 
+  //   videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
 
-  const handleImageError = (videoId) => {
-    setImageErrors((prevErrors) => {
-      const fallbackQualities = ["hqdefault", "mqdefault", "default"];
-      const currentIndex = prevErrors[videoId] || 0;
+  // const handleImageError = (videoId) => {
+  //   setImageErrors((prevErrors) => {
+  //     const fallbackQualities = ["hqdefault", "mqdefault", "default"];
+  //     const currentIndex = prevErrors[videoId] || 0;
 
-      if (currentIndex < fallbackQualities.length) {
-        return { ...prevErrors, [videoId]: currentIndex + 1 };
-      } else {
-        return { ...prevErrors, [videoId]: "error" }; // Mark as failed
-      }
-    });
-  };
+  //     if (currentIndex < fallbackQualities.length) {
+  //       return { ...prevErrors, [videoId]: currentIndex + 1 };
+  //     } else {
+  //       return { ...prevErrors, [videoId]: "error" }; // Mark as failed
+  //     }
+  //   });
+  // };
+  // const extractVideoId = (url) => {
+  //   const match = url.match(/[?&]v=([^&]+)/);
+  //   return match ? match[1] : null;
+  // };
+  // extractVideoId()
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -128,14 +133,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
           </thead>
           <tbody>
             {filteredList.map((item) => {
-                const imageQuality =
-                ["maxresdefault", "hqdefault", "mqdefault", "default"][
-                  imageErrors[item.videoId] || 0
-                ];
-              const imageSrc =
-                imageErrors[item.videoId] === "error"
-                  ? null
-                  : getThumbnailUrl(item.videoId, imageQuality);
+              
                   return(
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
@@ -143,16 +141,16 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                     <Skeleton width={100} height={50} />
                   ) : (
                     <>
-                       {imageSrc ? (
+                       
               <img
-                src={imageSrc}
-                onError={handleImageError}
+                src={item.thumbnail}
+               
                 style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
                 alt="Thumbnail"
               />
-            ) : (
+            {/* ) : (
               <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
-            )}   
+            )}    */}
 
                       {item.status=="Fetching Info.." ? (
                         <Skeleton width={50} />

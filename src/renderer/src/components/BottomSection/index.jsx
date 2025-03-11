@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FaDownload } from 'react-icons/fa';
+import { FaDownload,FaTimes,FaGlobe } from 'react-icons/fa';
 import '../common.css';
 import PlatformIcons from '../PlatformIcons';
 import DownloadList from '../DownloadList';
 import { v4 as uuidv4 } from 'uuid';
+import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 
 function BottomSection({
   downloadType,
@@ -32,6 +33,39 @@ function BottomSection({
   const downloadQueue = useRef([]);
   const isDownloading = useRef(false);
   const [fetchingInfoMap, setFetchingInfoMap] = useState(new Map());
+
+  const extractVideoId = (url) => {
+    const match = url.match(/[?&]v=([^&]+)/);
+    return match ? match[1] : null;
+  };
+  const API_KEY = 'AIzaSyAqOmz88j_a10_Eoa7-Z9lgW8b-J6YrXI4' 
+  const getVideoInfo = async (videoUrl) => {
+    try {
+      const videoId = extractVideoId(videoUrl); // Extract the video ID from the URL
+      if (!videoId) throw new Error('Invalid YouTube URL');
+  
+      const response = await fetch(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
+      );
+      const data = await response.json();
+  
+      if (data.items.length === 0) throw new Error('Video not found');
+  
+      const videoInfo = data.items[0].snippet;
+      console.log("videoInfo",videoInfo)
+      
+      return {
+
+        
+        title: videoInfo.title,
+        thumbnail: videoInfo.thumbnails.high.url,
+        duration: data.items[0].contentDetails.duration, // ISO 8601 format
+      };
+    } catch (error) {
+      console.error('Error fetching video info:', error);
+      return null;
+    }
+  };
   // Handle webview navigation
   useEffect(() => {
     if (webviewRef.current) {
@@ -168,7 +202,7 @@ function BottomSection({
   
     try {
       // Fetch video info
-      const info = await window.api.fetchVideoInfo(url);
+      const info = await getVideoInfo(url);
   
       // Update the download item with the fetched info
       setDownloadList((prev) => {
@@ -516,9 +550,18 @@ function BottomSection({
               />
 
               {lastUrl ? (
-                <button className="close-webview-btn" onClick={handleResumeBrowser}>
-                  Resume Browser
+                <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+              >
+                <button
+                  className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
+                  style={{ width: "48px", height: "48px" }}
+                  onClick={handleResumeBrowser}
+                >
+                  <FaGlobe size={16}/>
                 </button>
+              </OverlayTrigger>
               ) : (
                 <button
                   className="close-webview-btn"
@@ -540,9 +583,21 @@ function BottomSection({
               <h1>Select a service below and enter your search query</h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
-                <button className="close-webview-btn" onClick={handleResumeBrowser}>
-                  Resume Browser
+                // <button className="close-webview-btn" onClick={handleResumeBrowser}>
+                //   Resume Browser
+                // </button>
+                <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+              >
+                <button
+                  className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
+                  style={{ width: "48px", height: "48px" }}
+                  onClick={handleResumeBrowser}
+                >
+                  <FaGlobe size={16}/>
                 </button>
+              </OverlayTrigger>
               )}
             </div>
           )}
@@ -553,9 +608,22 @@ function BottomSection({
           style={{ margin: isSidebarOpen ? '10px 20px 10px 60px' : '10px 20px 10px 30px' }}
         >
           <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
-          <button className="close-webview-btn" onClick={handleCloseWebView}>
+          {/* <button className="close-webview-btn" onClick={handleCloseWebView}>
             Close Browser
-          </button>
+          </button> */}
+           <OverlayTrigger
+      placement="top"
+      overlay={<Tooltip id="close-tooltip">Close Process</Tooltip>}
+    >
+      <button
+        className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
+        style={{ width: "48px", height: "48px" }}
+        onClick={handleCloseWebView}
+      >
+        <FaTimes size={20} />
+      </button>
+    </OverlayTrigger>
+  
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
               {downloading ? 'Downloading...' : <><FaDownload /> Download</>}
