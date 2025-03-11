@@ -139,7 +139,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                   return(
               <tr key={item.url} className="data-row">
                 <td className="data-cell">
-                  {fetchingInfoMap.get(item.id) ? (
+                  {item.status=="Fetching Info.." ? (
                     <Skeleton width={100} height={50} />
                   ) : (
                     <>
@@ -154,7 +154,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
               <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
             )}   
 
-                      {fetchingInfoMap.get(item.id) ? (
+                      {item.status=="Fetching Info.." ? (
                         <Skeleton width={50} />
                        
                       ) : (
@@ -164,13 +164,13 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                   )}
                   </td>
                 <td className="data-cell">
-                  {fetchingInfoMap.get(item.id) ? <Skeleton width={50} /> : item.duration}
+                  {item.status=="Fetching Info.." ? <Skeleton width={50} /> : item.duration}
                 </td>
                 <td className="data-cell">
-                  {fetchingInfoMap.get(item.id) ? <Skeleton width={50} /> : item.format}
+                  {item.status=="Fetching Info.." ? <Skeleton width={50} /> : item.format}
                 </td>
                 <td className="data-cell status-cell">
-                  {fetchingInfoMap.get(item.id) ? (
+                  {item.status=="Fetching Info.." ? (
                     <Skeleton width={100} />
                   ) : item.isCompleted ? (
                     <>
@@ -189,7 +189,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                   </td>
 
                 <td className="data-cell action-cell">
-                  {fetchingInfoMap.get(item.id) ? (
+                  {item.status=="Fetching Info.." ? (
                     <Skeleton width={40} height={40} borderRadius={100} />
                   ) : (
                     <button
