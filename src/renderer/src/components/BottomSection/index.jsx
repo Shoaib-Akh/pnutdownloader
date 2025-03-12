@@ -135,392 +135,195 @@ function BottomSection({
     ];
     setIsDownloadable(videoPatterns.some((pattern) => pattern.test(currentUrl)));
   };
+// Handle download click
+const handleDownloadClick = () => {
+  if (!currentWebViewUrl) {
+    console.error('No URL detected.');
+    return;
+  }
 
-  // Handle download click
-  const handleDownloadClick = () => {
-    if (!currentWebViewUrl) {
-      console.error('No URL detected.');
-      return;
-    }
-
-
-    setUrl(currentWebViewUrl);
-    setDownloadListOpen(true);
-    setShowWebView(false);
-    setIsSidebarOpen(true);
-    setSelectedItem('Recent Download');
-    setDownload(true);
-
-    // Add the URL to the queue and process it
-    addToQueue(currentWebViewUrl);
-  };
+  setUrl(currentWebViewUrl);
+  setDownloadListOpen(true);
+  setShowWebView(false);
+  setIsSidebarOpen(true);
+  setSelectedItem('Recent Download');
+  setDownload(true);
 
   // Add URL to the download queue
-  const addToQueue = (url) => {
-    if (!url) return;
-  
-    // Create a new download item with "Fetching Info..." status
-    const newId = uuidv4();
-    const newDownload = {
-      id: newId,
-      url,
-      title: 'Fetching Info...',
-      thumbnail: '',
-      filename: '',
-      quality: quality,
-      format: format,
-      duration: 'Unknown',
-      progress: 0,
-      fileSize: 'Unknown',
-      speed: 'Unknown',
-      eta: 'Unknown',
-      status: 'Fetching Info..',
-      isCompleted: false,
-      isFailed: false,
-      isPaused: false,
-    };
-  
-    // Add the new download to the list
-    setDownloadList((prev) => [newDownload, ...prev]);
-    localStorage.setItem('downloadList', JSON.stringify([newDownload, ...JSON.parse(localStorage.getItem('downloadList') || '[]')]));
-  
-    // Add the URL to the queue and process it
-    downloadQueue.current.push(url);
-  
-    if (!isDownloading.current) {
-      processQueue();
-    }
+  addToQueue(currentWebViewUrl);
+};
+
+const addToQueue = (url) => {
+  if (!url) return;
+
+  const newId = uuidv4();
+  const newDownload = {
+    id: newId,
+    url,
+    title: 'Pending...',
+    thumbnail: '',
+    filename: '',
+    quality: quality,
+    format: format,
+    duration: 'Unknown',
+    progress: 0,
+    fileSize: 'Unknown',
+    speed: 'Unknown',
+    eta: 'Unknown',
+    status: 'Queued',
+    isCompleted: false,
+    isFailed: false,
+    isPaused: false,
   };
 
-  // Process the download queue
-  const processQueue = async () => {
-    if (downloadQueue.current.length === 0) {
-      isDownloading.current = false;
-      return;
-    }
-  
-    isDownloading.current = true;
-    const url = downloadQueue.current[0]; // Get the first item in the queue without removing it
-  
+  setDownloadList((prev) => [newDownload, ...prev]);
+  localStorage.setItem('downloadList', JSON.stringify([newDownload, ...JSON.parse(localStorage.getItem('downloadList') || '[]')]))
+  downloadQueue.current.push(url);
+
+  if (!isDownloading.current) {
+    processQueue();
+  }
+};
+
+const processQueue = async () => {
+  if (downloadQueue.current.length === 0) {
+    isDownloading.current = false;
+    return;
+  }
+
+  isDownloading.current = true;
+
+  while (downloadQueue.current.length > 0) {
+    const url = downloadQueue.current[0];
     try {
-      // Fetch video info
-      const info = await getVideoInfo(url);
-  
-      // Update the download item with the fetched info
-      setDownloadList((prev) => {
-        const updatedList = prev.map((item) => {
-          if (item.url === url) {
-            return {
-              ...item,
-              title: info?.title || 'Unknown',
-              thumbnail: info?.thumbnail || '',
-              filename: info?.filename || '',
-              duration: info?.duration || 'Unknown',
-              status: 'Downloading', 
-            };
-          }
-          return item;
-        });
-  
-        // Update localStorage
-        localStorage.setItem('downloadList', JSON.stringify(updatedList));
-        return updatedList;
-      });
-  
-      // Remove the URL from the queue
-      downloadQueue.current.shift();
-  
-      // Start the download
-      await startDownload([url], info);
+      await startDownload([url]);
     } catch (error) {
-      console.error('Error fetching video info:', error);
-  
-      // If fetching info fails, mark the item as failed
-      setDownloadList((prev) => {
-        const updatedList = prev.map((item) => {
-          if (item.url === url) {
-            return {
-              ...item,
-              status: 'Failed',
-              isFailed: true,
-            };
-          }
-          return item;
-        });
-  
-        // Update localStorage
-        localStorage.setItem('downloadList', JSON.stringify(updatedList));
-        return updatedList;
-      });
-  
-      // Remove the URL from the queue
-      downloadQueue.current.shift();
-    } finally {
-      // Process the next item in the queue after a delay
-      setTimeout(() => {
-        processQueue();
-      }, 500); // Wait 500ms before processing the next one
+      console.error('Download error:', error);
     }
-  };
-  useEffect(() => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-    setDownloadList(storedDownloads)
-  }, [])
-  // Start downloading a URL
-  // const startDownload = useCallback(async (urls) => {
-  //   try {
-  //     let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-  
-  //     for (const url of urls) {
-  //       if (!url) continue;
-  
-  //       const newId = uuidv4();
-  
-  //       const existingDownload = storedDownloads.some((item) => item.url === url);
-  //       if (existingDownload) {
-  //         if (!window.alertShown) {
-  //           window.api.showMessageBox({
-  //             type: 'warning',
-  //             title: 'Duplicate Download',
-  //             message: 'This URL is already in the download list.',
-  //           });
-  //           window.alertShown = true;
-  //           setTimeout(() => (window.alertShown = false), 1000);
-  //         }
-  //         continue;
-  //       }
-  
-  //       const newDownload = {
-  //         id: newId,
-  //         url,
-  //         title: '',
-  //         thumbnail: '',
-  //         filename: '',
-  //         quality:quality ,
-  //         format: format,
-  //         duration: '',
-  //         progress: 0,
-  //         fileSize: 'Unknown',
-  //         speed: 'Unknown',
-  //         eta: 'Unknown',
-  //         status: 'Fetching Info...',
-  //         isCompleted: false,
-  //         isFailed: false,
-  //         isPaused:false
-  //       };
-  
-  //       storedDownloads = [newDownload, ...storedDownloads];
-  //       localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  //       setDownloadList((prev) => [newDownload, ...prev]);
-  
-  //       // Set loading state for this specific download
-  //       setFetchingInfoMap((prev) => new Map(prev).set(newId, true));
-  
-  //       let retries = 3;
-  //       let info = null;
-  //       while (retries > 0) {
-  //         try {
-  //           info = await window.api.fetchVideoInfo(url);
-  //           break;
-  //         } catch (error) {
-  //           retries--;
-  //           if (retries === 0) {
-  //             storedDownloads = storedDownloads.map((item) =>
-  //               item.id === newId ? { ...item, status: 'Failed', isFailed: true } : item
-  //             );
-  //             localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  //             setDownloadList(storedDownloads);
-  //             setFetchingInfoMap((prev) => new Map(prev).set(newId, false)); // Reset loading state on failure
-  //             return;
-  //           }
-  //         }
-  //       }
-  
-  //       // Reset loading state after fetching info
-  //       setFetchingInfoMap((prev) => new Map(prev).set(newId, false));
-  
-  //       const updatedDownload = {
-  //         ...newDownload,
-  //         title: info?.title || 'Unknown',
-  //         thumbnail: info?.thumbnail || '',
-  //         filename: info?.filename || '',
-  //         duration: info?.duration || 'Unknown',
-  //         status: 'Downloading',
-  //       };
-  
-  //       storedDownloads = storedDownloads.map((item) =>
-  //         item.id === newId ? updatedDownload : item
-  //       );
-  //       localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  //       setDownloadList(storedDownloads);
-  
-  //       try {
-  //         const handleProgress = (progressData) => {
-  //           const parseMessage = progressData.message.match(
-  //             /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
-  //           );
-  
-  //           if (parseMessage) {
-  //             const [, progress, fileSize, speed, eta] = parseMessage;
-  
-  //             setDownloadList((prev) => {
-  //               const updatedList = prev.map((item) => {
-  //                 if (item.id === newId && item.status !== "Completed" && !item.isPaused) {
-  //                   return {
-  //                     ...item,
-  //                     progress: parseFloat(progress),
-  //                     fileSize,
-  //                     speed,
-  //                     eta,
-  //                     status: item.isPaused ? 'Paused' : (parseFloat(progress) >= 100 ? 'Completed' : 'Downloading'),
-  //                     isCompleted: parseFloat(progress) >= 100,
-  //                   };
-  //                 }
-  //                 return item;
-  //               });
-  
-  //               localStorage.setItem('downloadList', JSON.stringify(updatedList));
-  //               return updatedList;
-  //             });
-  //           }
-  //         };
-  
-  //         // Attach the progress handler
-  //         window.api.onDownloadProgress(handleProgress);
-  
-  //         // Start the download
-  //         await window.api.downloadVideo({
-  //           id: newId,
-  //           url,
-  //           isAudioOnly: downloadType === 'Audio',
-  //           selectedFormat: format,
-  //           selectedQuality: quality,
-  //           saveTo,
-  //         });
-  
-  //         // Mark the download as completed
-  //         storedDownloads = storedDownloads.map((item) =>
-  //           item.id === newId ? { ...item, status: 'Completed', isCompleted: true } : item
-  //         );
-  //         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  //         setDownloadList(storedDownloads);
-  //       } catch (error) {
-  //         console.log("error", error);
-  
-  //         if (error.message.includes("Error invoking remote method 'downloadVideo': Error: Download failed with code")) {
-  //           storedDownloads = storedDownloads.map((item) =>
-  //             item.id === newId ? { ...item, status: 'Paused', isPaused: true } : item
-  //           );
-  //         } else {
-  //           storedDownloads = storedDownloads.map((item) =>
-  //             item.id === newId ? { ...item, status: 'Failed', isFailed: true } : item
-  //           );
-  //         }
-  
-  //         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  //         setDownloadList(storedDownloads);
-  //       }
-  //     }
-  //   } catch (error) {
-  //     console.error('❌ Download error:', error);
-  //   }
-  // }, [downloadType, format, quality, saveTo]);
-  const startDownload = useCallback(async (urls, info) => {
-    console.log("info", info);
-  console.log("urls",urls);
-  
-    try {
-      let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-  
-      for (const url of urls) {
-        if (!url) continue;
-  console.log("url",url);
-  
-        console.log("info.videourl", info.videoUrl);
-  
-        // Find the existing download item in the list
-        const existingDownloadIndex = storedDownloads.findIndex((item) => item.url === url);
-        if (existingDownloadIndex === -1) {
-          console.error('Download item not found in the list.');
-          continue;
-        }
-  
-        // Update the existing download item with the fetched info
-        const updatedDownload = {
-          ...storedDownloads[existingDownloadIndex],
-          title: info?.title || 'Unknown',
-          thumbnail: info?.thumbnail || '',
-          filename: info?.filename || '',
-          duration: info?.duration || 'Unknown',
-          status: 'Downloading', // Set status to "Downloading"
-        };
-  
-        // Update the download list and localStorage
-        storedDownloads[existingDownloadIndex] = updatedDownload;
-        localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-        setDownloadList(storedDownloads);
-  
-        try {
-          // Attach the progress handler
-          const handleProgress = (progressData) => {
-            const parseMessage = progressData.message.match(
-              /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
-            );
-  
-            if (parseMessage) {
-              const [, progress, fileSize, speed, eta] = parseMessage;
-  
-              // Update local progress state
-              setProgressMap((prev) => {
-                const newMap = new Map(prev);
-                newMap.set(updatedDownload.id, { progress: parseFloat(progress), fileSize, speed, eta });
-                return newMap;
-              });
-            }
-          };
-  
-          // Attach the progress handler
-          window.api.onDownloadProgress(handleProgress);
-  
-          // Start the download
-          await window.api.downloadVideo({
-            id: updatedDownload.id,
-            url,
-            isAudioOnly: downloadType === 'Audio',
-            selectedFormat: format,
-            selectedQuality: quality,
-            saveTo,
-          });
-  
-          // Mark the download as completed
-          storedDownloads = storedDownloads.map((item) =>
-            item.url === url ? { ...item, status: 'Completed', isCompleted: true } : item
-          );
-          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-          setDownloadList(storedDownloads);
-        } catch (error) {
-          console.log("error", error);
-  
-          // Handle paused or failed downloads
-          if (error.message.includes("Error invoking remote method 'downloadVideo': Error: Download failed with code")) {
-            storedDownloads = storedDownloads.map((item) =>
-              item.url === url ? { ...item, status: 'Paused', isPaused: true } : item
-            );
-          } else {
-            storedDownloads = storedDownloads.map((item) =>
-              item.url === url ? { ...item, status: 'Failed', isFailed: true } : item
-            );
-          }
-  
-          // Update localStorage
-          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-          setDownloadList(storedDownloads);
-        }
+    downloadQueue.current.shift();
+  }
+
+  isDownloading.current = false;
+};
+
+const startDownload = useCallback(async (urls) => {
+  try {
+    let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+    
+    for (const url of urls) {
+      const itemIndex = storedDownloads.findIndex((item) => item.url === url);
+      if (itemIndex === -1) continue;
+
+      // Update status to Fetching Info
+      setDownloadList(prev => updateStatus(prev, url, 'Fetching Info...'));
+      storedDownloads = updateLocalStorage(storedDownloads, url, 'Fetching Info...');
+
+      let info;
+      try {
+        info = await getVideoInfo(url);
+      } catch (error) {
+        setDownloadList(prev => markFailed(prev, url));
+        storedDownloads = markFailed(storedDownloads, url);
+        continue;
       }
-    } catch (error) {
-      console.error('❌ Download error:', error);
+
+      // Update with fetched info
+      const updatedItem = {
+        ...storedDownloads[itemIndex],
+        title: info?.title || 'Unknown',
+        thumbnail: info?.thumbnail || '',
+        filename: info?.filename || '',
+        duration: info?.duration || 'Unknown',
+        status: 'Downloading',
+      };
+
+      setDownloadList(prev => updateItem(prev, url, updatedItem));
+      storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem);
+      const handleProgress = (progressData) => {
+        console.log('Progress data received:', progressData);
+        const parseMessage = progressData.message.match(
+          /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
+        );
+
+        if (parseMessage) {
+          const [, progress, fileSize, speed, eta] = parseMessage;
+          console.log('Parsed progress data:', { progress, fileSize, speed, eta });
+
+          // Update local progress state
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(updatedItem.id, { progress: parseFloat(progress), fileSize, speed, eta });
+            console.log('Updated progress map:', newMap);
+            return newMap;
+          });
+        }
+      };
+      window.api.onDownloadProgress(handleProgress);
+      try {
+        await window.api.downloadVideo({
+          id: updatedItem.id,
+          url,
+          isAudioOnly: downloadType === 'Audio',
+          selectedFormat: format,
+          selectedQuality: quality,
+          saveTo,
+        });
+
+        setDownloadList(prev => markCompleted(prev, url));
+        storedDownloads = markCompleted(storedDownloads, url);
+      } catch (error) {
+        const status = error.message.includes('paused') ? 'Paused' : 'Failed';
+        setDownloadList(prev => updateStatus(prev, url, status));
+        storedDownloads = updateLocalStorageStatus(storedDownloads, url, status);
+      }
     }
-  }, [downloadType, format, quality, saveTo]);
+  } catch (error) {
+    console.error('Download error:', error);
+  }
+}, [downloadType, format, quality, saveTo]);
+
+// Helper functions
+const updateStatus = (list, url, status) => 
+  list.map(item => item.url === url ? {...item, status} : item);
+
+const markFailed = (list, url) =>
+  list.map(item => item.url === url ? {...item, status: 'Failed', isFailed: true} : item);
+
+const updateItem = (list, url, newItem) =>
+  list.map(item => item.url === url ? newItem : item);
+
+const markCompleted = (list, url) =>
+  list.map(item => item.url === url ? {...item, status: 'Completed', isCompleted: true} : item);
+
+const updateLocalStorage = (list, url, status) => {
+  const updated = list.map(item => item.url === url ? {...item, status} : item);
+  localStorage.setItem('downloadList', JSON.stringify(updated));
+  return updated;
+};
+
+const updateLocalStorageItem = (list, url, newItem) => {
+  const updated = list.map(item => item.url === url ? newItem : item);
+  localStorage.setItem('downloadList', JSON.stringify(updated));
+  return updated;
+};
+
+const updateLocalStorageStatus = (list, url, status) => {
+  const updated = list.map(item => 
+    item.url === url ? {
+      ...item, 
+      status,
+      ...(status === 'Failed' ? {isFailed: true} : {}),
+      ...(status === 'Paused' ? {isPaused: true} : {})
+    } : item
+  );
+  localStorage.setItem('downloadList', JSON.stringify(updated));
+  return updated;
+};
+
+useEffect(() => {
+  const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+  setDownloadList(storedDownloads);
+}, []);
   // Render the component
   return (
     <div>

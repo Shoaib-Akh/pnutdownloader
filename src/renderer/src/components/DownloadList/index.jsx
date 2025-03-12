@@ -152,9 +152,9 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
           <tbody>
             {filteredList.map((item) => {
               return (
-                <tr key={item.url} className="data-row">
+                <tr key={item.id} className="data-row">
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' ? (
+                    { item.status == 'Fetching Info..'|| item.status == 'Queued'   ? (
                       <Skeleton width={100} height={50} />
                     ) : (
                       <>
@@ -167,7 +167,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
               <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
             )}    */}
 
-                        {item.status == 'Fetching Info..' ? (
+                        { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? (
                           <Skeleton width={50} />
                         ) : (
                           `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
@@ -176,13 +176,13 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
                     )}
                   </td>
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' ? <Skeleton width={50} /> : item.duration}
+                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? <Skeleton width={50} /> : item.duration}
                   </td>
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' ? <Skeleton width={50} /> : item.format}
+                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? <Skeleton width={50} /> : item.format}
                   </td>
                   <td className="data-cell status-cell">
-                    {item.status == 'Fetching Info..' ? (
+                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? (
                       <Skeleton width={100} />
                     ) :  item.isCompleted || progressMap.get(item.id)?.progress === 100  ? (
                       <>
