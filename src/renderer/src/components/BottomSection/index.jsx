@@ -23,7 +23,6 @@ function BottomSection({
   downloadListOpen,
   pastLinkUrl
 }) {
-  console.log("pastLinkUrl",pastLinkUrl);
   
   const [url, setUrl] = useState('');
   const [lastUrl, setLastUrl] = useState('');
@@ -36,7 +35,7 @@ function BottomSection({
   const downloadQueue = useRef([]);
   const isDownloading = useRef(false);
   const [fetchingInfoMap, setFetchingInfoMap] = useState(new Map());
-
+  const [progressMap, setProgressMap] = useState(new Map());
   const extractVideoId = (url) => {
     const match = url.match(/[?&]v=([^&]+)/);
     return match ? match[1] : null;
@@ -59,7 +58,7 @@ function BottomSection({
       
       return {
 
-        
+        videoUrl:videoUrl,
         title: videoInfo.title,
         thumbnail: videoInfo.thumbnails.high.url,
         duration: data.items[0].contentDetails.duration, // ISO 8601 format
@@ -217,7 +216,7 @@ function BottomSection({
               thumbnail: info?.thumbnail || '',
               filename: info?.filename || '',
               duration: info?.duration || 'Unknown',
-              status: 'Downloading', // Update status to "Downloading"
+              status: 'Downloading', 
             };
           }
           return item;
@@ -427,11 +426,17 @@ function BottomSection({
   //   }
   // }, [downloadType, format, quality, saveTo]);
   const startDownload = useCallback(async (urls, info) => {
+    console.log("info", info);
+  console.log("urls",urls);
+  
     try {
       let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
   
       for (const url of urls) {
         if (!url) continue;
+  console.log("url",url);
+  
+        console.log("info.videourl", info.videoUrl);
   
         // Find the existing download item in the list
         const existingDownloadIndex = storedDownloads.findIndex((item) => item.url === url);
@@ -465,25 +470,11 @@ function BottomSection({
             if (parseMessage) {
               const [, progress, fileSize, speed, eta] = parseMessage;
   
-              setDownloadList((prev) => {
-                const updatedList = prev.map((item) => {
-                  if (item.url === url && item.status !== "Completed" && !item.isPaused) {
-                    return {
-                      ...item,
-                      progress: parseFloat(progress),
-                      fileSize,
-                      speed,
-                      eta,
-                      status: item.isPaused ? 'Paused' : (parseFloat(progress) >= 100 ? 'Completed' : 'Downloading'),
-                      isCompleted: parseFloat(progress) >= 100,
-                    };
-                  }
-                  return item;
-                });
-  
-                // Update localStorage
-                localStorage.setItem('downloadList', JSON.stringify(updatedList));
-                return updatedList;
+              // Update local progress state
+              setProgressMap((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(updatedDownload.id, { progress: parseFloat(progress), fileSize, speed, eta });
+                return newMap;
               });
             }
           };
@@ -548,8 +539,7 @@ function BottomSection({
                 setDownload={setDownload}
                 setDownloadList={setDownloadList}
                 downloadList={downloadList}
-                fetchingInfoMap={fetchingInfoMap}
-                
+                progressMap={progressMap}
               />
 
               {lastUrl ? (

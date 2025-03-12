@@ -14,7 +14,7 @@ import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
 import { Dropdown, DropdownButton } from 'react-bootstrap'
 
-function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInfoMap }) {
+function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap }) {
   const [dropdownOpen, setDropdownOpen] = useState(null)
 
   useEffect(() => {
@@ -63,39 +63,55 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
   )
 
   const handlePauseResume = async (id) => {
-    const item = downloadList.find((itm) => itm.id === id)
-    if (!item) return // If item is not found, do nothing
-
+    const item = downloadList.find((itm) => itm.id === id);
+    if (!item) return; // If item is not found, do nothing
+  
     if (item.isPaused) {
-      // Resume the download
+      // ✅ Resume Download (if paused, restart from 0)
       window.api.resumeDownload({
         url: item.url,
         isAudioOnly: item.downloadType === 'Audio',
         selectedFormat: item.format,
         selectedQuality: item.quality,
         saveTo: item.saveTo
-      })
-
-      setDownloadList((prev) =>
-        prev.map((itm) =>
-          itm.id === id ? { ...itm, isPaused: false, status: 'Downloading' } : itm
-        )
-      )
+      });
+  
+      setDownloadList((prev) => {
+        const updatedList = prev.map((itm) => 
+          itm.id === id 
+            ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
+            : itm
+        );
+  
+        localStorage.setItem('downloadList', JSON.stringify(updatedList));
+        return updatedList;
+      });
+  
     } else {
-      // Pause confirmation
+      // ✅ Pause Confirmation: Warn user that progress will reset
       const response = await window.api.showConfirmDialog(
         'Pause Download',
         'If you pause the download, resuming may start from the beginning. Do you want to continue?'
-      )
-
-      if (response === 0) {
-        window.api.pauseDownload(id)
-        setDownloadList((prev) =>
-          prev.map((itm) => (itm.id === id ? { ...itm, isPaused: true, status: 'Paused' } : itm))
-        )
+      );
+  
+      if (response === 0) { // User confirmed pause
+        window.api.pauseDownload(id);
+  
+        setDownloadList((prev) => {
+          const updatedList = prev.map((itm) =>
+            itm.id === id 
+              ? { ...itm, isPaused: true, status: 'Paused' } 
+              : itm
+          );
+  
+          localStorage.setItem('downloadList', JSON.stringify(updatedList));
+          return updatedList;
+        });
       }
     }
-  }
+  };
+  
+  
   const [openDropdown, setOpenDropdown] = useState(null)
 
   // const getThumbnailUrl = (videoId, quality) =>
@@ -118,6 +134,8 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
   //   return match ? match[1] : null;
   // };
   // extractVideoId()
+  
+
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -166,7 +184,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                   <td className="data-cell status-cell">
                     {item.status == 'Fetching Info..' ? (
                       <Skeleton width={100} />
-                    ) : item.isCompleted ? (
+                    ) :  item.isCompleted || progressMap.get(item.id)?.progress === 100  ? (
                       <>
                         <FaCheckCircle className="text-success" /> {item.status}
                       </>
@@ -174,7 +192,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                       <div>
                         <FaRegClock className="text-primary" /> {item.status}
                         <ProgressBar
-                          now={item.progress}
+                          now={progressMap.get(item.id)?.progress || 0} // Get progress from progressMap using ID
                           className="flex-grow-1"
                           style={{ height: 4 }}
                         />
