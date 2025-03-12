@@ -28,7 +28,7 @@ function Sidebar({
         transition: 'width 0.3s ease-in-out',
         backgroundColor: '#f8f9fa',
         color: '#333',
-        height: '75%',
+        height: '80%',
         position: 'fixed',
         left: 0,
 
@@ -82,10 +82,10 @@ function Sidebar({
             style={{
               display: 'flex',
               alignItems: 'center',
-              padding: '10px 15px',
+              padding: '18px 15px',
               borderRadius: '8px',
               cursor: 'pointer',
-              marginBottom: '8px',
+              marginBottom: '10px',
               // backgroundColor: selectedItem === item.label ? "#BB4F28" : "#fff", // 🔥 Selected item background
               color: selectedItem === item.label ? 'black' : '#A0AEC0', // 🔥 Selected text color
               fontSize: 16,
@@ -94,16 +94,28 @@ function Sidebar({
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}
           >
-            <item.icon
+            <div
               style={{
-                marginRight: '10px',
                 backgroundColor: selectedItem === item.label ? '#BB4F28' : '#fff', // 🔥 Icon background
                 borderRadius: '50%',
-                padding: '5px',
-                fontSize: '20px',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                // padding: '5px',
+                height: 30,
+                width: 30,
+                // fontSize: '20px',
                 color: selectedItem === item.label ? '#fff' : '#BB4F28' // 🔥 Icon color logic
               }}
-            />
+            >
+              <item.icon
+                style={{
+                  fontSize: '10px'
+                  // 🔥 Icon color logic
+                }}
+              />
+            </div>
+
             {isOpen && <span>{item.label}</span>}
           </div>
         ))}
@@ -113,7 +125,7 @@ function Sidebar({
       <div
         style={{
           position: 'absolute',
-          bottom: '20px',
+          bottom: '0',
           width: '90%',
           textAlign: 'center'
         }}

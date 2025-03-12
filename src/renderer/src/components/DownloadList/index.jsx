@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react'
 import {
   FaCheckCircle,
   FaRegClock,
@@ -6,42 +6,44 @@ import {
   FaPlay,
   FaEllipsisV,
   FaTrash,
-  FaDownload,
-} from "react-icons/fa";
-import { ProgressBar } from "react-bootstrap";
-import Skeleton from "react-loading-skeleton";
-import "react-loading-skeleton/dist/skeleton.css";
-import "../common.css";
+  FaDownload
+} from 'react-icons/fa'
+import { ProgressBar } from 'react-bootstrap'
+import Skeleton from 'react-loading-skeleton'
+import 'react-loading-skeleton/dist/skeleton.css'
+import '../common.css'
+import { Dropdown, DropdownButton } from 'react-bootstrap'
 
 function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInfoMap }) {
-  const [dropdownOpen, setDropdownOpen] = useState(null);
-  const [imageErrors, setImageErrors] = useState({});
+  const [dropdownOpen, setDropdownOpen] = useState(null)
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
       try {
-        const desktopPath = await window.api.getPath("downloads");
-        const downloadDir = `${desktopPath}/pnutdownloader`;
-        const files = await window.api.readDirectory(downloadDir);
-        const storedDownloads = JSON.parse(localStorage.getItem("downloadList")) || [];
+        const desktopPath = await window.api.getPath('downloads')
+        const downloadDir = `${desktopPath}/pnutdownloader`
+        const files = await window.api.readDirectory(downloadDir)
+        const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
 
         const updatedList = storedDownloads.map((item) => {
-          const normalizedTitle = item.title.replace(/\|/g, "｜").trim();
-          const possibleExtensions = ["mp4", "webm", "mkv", "avi"];
+          const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
+          const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi']
           const fileExists = files.some((file) =>
             possibleExtensions.some((ext) => file === `${normalizedTitle}.${ext}`)
-          );
-          return fileExists ? { ...item, status: "Completed", isCompleted: true, progress: 100 } : item;
-        });
+          )
+          return fileExists
+            ? { ...item, status: 'Completed', isCompleted: true, progress: 100 }
+            : item
+        })
 
-        setDownloadList(updatedList);
-        localStorage.setItem("downloadList", JSON.stringify(updatedList));
+        setDownloadList(updatedList)
+        localStorage.setItem('downloadList', JSON.stringify(updatedList))
       } catch (error) {
-        console.error("❌ Error reading directory:", error);
+        console.error('❌ Error reading directory:', error)
       }
     }
-    fetchDownloadedFiles();
-  }, [setDownloadList]);
+    fetchDownloadedFiles()
+  }, [setDownloadList])
 
   const handleDelete = (url) => {
     setDownloadList((prev) => {
@@ -61,44 +63,42 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
   )
 
   const handlePauseResume = async (id) => {
-    const item = downloadList.find((itm) => itm.id === id);
-    if (!item) return; // If item is not found, do nothing
-  
+    const item = downloadList.find((itm) => itm.id === id)
+    if (!item) return // If item is not found, do nothing
+
     if (item.isPaused) {
       // Resume the download
       window.api.resumeDownload({
         url: item.url,
-        isAudioOnly: item.downloadType === "Audio",
+        isAudioOnly: item.downloadType === 'Audio',
         selectedFormat: item.format,
         selectedQuality: item.quality,
-        saveTo: item.saveTo,
-      });
-  
+        saveTo: item.saveTo
+      })
+
       setDownloadList((prev) =>
         prev.map((itm) =>
-          itm.id === id ? { ...itm, isPaused: false, status: "Downloading" } : itm
+          itm.id === id ? { ...itm, isPaused: false, status: 'Downloading' } : itm
         )
-      );
+      )
     } else {
       // Pause confirmation
       const response = await window.api.showConfirmDialog(
-        "Pause Download",
-        "If you pause the download, resuming may start from the beginning. Do you want to continue?"
-      );
-  
+        'Pause Download',
+        'If you pause the download, resuming may start from the beginning. Do you want to continue?'
+      )
+
       if (response === 0) {
-        window.api.pauseDownload(id);
+        window.api.pauseDownload(id)
         setDownloadList((prev) =>
-          prev.map((itm) =>
-            itm.id === id ? { ...itm, isPaused: true, status: "Paused" } : itm
-          )
-        );
+          prev.map((itm) => (itm.id === id ? { ...itm, isPaused: true, status: 'Paused' } : itm))
+        )
       }
     }
-  };
-  
-  
-  // const getThumbnailUrl = (videoId, quality) => 
+  }
+  const [openDropdown, setOpenDropdown] = useState(null)
+
+  // const getThumbnailUrl = (videoId, quality) =>
   //   videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
 
   // const handleImageError = (videoId) => {
@@ -133,60 +133,56 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
           </thead>
           <tbody>
             {filteredList.map((item) => {
-              
-                  return(
-              <tr key={item.url} className="data-row">
-                <td className="data-cell">
-                  {item.status=="Fetching Info.." ? (
-                    <Skeleton width={100} height={50} />
-                  ) : (
-                    <>
-                       
-              <img
-                src={item.thumbnail}
-               
-                style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
-                alt="Thumbnail"
-              />
-            {/* ) : (
+              return (
+                <tr key={item.url} className="data-row">
+                  <td className="data-cell">
+                    {item.status == 'Fetching Info..' ? (
+                      <Skeleton width={100} height={50} />
+                    ) : (
+                      <>
+                        <img
+                          src={item.thumbnail}
+                          style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
+                          alt="Thumbnail"
+                        />
+                        {/* ) : (
               <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
             )}    */}
 
-                      {item.status=="Fetching Info.." ? (
-                        <Skeleton width={50} />
-                       
-                      ) : (
-                         `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
-                      )}
-                    </>
-                  )}
+                        {item.status == 'Fetching Info..' ? (
+                          <Skeleton width={50} />
+                        ) : (
+                          `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
+                        )}
+                      </>
+                    )}
                   </td>
-                <td className="data-cell">
-                  {item.status=="Fetching Info.." ? <Skeleton width={50} /> : item.duration}
-                </td>
-                <td className="data-cell">
-                  {item.status=="Fetching Info.." ? <Skeleton width={50} /> : item.format}
-                </td>
-                <td className="data-cell status-cell">
-                  {item.status=="Fetching Info.." ? (
-                    <Skeleton width={100} />
-                  ) : item.isCompleted ? (
-                    <>
-                      <FaCheckCircle className="text-success" /> {item.status}
-                    </>
+                  <td className="data-cell">
+                    {item.status == 'Fetching Info..' ? <Skeleton width={50} /> : item.duration}
+                  </td>
+                  <td className="data-cell">
+                    {item.status == 'Fetching Info..' ? <Skeleton width={50} /> : item.format}
+                  </td>
+                  <td className="data-cell status-cell">
+                    {item.status == 'Fetching Info..' ? (
+                      <Skeleton width={100} />
+                    ) : item.isCompleted ? (
+                      <>
+                        <FaCheckCircle className="text-success" /> {item.status}
+                      </>
                     ) : (
                       <div>
                         <FaRegClock className="text-primary" /> {item.status}
-                      <ProgressBar
-                        now={item.progress}
-                        className="flex-grow-1"
-                        style={{ height: 4 }}
-                      />
+                        <ProgressBar
+                          now={item.progress}
+                          className="flex-grow-1"
+                          style={{ height: 4 }}
+                        />
                       </div>
                     )}
                   </td>
 
-                <td className="data-cell action-cell">
+                  {/* <td className="data-cell action-cell">
                   {item.status=="Fetching Info.." ? (
                     <Skeleton width={40} height={40} borderRadius={100} />
                   ) : (
@@ -219,10 +215,50 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, fetchingInf
                         </button>
                       </div>
                     )}
+                  </td> */}
+                  <td className="data-cell action-cell">
+                    {item.status === 'Fetching Info..' ? (
+                      <Skeleton width={40} height={40} borderRadius={100} />
+                    ) : (
+                      <Dropdown
+                        show={openDropdown === item.id}
+                        onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
+                      >
+                        <Dropdown.Toggle as="button" className="three-dots-btn">
+                          <FaEllipsisV />
+                        </Dropdown.Toggle>
+
+                        <Dropdown.Menu className="dropdown-menu">
+                          {!item.isCompleted && (
+                            <Dropdown.Item
+                              onClick={() => {
+                                handlePauseResume(item.id)
+                                setOpenDropdown(null) // Close dropdown after action
+                              }}
+                            >
+                              {item.isPaused ? (
+                                <FaPlay className="me-2" />
+                              ) : (
+                                <FaPause className="me-2" />
+                              )}
+                              {item.isPaused ? 'Resume' : 'Pause'}
+                            </Dropdown.Item>
+                          )}
+                          <Dropdown.Item
+                            onClick={() => {
+                              handleDelete(item.url)
+                              setOpenDropdown(null) // Close dropdown after action
+                            }}
+                          >
+                            <FaTrash className="me-2" /> Delete
+                          </Dropdown.Item>
+                        </Dropdown.Menu>
+                      </Dropdown>
+                    )}
                   </td>
                 </tr>
-            )})}
-          
+              )
+            })}
           </tbody>
         </table>
       </div>

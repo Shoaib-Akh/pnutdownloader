@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { FaDownload,FaTimes,FaGlobe } from 'react-icons/fa';
+import { FaDownload,FaTimes,FaGlobe,FaArrowRight  } from 'react-icons/fa';
 import '../common.css';
 import PlatformIcons from '../PlatformIcons';
 import DownloadList from '../DownloadList';
@@ -20,8 +20,11 @@ function BottomSection({
   setShowWebView,
   showWebView,
   setDownloadListOpen,
-  downloadListOpen
+  downloadListOpen,
+  pastLinkUrl
 }) {
+  console.log("pastLinkUrl",pastLinkUrl);
+  
   const [url, setUrl] = useState('');
   const [lastUrl, setLastUrl] = useState('');
   const [isDownloadable, setIsDownloadable] = useState(false);
@@ -563,8 +566,13 @@ function BottomSection({
                 </button>
               </OverlayTrigger>
               ) : (
+                <OverlayTrigger
+                placement="left"
+                overlay={<Tooltip id="close-tooltip">Back</Tooltip>}
+              >
                 <button
-                  className="close-webview-btn"
+                  className=" shadow close-webview-btn"
+                  style={{ width: "48px", height: "48px" }}
                   onClick={() => {
                     if (lastUrl) {
                       handleResumeBrowser();
@@ -574,8 +582,15 @@ function BottomSection({
                     }
                   }}
                 >
-                  Back
+                  <FaArrowRight size={20} />
                 </button>
+              </OverlayTrigger>
+                // <button
+                //   className="close-webview-btn"
+                  
+                // >
+                //   Back
+                // </button>
               )}
             </div>
           ) : (

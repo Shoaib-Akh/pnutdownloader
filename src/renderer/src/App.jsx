@@ -13,6 +13,8 @@ function App() {
   const [download, setDownload] = useState(false)
   const [showWebView, setShowWebView] = useState(false)
    const [downloadListOpen, setDownloadListOpen] = useState(false);
+   const [pastLinkUrl, setPastLinkUrl] = useState("");
+
   return (
     <div className=" vh-100">
       {/* Sidebar Component */}
@@ -30,6 +32,7 @@ function App() {
         setSaveTo={setSaveTo}
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
+        setPastLinkUrl={setPastLinkUrl}
       />
       <div
         className=""
@@ -65,6 +68,7 @@ function App() {
           showWebView={showWebView}
           downloadListOpen={downloadListOpen}
           setDownloadListOpen={setDownloadListOpen}
+          pastLinkUrl={pastLinkUrl}
         />
       </div>
     </div>
