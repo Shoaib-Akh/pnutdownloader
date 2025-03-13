@@ -14,9 +14,25 @@ import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
 import { Dropdown, DropdownButton } from 'react-bootstrap'
 
-function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap }) {
-  const [dropdownOpen, setDropdownOpen] = useState(null)
+function DownloadList({
+  selectedItem,
+  setDownloadList,
+  downloadList,
+  progressMap,
+  handlePauseResume
+}) {
+useEffect(() => {
+  // Load stored downloads from localStorage
+  var storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+  setDownloadList(storedDownloads)
 
+  // Check for any 'Queued' downloads and add them to the queue
+ 
+
+    // Start processing the queue if not already processing
+    
+  
+}, []);
   useEffect(() => {
     async function fetchDownloadedFiles() {
       try {
@@ -62,56 +78,55 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
           : false
   )
 
-  const handlePauseResume = async (id) => {
-    const item = downloadList.find((itm) => itm.id === id);
-    if (!item) return; // If item is not found, do nothing
-  
-    if (item.isPaused) {
-      // ✅ Resume Download (if paused, restart from 0)
-      window.api.resumeDownload({
-        url: item.url,
-        isAudioOnly: item.downloadType === 'Audio',
-        selectedFormat: item.format,
-        selectedQuality: item.quality,
-        saveTo: item.saveTo
-      });
-  
-      setDownloadList((prev) => {
-        const updatedList = prev.map((itm) => 
-          itm.id === id 
-            ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
-            : itm
-        );
-  
-        localStorage.setItem('downloadList', JSON.stringify(updatedList));
-        return updatedList;
-      });
-  
-    } else {
-      // ✅ Pause Confirmation: Warn user that progress will reset
-      const response = await window.api.showConfirmDialog(
-        'Pause Download',
-        'If you pause the download, resuming may start from the beginning. Do you want to continue?'
-      );
-  
-      if (response === 0) { // User confirmed pause
-        window.api.pauseDownload(id);
-  
-        setDownloadList((prev) => {
-          const updatedList = prev.map((itm) =>
-            itm.id === id 
-              ? { ...itm, isPaused: true, status: 'Paused' } 
-              : itm
-          );
-  
-          localStorage.setItem('downloadList', JSON.stringify(updatedList));
-          return updatedList;
-        });
-      }
-    }
-  };
-  
-  
+  // const handlePauseResume = async (id) => {
+  //   const item = downloadList.find((itm) => itm.id === id);
+  //   if (!item) return; // If item is not found, do nothing
+
+  //   if (item.isPaused) {
+  //     // ✅ Resume Download (if paused, restart from 0)
+  //     window.api.resumeDownload({
+  //       url: item.url,
+  //       isAudioOnly: item.downloadType === 'Audio',
+  //       selectedFormat: item.format,
+  //       selectedQuality: item.quality,
+  //       saveTo: item.saveTo
+  //     });
+
+  //     setDownloadList((prev) => {
+  //       const updatedList = prev.map((itm) =>
+  //         itm.id === id
+  //           ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
+  //           : itm
+  //       );
+
+  //       localStorage.setItem('downloadList', JSON.stringify(updatedList));
+  //       return updatedList;
+  //     });
+
+  //   } else {
+  //     // ✅ Pause Confirmation: Warn user that progress will reset
+  //     const response = await window.api.showConfirmDialog(
+  //       'Pause Download',
+  //       'If you pause the download, resuming may start from the beginning. Do you want to continue?'
+  //     );
+
+  //     if (response === 0) { // User confirmed pause
+  //       window.api.pauseDownload(id);
+
+  //       setDownloadList((prev) => {
+  //         const updatedList = prev.map((itm) =>
+  //           itm.id === id
+  //             ? { ...itm, isPaused: true, status: 'Paused' }
+  //             : itm
+  //         );
+
+  //         localStorage.setItem('downloadList', JSON.stringify(updatedList));
+  //         return updatedList;
+  //       });
+  //     }
+  //   }
+  // };
+
   const [openDropdown, setOpenDropdown] = useState(null)
 
   // const getThumbnailUrl = (videoId, quality) =>
@@ -134,7 +149,6 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
   //   return match ? match[1] : null;
   // };
   // extractVideoId()
-  
 
   return (
     <div className="container-fluid p-0">
@@ -154,7 +168,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
               return (
                 <tr key={item.id} className="data-row">
                   <td className="data-cell">
-                    { item.status == 'Fetching Info..'|| item.status == 'Queued'   ? (
+                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
                       <Skeleton width={100} height={50} />
                     ) : (
                       <>
@@ -167,7 +181,7 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
               <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
             )}    */}
 
-                        { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? (
+                        {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
                           <Skeleton width={50} />
                         ) : (
                           `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
@@ -176,13 +190,21 @@ function DownloadList({ selectedItem, setDownloadList, downloadList, progressMap
                     )}
                   </td>
                   <td className="data-cell">
-                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? <Skeleton width={50} /> : item.duration}
+                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
+                      <Skeleton width={50} />
+                    ) : (
+                      item.duration
+                    )}
                   </td>
                   <td className="data-cell">
-                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? <Skeleton width={50} /> : item.format}
+                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
+                      <Skeleton width={50} />
+                    ) : (
+                      item.format
+                    )}
                   </td>
                   <td className="data-cell status-cell">
-                    { item.status == 'Fetching Info..'|| item.status == 'Queued'  ? (
+                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
                       <Skeleton width={100} />
                     ) :  item.isCompleted || progressMap.get(item.id)?.progress === 100  ? (
                       <>

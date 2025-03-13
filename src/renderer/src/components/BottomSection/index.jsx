@@ -54,7 +54,7 @@ function BottomSection({
       if (data.items.length === 0) throw new Error('Video not found');
   
       const videoInfo = data.items[0].snippet;
-      console.log("videoInfo",videoInfo)
+      // console.log("videoInfo",videoInfo)
       
       return {
 
@@ -240,23 +240,36 @@ const startDownload = useCallback(async (urls) => {
       setDownloadList(prev => updateItem(prev, url, updatedItem));
       storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem);
       const handleProgress = (progressData) => {
-        console.log('Progress data received:', progressData);
+        // console.log('Progress data received:', progressData);
+
+        const youtubeUrlMatch = progressData?.message.match(/https:\/\/www\.youtube\.com\/watch\?v=([\w-]+)/);
+console.log("youtubeUrlMatch",youtubeUrlMatch);
+console.log("url",url);
+console.log("itemIndex",itemIndex
+);
+
+
         const parseMessage = progressData.message.match(
           /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
         );
-
+      
         if (parseMessage) {
           const [, progress, fileSize, speed, eta] = parseMessage;
-          console.log('Parsed progress data:', { progress, fileSize, speed, eta });
 
-          // Update local progress state
-          setProgressMap((prev) => {
-            const newMap = new Map(prev);
+      
+            setProgressMap((prev) => {
+              const newMap = new Map(prev);
             newMap.set(updatedItem.id, { progress: parseFloat(progress), fileSize, speed, eta });
             console.log('Updated progress map:', newMap);
-            return newMap;
-          });
-        }
+              return newMap;
+            });
+          
+          }
+          if (progressData?.status?.includes("Download complete!")) {
+            storedDownloads = storedDownloads.map((item) =>
+              item.id === updatedItem.id ? { ...item, status: 'Completed', isCompleted: true } : item
+            );
+          }
       };
       window.api.onDownloadProgress(handleProgress);
       try {
@@ -271,10 +284,19 @@ const startDownload = useCallback(async (urls) => {
 
         setDownloadList(prev => markCompleted(prev, url));
         storedDownloads = markCompleted(storedDownloads, url);
+       
       } catch (error) {
-        const status = error.message.includes('paused') ? 'Paused' : 'Failed';
-        setDownloadList(prev => updateStatus(prev, url, status));
-        storedDownloads = updateLocalStorageStatus(storedDownloads, url, status);
+               console.log("error", error);
+  
+          if (error.message.includes("Error invoking remote method 'downloadVideo': Error: Download failed with code")) {
+            storedDownloads = storedDownloads.map((item) =>
+              item.id === updatedItem.id ? { ...item, status: 'Paused', isPaused: true } : item
+            );
+          } else {
+            storedDownloads = storedDownloads.map((item) =>
+              item.id === updatedItem.id ? { ...item, status: 'Failed', isFailed: true } : item
+            );
+          }
       }
     }
   } catch (error) {
@@ -321,9 +343,92 @@ const updateLocalStorageStatus = (list, url, status) => {
 };
 
 useEffect(() => {
+  // Load stored downloads from localStorage
   const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
   setDownloadList(storedDownloads);
+
+  // Check for any 'Queued' downloads and add them to the queue
+  const queuedDownloads = storedDownloads.filter((item) => item.status === 'Queued');
+  if (queuedDownloads.length > 0) {
+    console.log('Found queued downloads in localStorage. Adding to queue...');
+    queuedDownloads.forEach((item) => {
+      downloadQueue.current.push(item.url); // Add URL to the queue
+    });
+
+    // Start processing the queue if not already processing
+    if (!isDownloading.current) {
+      console.log('Starting queue processing for queued downloads...');
+      processQueue();
+    }
+  }
 }, []);
+const handlePauseResume = async (id) => {
+  const item = downloadList.find((itm) => itm.id === id);
+  if (!item) return; // If item is not found, do nothing
+
+  if (item.isPaused) {
+    // ✅ Resume Download (if paused, restart from 0)
+    window.api.resumeDownload({
+      url: item.url,
+      isAudioOnly: item.downloadType === 'Audio',
+      selectedFormat: item.format,
+      selectedQuality: item.quality,
+      saveTo: item.saveTo
+    });
+
+    setDownloadList((prev) => {
+      const updatedList = prev.map((itm) => 
+        itm.id === id 
+          ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
+          : itm
+      );
+
+      localStorage.setItem('downloadList', JSON.stringify(updatedList));
+      return updatedList;
+    });
+
+  } else {
+    // ✅ Pause Confirmation: Warn user that progress will reset
+    const response = await window.api.showConfirmDialog(
+      'Pause Download',
+      'If you pause the download, resuming may start from the beginning. Do you want to continue?'
+    );
+
+    if (response === 0) { // User confirmed pause
+      window.api.pauseDownload(id);
+
+      setDownloadList((prev) => {
+        const updatedList = prev.map((itm) =>
+          itm.id === id 
+            ? { ...itm, isPaused: true, status: 'Paused' } 
+            : itm
+        );
+
+        localStorage.setItem('downloadList', JSON.stringify(updatedList));
+        return updatedList;
+      });
+
+      // Check for any 'Queued' downloads in localStorage
+      const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+      const queuedDownloads = storedDownloads.filter((item) => item.status === 'Queued');
+
+      if (queuedDownloads.length > 0) {
+        console.log('Found queued downloads in localStorage. Adding to queue...');
+        queuedDownloads.forEach((item) => {
+          if (!downloadQueue.current.includes(item.url)) { // Avoid duplicate URLs
+            downloadQueue.current.push(item.url); // Add URL to the queue
+          }
+        });
+
+        // Start processing the queue if not already processing
+        if (!isDownloading.current) {
+          console.log('Starting queue processing for queued downloads...');
+          processQueue();
+        }
+      }
+    }
+  }
+};
   // Render the component
   return (
     <div>
@@ -343,6 +448,7 @@ useEffect(() => {
                 setDownloadList={setDownloadList}
                 downloadList={downloadList}
                 progressMap={progressMap}
+                handlePauseResume={handlePauseResume}
               />
 
               {lastUrl ? (
