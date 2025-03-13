@@ -169,26 +169,46 @@ function BottomSection({
   }
   // Handle download click
   const handleDownloadClick = () => {
-    const urlToDownload = pastLinkUrl || currentWebViewUrl
+    const urlToDownload = pastLinkUrl || currentWebViewUrl;
+  
+    // Check if URL is available
     if (!urlToDownload) {
-      console.error('No URL detected.')
-      return
+      console.error('No URL detected.');
+      return;
     }
-
-    setUrl(urlToDownload)
-    setDownloadListOpen(true)
-    setShowWebView(false)
-    setIsSidebarOpen(true)
-    setSelectedItem('Recent Download')
-    setDownload(true)
-
+  
+    // Check if the URL already exists in the download list
+    const existingDownload = downloadList.some((item) => item.url === urlToDownload);
+  
+    if (existingDownload) {
+      // Show a warning message if the URL is already in the download list
+      if (!window.alertShown) {
+        window.api.showMessageBox({
+          type: 'warning',
+          title: 'Duplicate Download',
+          message: 'This URL is already in the download list.',
+        });
+        window.alertShown = true;
+        setTimeout(() => (window.alertShown = false), 1000); // Reset the flag after 1 second
+      }
+      return; // Exit the function if the URL already exists
+    }
+  
+    // Update state
+    setUrl(urlToDownload);
+    setDownloadListOpen(true);
+    setShowWebView(false);
+    setIsSidebarOpen(true);
+    setSelectedItem('Recent Download');
+    setDownload(true);
+  
     // Add URL to the download queue
-    addToQueue(currentWebViewUrl)
-  }
+    addToQueue(urlToDownload);
+  };
 
-  const addToQueue = (url) => {
+  const addToQueue =  async(url) => {
     if (!url) return
-
+  
     const newId = uuidv4()
     const newDownload = {
       id: newId,
