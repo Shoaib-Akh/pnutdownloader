@@ -22,16 +22,8 @@ function DownloadList({
   handlePauseResume
 }) {
 useEffect(() => {
-  // Load stored downloads from localStorage
   var storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
   setDownloadList(storedDownloads)
-
-  // Check for any 'Queued' downloads and add them to the queue
- 
-
-    // Start processing the queue if not already processing
-    
-  
 }, []);
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -77,79 +69,7 @@ useEffect(() => {
           ? true
           : false
   )
-
-  // const handlePauseResume = async (id) => {
-  //   const item = downloadList.find((itm) => itm.id === id);
-  //   if (!item) return; // If item is not found, do nothing
-
-  //   if (item.isPaused) {
-  //     // ✅ Resume Download (if paused, restart from 0)
-  //     window.api.resumeDownload({
-  //       url: item.url,
-  //       isAudioOnly: item.downloadType === 'Audio',
-  //       selectedFormat: item.format,
-  //       selectedQuality: item.quality,
-  //       saveTo: item.saveTo
-  //     });
-
-  //     setDownloadList((prev) => {
-  //       const updatedList = prev.map((itm) =>
-  //         itm.id === id
-  //           ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
-  //           : itm
-  //       );
-
-  //       localStorage.setItem('downloadList', JSON.stringify(updatedList));
-  //       return updatedList;
-  //     });
-
-  //   } else {
-  //     // ✅ Pause Confirmation: Warn user that progress will reset
-  //     const response = await window.api.showConfirmDialog(
-  //       'Pause Download',
-  //       'If you pause the download, resuming may start from the beginning. Do you want to continue?'
-  //     );
-
-  //     if (response === 0) { // User confirmed pause
-  //       window.api.pauseDownload(id);
-
-  //       setDownloadList((prev) => {
-  //         const updatedList = prev.map((itm) =>
-  //           itm.id === id
-  //             ? { ...itm, isPaused: true, status: 'Paused' }
-  //             : itm
-  //         );
-
-  //         localStorage.setItem('downloadList', JSON.stringify(updatedList));
-  //         return updatedList;
-  //       });
-  //     }
-  //   }
-  // };
-
   const [openDropdown, setOpenDropdown] = useState(null)
-
-  // const getThumbnailUrl = (videoId, quality) =>
-  //   videoId ? `https://i.ytimg.com/vi/${videoId}/${quality}.jpg` : null;
-
-  // const handleImageError = (videoId) => {
-  //   setImageErrors((prevErrors) => {
-  //     const fallbackQualities = ["hqdefault", "mqdefault", "default"];
-  //     const currentIndex = prevErrors[videoId] || 0;
-
-  //     if (currentIndex < fallbackQualities.length) {
-  //       return { ...prevErrors, [videoId]: currentIndex + 1 };
-  //     } else {
-  //       return { ...prevErrors, [videoId]: "error" }; // Mark as failed
-  //     }
-  //   });
-  // };
-  // const extractVideoId = (url) => {
-  //   const match = url.match(/[?&]v=([^&]+)/);
-  //   return match ? match[1] : null;
-  // };
-  // extractVideoId()
-
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -165,6 +85,38 @@ useEffect(() => {
           </thead>
           <tbody>
             {filteredList.map((item) => {
+        function convertISODurationToMinutesSeconds(duration) {
+          // Check if the input is a valid string
+          if (typeof duration !== 'string' || !duration.startsWith('PT')) {
+            return '0.00'; // Return a default value for invalid formats
+          }
+        
+          // Extract hours, minutes, and seconds from the ISO 8601 duration string
+          const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+        
+          // If no matches are found, return a default value
+          if (!matches) {
+            return '0.00';
+          }
+        
+          const hours = matches[1] ? parseInt(matches[1]) : 0;
+          const minutes = matches[2] ? parseInt(matches[2]) : 0;
+          const seconds = matches[3] ? parseInt(matches[3]) : 0;
+        
+          // Convert to total seconds
+          const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+        
+          // Convert to hours:minutes.seconds format (e.g., 1:05.04)
+          const formattedHours = Math.floor(totalSeconds / 3600);
+          const formattedMinutes = Math.floor((totalSeconds % 3600) / 60);
+          const formattedSeconds = (totalSeconds % 60).toString().padStart(2, '0');
+        
+          if (formattedHours > 0) {
+            return `${formattedHours}:${formattedMinutes.toString().padStart(2, '0')}.${formattedSeconds}`;
+          } else {
+            return `${formattedMinutes}.${formattedSeconds}`;
+          }
+        }
               return (
                 <tr key={item.id} className="data-row">
                   <td className="data-cell">
@@ -193,7 +145,7 @@ useEffect(() => {
                     {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
                       <Skeleton width={50} />
                     ) : (
-                      item.duration
+                      item?.duration &&   convertISODurationToMinutesSeconds  (item?.duration)
                     )}
                   </td>
                   <td className="data-cell">
