@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import {
-  FaCheckCircle,
-  FaRegClock,
-  FaPause,
-  FaPlay,
-  FaEllipsisV,
-  FaTrash,
-  FaDownload
-} from 'react-icons/fa'
-import { ProgressBar } from 'react-bootstrap'
+import { FaCheckCircle, FaRegClock, FaPause, FaPlay, FaEllipsisV, FaTrash } from 'react-icons/fa'
+import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
-import { Dropdown, DropdownButton } from 'react-bootstrap'
 
 function DownloadList({
   selectedItem,
@@ -21,10 +12,11 @@ function DownloadList({
   progressMap,
   handlePauseResume
 }) {
-useEffect(() => {
-  var storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-  setDownloadList(storedDownloads)
-}, []);
+  useEffect(() => {
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+    setDownloadList(storedDownloads)
+  }, [setDownloadList])
+
   useEffect(() => {
     async function fetchDownloadedFiles() {
       try {
@@ -60,16 +52,52 @@ useEffect(() => {
       return updatedList
     })
   }
-  const filteredList = downloadList.filter((item) =>
-    selectedItem === 'Video'
-      ? item.format === 'MP4'
-      : selectedItem === 'Audio'
-        ? item.format === 'MP3'
-        : selectedItem === 'Recent Download'
-          ? true
-          : false
-  )
+
+  const filteredList = downloadList
+    .filter((item) => {
+      const isPlaylist =
+        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
+
+      if (selectedItem === 'Video') return item.format === 'MP4'
+      if (selectedItem === 'Audio') return item.format === 'MP3'
+      if (selectedItem === 'Playlist') return isPlaylist
+      if (selectedItem === 'Recent Download') return true
+      return false
+    })
+    .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+
   const [openDropdown, setOpenDropdown] = useState(null)
+
+  // Function to convert ISO duration to seconds
+  const convertISODurationToSeconds = (duration) => {
+    if (typeof duration !== 'string' || !duration.startsWith('PT')) {
+      return 0 // Invalid format
+    }
+
+    const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/)
+    if (!matches) return 0
+
+    const hours = matches[1] ? parseInt(matches[1]) : 0
+    const minutes = matches[2] ? parseInt(matches[2]) : 0
+    const seconds = matches[3] ? parseInt(matches[3]) : 0
+
+    return hours * 3600 + minutes * 60 + seconds
+  }
+
+  // Function to calculate remaining download time
+  const calculateRemainingTime = (duration, progress) => {
+    const totalSeconds = convertISODurationToSeconds(duration)
+    const remainingSeconds = (totalSeconds * (100 - progress)) / 100
+    return remainingSeconds
+  }
+
+  // Function to format seconds into MM:SS
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60)
+    const secs = Math.floor(seconds % 60)
+    return `${minutes}:${secs.toString().padStart(2, '0')}`
+  }
+
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -78,6 +106,7 @@ useEffect(() => {
             <tr>
               <th className="header-cell">Files</th>
               <th className="header-cell">DURATION</th>
+              {/* <th className="header-cell">REMAINING</th> */}
               <th className="header-cell">Format</th>
               <th className="header-cell">Status</th>
               <th className="header-cell">Action</th>
@@ -85,42 +114,14 @@ useEffect(() => {
           </thead>
           <tbody>
             {filteredList.map((item) => {
-        function convertISODurationToMinutesSeconds(duration) {
-          // Check if the input is a valid string
-          if (typeof duration !== 'string' || !duration.startsWith('PT')) {
-            return '0.00'; // Return a default value for invalid formats
-          }
-        
-          // Extract hours, minutes, and seconds from the ISO 8601 duration string
-          const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-        
-          // If no matches are found, return a default value
-          if (!matches) {
-            return '0.00';
-          }
-        
-          const hours = matches[1] ? parseInt(matches[1]) : 0;
-          const minutes = matches[2] ? parseInt(matches[2]) : 0;
-          const seconds = matches[3] ? parseInt(matches[3]) : 0;
-        
-          // Convert to total seconds
-          const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-        
-          // Convert to hours:minutes.seconds format (e.g., 1:05.04)
-          const formattedHours = Math.floor(totalSeconds / 3600);
-          const formattedMinutes = Math.floor((totalSeconds % 3600) / 60);
-          const formattedSeconds = (totalSeconds % 60).toString().padStart(2, '0');
-        
-          if (formattedHours > 0) {
-            return `${formattedHours}:${formattedMinutes.toString().padStart(2, '0')}.${formattedSeconds}`;
-          } else {
-            return `${formattedMinutes}.${formattedSeconds}`;
-          }
-        }
+              const progress = progressMap.get(item.id)?.progress || 0
+              const remainingTime = calculateRemainingTime(item.duration, progress)
+              const formattedRemainingTime = formatTime(remainingTime)
+
               return (
                 <tr key={item.id} className="data-row">
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
+                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
                       <Skeleton width={100} height={50} />
                     ) : (
                       <>
@@ -129,27 +130,26 @@ useEffect(() => {
                           style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
                           alt="Thumbnail"
                         />
-                        {/* ) : (
-              <FaDownload  className="text-danger"  style={{ width: 30,height: 30, borderRadius: 10, marginRight: 10 }}/>
-            )}    */}
-
-                        {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
-                          <Skeleton width={50} />
-                        ) : (
-                          `#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`
-                        )}
+                        {`#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`}
                       </>
                     )}
                   </td>
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
+                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
                       <Skeleton width={50} />
                     ) : (
-                      item?.duration &&   convertISODurationToMinutesSeconds  (item?.duration)
+                      formatTime(convertISODurationToSeconds(item.duration))
                     )}
                   </td>
+                  {/* <td className="data-cell">
+                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                      <Skeleton width={50} />
+                    ) : (
+                      formattedRemainingTime
+                    )}
+                  </td> */}
                   <td className="data-cell">
-                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
+                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
                       <Skeleton width={50} />
                     ) : (
                       item.format
@@ -158,18 +158,21 @@ useEffect(() => {
                   <td className="data-cell status-cell">
                     {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
                       <Skeleton width={100} />
-                    ) :  item.isCompleted || progressMap.get(item.id)?.progress === 100  ? (
+                    ) : item.isCompleted || progress === 100 ? (
                       <>
-                        <FaCheckCircle className="text-success" /> {item.status}
+                        <FaCheckCircle className="text-success" />
+
+                        {item.status}
                       </>
                     ) : (
                       <div>
-                        <FaRegClock className="text-primary" /> {item.status}
-                        <ProgressBar
-                          now={progressMap.get(item.id)?.progress || 0} // Get progress from progressMap using ID
-                          className="flex-grow-1"
-                          style={{ height: 4 }}
-                        />
+                       
+
+                        <FaRegClock className="text-primary" style={{ marginRight: 10 }} />
+                        {item.isPlaylist
+                          ? `${item.currentItem}/${item.totalItems} videos downloaded`
+                          : item.status}
+                        <ProgressBar now={progress} className="flex-grow-1" style={{ height: 4 }} />
                       </div>
                     )}
                   </td>
@@ -219,13 +222,12 @@ useEffect(() => {
                         <Dropdown.Toggle as="button" className="three-dots-btn">
                           <FaEllipsisV />
                         </Dropdown.Toggle>
-
                         <Dropdown.Menu className="dropdown-menu">
                           {!item.isCompleted && (
                             <Dropdown.Item
                               onClick={() => {
                                 handlePauseResume(item.id)
-                                setOpenDropdown(null) // Close dropdown after action
+                                setOpenDropdown(null)
                               }}
                             >
                               {item.isPaused ? (
@@ -239,7 +241,7 @@ useEffect(() => {
                           <Dropdown.Item
                             onClick={() => {
                               handleDelete(item.url)
-                              setOpenDropdown(null) // Close dropdown after action
+                              setOpenDropdown(null)
                             }}
                           >
                             <FaTrash className="me-2" /> Delete

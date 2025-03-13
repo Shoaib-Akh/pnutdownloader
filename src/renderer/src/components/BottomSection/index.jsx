@@ -23,7 +23,6 @@ function BottomSection({
   downloadListOpen,
   pastLinkUrl
 }) {
-
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
@@ -74,32 +73,20 @@ function BottomSection({
     return null
   }
   const API_KEY = 'AIzaSyAqOmz88j_a10_Eoa7-Z9lgW8b-J6YrXI4'
-  const getVideoInfo = async (videoUrl) => {
-    try {
-      const videoId = extractVideoId(videoUrl) // Extract the video ID from the URL
-      if (!videoId) throw new Error('Invalid YouTube URL')
 
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
-      )
-      const data = await response.json()
+  const extractPlaylistId = (url) => {
+    // Handle playlist URL (https://www.youtube.com/playlist?list=PLAYLIST_ID)
+    const playlistMatch = url.match(/[?&]list=([^&]+)/)
+    if (playlistMatch) return playlistMatch[1]
 
-      if (data.items.length === 0) throw new Error('Video not found')
+    // Handle playlist in video URL (https://www.youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID)
+    const videoPlaylistMatch = url.match(/[?&]list=([^&]+)/)
+    if (videoPlaylistMatch) return videoPlaylistMatch[1]
 
-      const videoInfo = data.items[0].snippet
-      // console.log("videoInfo",videoInfo)
-
-      return {
-        videoUrl: videoUrl,
-        title: videoInfo.title,
-        thumbnail: videoInfo.thumbnails.high.url,
-        duration: data.items[0].contentDetails.duration // ISO 8601 format
-      }
-    } catch (error) {
-      console.error('Error fetching video info:', error)
-      return null
-    }
+    // If no match, return null
+    return null
   }
+
   // Handle webview navigation
   useEffect(() => {
     if (webviewRef.current) {
@@ -154,6 +141,7 @@ function BottomSection({
       setIsSidebarOpen(false)
     }
   }
+  const isPlaylist = url.includes('playlist') || url.includes('&list=') || url.includes('?list=')
 
   // Check if the URL is downloadable
   const checkIfDownloadable = (currentUrl) => {
@@ -169,46 +157,122 @@ function BottomSection({
   }
   // Handle download click
   const handleDownloadClick = () => {
-    const urlToDownload = pastLinkUrl || currentWebViewUrl;
-  
+    const urlToDownload = pastLinkUrl || currentWebViewUrl
+
     // Check if URL is available
     if (!urlToDownload) {
-      console.error('No URL detected.');
-      return;
+      console.error('No URL detected.')
+      return
     }
-  
+
     // Check if the URL already exists in the download list
-    const existingDownload = downloadList.some((item) => item.url === urlToDownload);
-  
+    const existingDownload = downloadList.some((item) => item.url === urlToDownload)
+
     if (existingDownload) {
       // Show a warning message if the URL is already in the download list
       if (!window.alertShown) {
         window.api.showMessageBox({
           type: 'warning',
           title: 'Duplicate Download',
-          message: 'This URL is already in the download list.',
-        });
-        window.alertShown = true;
-        setTimeout(() => (window.alertShown = false), 1000); // Reset the flag after 1 second
+          message: 'This URL is already in the download list.'
+        })
+        window.alertShown = true
+        setTimeout(() => (window.alertShown = false), 1000) // Reset the flag after 1 second
       }
-      return; // Exit the function if the URL already exists
+      return // Exit the function if the URL already exists
     }
-  
-    // Update state
-    setUrl(urlToDownload);
-    setDownloadListOpen(true);
-    setShowWebView(false);
-    setIsSidebarOpen(true);
-    setSelectedItem('Recent Download');
-    setDownload(true);
-  
-    // Add URL to the download queue
-    addToQueue(urlToDownload);
-  };
 
-  const addToQueue =  async(url) => {
+    // Update state
+    setUrl(urlToDownload)
+    setDownloadListOpen(true)
+    setShowWebView(false)
+    setIsSidebarOpen(true)
+    setSelectedItem('Recent Download')
+    setDownload(true)
+
+    // Add URL to the download queue
+    addToQueue(urlToDownload)
+  }
+
+  const getVideoInfo = async (url) => {
+    try {
+      const videoId = extractVideoId(url)
+      const playlistId = extractPlaylistId(url)
+
+      if (!videoId && !playlistId) throw new Error('Invalid YouTube URL')
+
+      let videoInfo = null
+      let playlistInfo = null
+
+      // Fetch video info if it's a single video
+      if (videoId) {
+        const videoResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
+        )
+        const videoData = await videoResponse.json()
+
+        if (videoData.items.length === 0) throw new Error('Video not found')
+
+        const snippet = videoData.items[0].snippet
+        const contentDetails = videoData.items[0].contentDetails
+
+        videoInfo = {
+          videoUrl: url,
+          title: snippet.title,
+          thumbnail: snippet.thumbnails.high.url,
+          duration: contentDetails.duration, // ISO 8601 format
+          isPlaylist: false
+        }
+      }
+
+      // Fetch playlist info if it's a playlist
+      if (playlistId) {
+        const playlistResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id=${playlistId}&key=${API_KEY}`
+        )
+
+        const playlistData = await playlistResponse.json()
+
+        if (playlistData.items.length === 0) throw new Error('Playlist not found')
+
+        const playlistSnippet = playlistData.items[0].snippet
+        const playlistContentDetails = playlistData.items[0].contentDetails
+
+        // Fetch the list of videos in the playlist
+        const playlistItemsResponse = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50&key=${API_KEY}`
+        )
+        const playlistItemsData = await playlistItemsResponse.json()
+
+        const videos = playlistItemsData.items.map((item) => ({
+          videoUrl: item.snippet.resourceId.url,
+          videoId: item.snippet.resourceId.videoId,
+          title: item.snippet.title,
+          thumbnail: item.snippet.thumbnails.high.url
+        }))
+
+        playlistInfo = {
+          playlistUrl: url,
+          title: playlistSnippet.title,
+          thumbnail: playlistSnippet.thumbnails.high.url,
+          totalVideos: playlistContentDetails.itemCount,
+          videos: videos,
+          isPlaylist: true
+        }
+      }
+
+      return {
+        ...videoInfo,
+        ...playlistInfo
+      }
+    } catch (error) {
+      console.error('Error fetching video/playlist info:', error)
+      return null
+    }
+  }
+
+  const addToQueue = async (url) => {
     if (!url) return
-  
     const newId = uuidv4()
     const newDownload = {
       id: newId,
@@ -226,7 +290,10 @@ function BottomSection({
       status: 'Queued',
       isCompleted: false,
       isFailed: false,
-      isPaused: false
+      isPaused: false,
+      playlist: isPlaylist,
+      currentItem: 0,
+      totalItems: 0
     }
 
     setDownloadList((prev) => [newDownload, ...prev])
@@ -284,27 +351,22 @@ function BottomSection({
             continue
           }
 
-          // Update with fetched info
+          // Update with fetched info and save to localStorage
           const updatedItem = {
             ...storedDownloads[itemIndex],
             title: info?.title || 'Unknown',
             thumbnail: info?.thumbnail || '',
             filename: info?.filename || '',
             duration: info?.duration || 'Unknown',
-            status: 'Downloading'
+            status: 'Downloading',
+            isPlaylist: info?.isPlaylist || false,
+            totalVideos: info?.totalVideos || 0,
+            downloadedVideos: 0
           }
 
           setDownloadList((prev) => updateItem(prev, url, updatedItem))
           storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem)
           const handleProgress = (progressData) => {
-            // console.log('Progress data received:', progressData);
-
-            const youtubeUrlMatch = progressData?.message.match(
-              /https:\/\/www\.youtube\.com\/watch\?v=([\w-]+)/
-            )
-            console.log('youtubeUrlMatch', youtubeUrlMatch)
-            console.log('url', url)
-            console.log('itemIndex', itemIndex)
 
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
@@ -316,19 +378,66 @@ function BottomSection({
               setProgressMap((prev) => {
                 const newMap = new Map(prev)
                 newMap.set(updatedItem.id, { progress: parseFloat(progress), fileSize, speed, eta })
-                console.log('Updated progress map:', newMap)
                 return newMap
               })
+
+              // Update progress in localStorage
+              // storedDownloads = storedDownloads.map((item) =>
+              //   item.id === updatedItem.id
+              //     ? { ...item, progress: parseFloat(progress), fileSize, speed, eta }
+              //     : item
+              // );
+              // localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
             }
+
+            // Check if the message indicates the current item being downloaded
+            const Downloadingitemcount = progressData.message.match(
+              /\[download\] Downloading item (\d+) of (\d+)/
+            )
+
+            if (Downloadingitemcount) {
+              const [, currentItem, totalItems] = Downloadingitemcount
+              console.log(`Downloading item ${currentItem} of ${totalItems}`)
+
+              // Update the current item count in localStorage
+              storedDownloads = storedDownloads.map((item) =>
+                item.id === updatedItem.id
+                  ? {
+                      ...item,
+                      currentItem: parseInt(currentItem),
+                      totalItems: parseInt(totalItems)
+                    }
+                  : item
+              )
+              localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
+              setDownloadList(storedDownloads)
+            }
+
+            // Handle download completion
             if (progressData?.status?.includes('Download complete!')) {
               storedDownloads = storedDownloads.map((item) =>
                 item.id === updatedItem.id
                   ? { ...item, status: 'Completed', isCompleted: true }
                   : item
               )
+
+              localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
+            }
+
+            // Handle playlist completion
+            if (progressData.message.includes('Finished downloading playlist:')) {
+              setDownloadList((prev) =>
+                prev.map((item) =>
+                  item.id === updatedItem.id
+                    ? { ...item, status: 'Completed', isCompleted: true }
+                    : item
+                )
+              )
             }
           }
+
           window.api.onDownloadProgress(handleProgress)
+
           try {
             await window.api.downloadVideo({
               id: updatedItem.id,
@@ -529,12 +638,9 @@ function BottomSection({
                   </button>
                 </OverlayTrigger>
               ) : (
-                <OverlayTrigger
-                  overlay={<Tooltip id="close-tooltip">Back</Tooltip>}
-                >
+                <OverlayTrigger overlay={<Tooltip id="close-tooltip">Back</Tooltip>}>
                   <button
-                                       className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-
+                    className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
                     style={{ width: '48px', height: '48px' }}
                     onClick={() => {
                       if (lastUrl) {

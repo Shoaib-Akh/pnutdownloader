@@ -231,32 +231,37 @@ const startDownload = async (event, options) => {
     try {
       if (downloadProcess) {
         event.sender.send('download-progress', { status: 'A download is already in progress!' });
-        reject(new Error('A download is already in progress.'));
-        return;
+        return reject(new Error('A download is already in progress.'));
       }
-      const downloadId = options.id;
+
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
+      if (!url || typeof url !== 'string') {
+        return reject(new Error('Invalid URL.'));
+      }
 
       if (activeDownloads[downloadId]) {
         console.log(`Download already in progress for ${url}`);
-        return { success: false, message: 'Download already in progress.' };
+        return reject(new Error('Download already in progress.'));
       }
-      const { url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
-      if (!url || typeof url !== 'string') throw new Error('Invalid URL.');
-      console.log('options', options);
 
+      console.log('Download options:', options);
+
+      // 🔍 **Check if URL is a Playlist**
+      const isPlaylist = url.includes("playlist") || url.includes("&list=") || url.includes("?list=");
+
+      // Format and quality processing
       const finalQualityVideo = selectedQuality.replace(/[pP]$/, '');
       const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
       const formatSpecifier = isAudioOnly
         ? `--extract-audio --audio-format mp3 --audio-quality best`
         : `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
-      console.log('formatSpecifier', formatSpecifier);
+      
+      console.log('Format Specifier:', formatSpecifier);
 
-      let downloadDir;
-      if (saveTo === 'Desktop') {
-        downloadDir = join(app.getPath('desktop'), 'pnutdownloader');
-      } else {
-        downloadDir = join(app.getPath('downloads'), 'pnutdownloader');
-      }
+      // Determine save location
+      let downloadDir = saveTo === 'Desktop'
+        ? join(app.getPath('desktop'), 'pnutdownloader')
+        : join(app.getPath('downloads'), 'pnutdownloader');
 
       if (!existsSync(downloadDir)) {
         mkdirSync(downloadDir, { recursive: true });
@@ -264,24 +269,31 @@ const startDownload = async (event, options) => {
 
       const downloadPath = join(downloadDir, '%(title)s.%(ext)s');
 
+      // Construct arguments for yt-dlp
       const args = [
         '--continue',
-        ...formatSpecifier.split(' '),
-        '--ffmpeg-location',
-        ffmpegPath,
-        '-o',
-        downloadPath,
-        '--cookies',
-        cookiesPath,
-        url,
+        '--ffmpeg-location', ffmpegPath,
+        '-o', downloadPath,
+        '--cookies', cookiesPath,
         '--newline',
         '--ignore-errors',
         '--progress',
+        ...formatSpecifier.split(' '),
+        url
       ];
 
-      console.log('Downloading with args:', args); // Debugging
+      // ✅ **Auto-Detect and Apply Playlist Option**
+      if (isPlaylist) {
+        args.push('--yes-playlist');  // Enables full playlist downloading
+      } else {
+        args.push('--no-playlist');   // Ensures only a single video download
+      }
 
+      console.log('Downloading with args:', args);
+
+      // Start download process
       downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
+      activeDownloads[downloadId] = true;
 
       downloadProcess.stdout.on('data', (data) => {
         const line = data.toString().trim();
@@ -292,20 +304,16 @@ const startDownload = async (event, options) => {
       downloadProcess.stderr.on('data', (data) => {
         const errorMessage = data.toString().trim();
         console.error('yt-dlp Error:', errorMessage);
-        if (errorMessage.includes('Requested format is not available')) {
-          event.sender.send('download-progress', {
-            error: 'Requested format not available. Please try a different format or quality.',
-          });
-        } else {
-          event.sender.send('download-progress', { error: errorMessage });
-        }
+        event.sender.send('download-progress', { error: errorMessage });
       });
 
       downloadProcess.on('close', (code) => {
-        downloadProcess = null; // Reset the download process
+        delete activeDownloads[downloadId];  // Remove from active downloads
+        downloadProcess = null;
+
         if (code === 0) {
           event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
-          resolve(); // Resolve the promise on successful completion
+          resolve();
         } else {
           event.sender.send('download-progress', { error: `Download failed with code ${code}` });
           reject(new Error(`Download failed with code ${code}`));
@@ -315,9 +323,11 @@ const startDownload = async (event, options) => {
       downloadProcess.on('error', (err) => {
         console.error('Download process error:', err);
         event.sender.send('download-progress', { error: err.message });
-        downloadProcess = null; // Reset the download process
+        delete activeDownloads[downloadId];
+        downloadProcess = null;
         reject(err);
       });
+
     } catch (err) {
       console.error('Download error:', err);
       event.sender.send('download-progress', { error: err.message });
@@ -325,6 +335,7 @@ const startDownload = async (event, options) => {
     }
   });
 };
+
 
 ipcMain.handle('downloadVideo', async (event, options) => {
   console.log('Starting download...');
