@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
@@ -36,7 +36,7 @@ const api = {
   onDownloadProgress: (callback) => {
     ipcRenderer.on('download-progress', (_event, progressData) => callback(progressData))
   },
-
+  openExternal: (url) => shell.openExternal(url),
   getPath: (type) => ipcRenderer.invoke('get-path', type),
 
   // ✅ New function to read directory contents

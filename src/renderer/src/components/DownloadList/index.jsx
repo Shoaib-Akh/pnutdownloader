@@ -58,13 +58,16 @@ function DownloadList({
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
 
-      if (selectedItem === 'Video') return item.format === 'MP4'
+      if (selectedItem === 'Playlist') return isPlaylist // Only show playlists
+      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist // Exclude playlists
       if (selectedItem === 'Audio') return item.format === 'MP3'
-      if (selectedItem === 'Playlist') return isPlaylist
       if (selectedItem === 'Recent Download') return true
       return false
     })
     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+    .filter(
+      (item, index, self) => index === self.findIndex((t) => t.url === item.url) // Remove duplicate URLs
+    )
 
   const [openDropdown, setOpenDropdown] = useState(null)
 
@@ -113,146 +116,156 @@ function DownloadList({
             </tr>
           </thead>
           <tbody>
-            {filteredList.map((item) => {
-              const progress = progressMap.get(item.id)?.progress || 0
-              const remainingTime = calculateRemainingTime(item.duration, progress)
-              const formattedRemainingTime = formatTime(remainingTime)
+            {filteredList.length > 0 ? (
+              filteredList.map((item) => {
+                const progress = progressMap.get(item.id)?.progress || 0
+                const remainingTime = calculateRemainingTime(item.duration, progress)
+                const formattedRemainingTime = formatTime(remainingTime)
+                console.log('Progress Map:', progressMap)
+                console.log('Item ID:', item.id, 'Progress:', progress)
+                return (
+                  <tr key={item.id} className="data-row">
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                        <Skeleton width={100} height={50} />
+                      ) : (
+                        <>
+                          <img
+                            src={item.thumbnail}
+                            style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
+                            alt="Thumbnail"
+                          />
+                          {`${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`}
+                        </>
+                      )}
+                    </td>
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                        <Skeleton width={50} />
+                      ) : (
+                        formatTime(convertISODurationToSeconds(item.duration))
+                      )}
+                    </td>
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                        <Skeleton width={50} />
+                      ) : (
+                        item.format
+                      )}
+                    </td>
+                    <td className="data-cell status-cell">
+                      {console.log('item.status', item.status)}
 
-              return (
-                <tr key={item.id} className="data-row">
-                  <td className="data-cell">
-                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
-                      <Skeleton width={100} height={50} />
-                    ) : (
-                      <>
-                        <img
-                          src={item.thumbnail}
-                          style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
-                          alt="Thumbnail"
-                        />
-                        {`#${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`}
-                      </>
-                    )}
-                  </td>
-                  <td className="data-cell">
-                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
-                      <Skeleton width={50} />
-                    ) : (
-                      formatTime(convertISODurationToSeconds(item.duration))
-                    )}
-                  </td>
-                  {/* <td className="data-cell">
-                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
-                      <Skeleton width={50} />
-                    ) : (
-                      formattedRemainingTime
-                    )}
-                  </td> */}
-                  <td className="data-cell">
-                    {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
-                      <Skeleton width={50} />
-                    ) : (
-                      item.format
-                    )}
-                  </td>
-                  <td className="data-cell status-cell">
-                    {item.status == 'Fetching Info..' || item.status == 'Queued' ? (
-                      <Skeleton width={100} />
-                    ) : item.isCompleted || progress === 100 ? (
-                      <>
-                        <FaCheckCircle className="text-success" />
+                      {['Fetching Info..', 'Queued'].includes(item.status) ? (
+                        <Skeleton width={100} />
+                      ) : item.isCompleted || progress === 100 ? (
+                        <>
+                          {item.status === 'Downloading' && (
+                            <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+                          )}
+                          {item.status === 'Completed' && (
+                            <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                          )}
+                          {item.status}
+                        </>
+                      ) : (
+                        <div>
+                          {['Paused', 'Downloading', 'Completed'].includes(item.status) && (
+                            <>
+                              {item.status === 'Paused' && (
+                                <FaPause className="text-success" style={{ marginRight: 5 }} />
+                              )}
+                              {item.status === 'Downloading' && (
+                                <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+                              )}
+                              {item.status === 'Completed' && (
+                                <FaCheckCircle
+                                  className="text-success"
+                                  style={{ marginRight: 5 }}
+                                />
+                              )}
+                            </>
+                          )}
 
-                        {item.status}
-                      </>
-                    ) : (
-                      <div>
-                       
+                          {console.log('item.isCompleted', item.isCompleted)}
 
-                        <FaRegClock className="text-primary" style={{ marginRight: 10 }} />
-                        {item.isPlaylist
-                          ? `${item.currentItem}/${item.totalItems} videos downloaded`
-                          : item.status}
-                        <ProgressBar now={progress} className="flex-grow-1" style={{ height: 4 }} />
-                      </div>
-                    )}
-                  </td>
+                          {item.isPlaylist
+                            ? `${item.currentItem}/${item.totalItems} videos downloaded`
+                            : item.status}
 
-                  {/* <td className="data-cell action-cell">
-                  {item.status=="Fetching Info.." ? (
-                    <Skeleton width={40} height={40} borderRadius={100} />
-                  ) : (
-                    <button
-                      className="three-dots-btn"
-                      onClick={() => setDropdownOpen(dropdownOpen === item.url ? null : item.url)}
-                    >
-                      <FaEllipsisV />
-                    </button>
-                  )}
+                          {!item.isCompleted &&
+                            item.status !== 'Paused' &&
+                            item.status !== 'Completed' && (
+                              <ProgressBar
+                                now={progressMap.get(item.id)?.progress || 0}
+                                className="flex-grow-1"
+                                style={{ height: 4 }}
+                                key={item.id}
+                              />
+                            )}
+                        </div>
+                      )}
+                    </td>
 
-                    {dropdownOpen === item.url && (
-                    <div className="dropdown-menu show">
-                        {!item.isCompleted && (
-                        <button
-                          className="dropdown-item"
-                          onClick={() => {handlePauseResume(item.id); setDropdownOpen(false)}}
+                    <td className="data-cell action-cell">
+                      {item.status === 'Fetching Info..' ? (
+                        <Skeleton width={40} height={40} borderRadius={100} />
+                      ) : (
+                        <Dropdown
+                          show={openDropdown === item.id}
+                          onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
                         >
-                          {item.isPaused ? (
-                            <FaPlay className="me-2" />
-                          ) : (
-                            <FaPause className="me-2" />
-                          )}{' '}
-                          {item.isPaused ? 'Resume' : 'Pause'}
-                          </button>
-                        )}
-
-                      <button className="dropdown-item" onClick={() => handleDelete(item.url)}>
-                        <FaTrash className="me-2" /> Delete
-                        </button>
-                      </div>
-                    )}
-                  </td> */}
-                  <td className="data-cell action-cell">
-                    {item.status === 'Fetching Info..' ? (
-                      <Skeleton width={40} height={40} borderRadius={100} />
-                    ) : (
-                      <Dropdown
-                        show={openDropdown === item.id}
-                        onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
-                      >
-                        <Dropdown.Toggle as="button" className="three-dots-btn">
-                          <FaEllipsisV />
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu className="dropdown-menu">
-                          {!item.isCompleted && (
+                          <Dropdown.Toggle as="button" className="three-dots-btn">
+                            <FaEllipsisV />
+                          </Dropdown.Toggle>
+                          <Dropdown.Menu className="dropdown-menu">
+                            {!item.isCompleted && (
+                              <Dropdown.Item
+                                onClick={() => {
+                                  handlePauseResume(item.id)
+                                  setOpenDropdown(null)
+                                }}
+                              >
+                                {item.isPaused ? (
+                                  <FaPlay className="me-2" />
+                                ) : (
+                                  <FaPause className="me-2" />
+                                )}
+                                {item.isPaused ? 'Resume' : 'Pause'}
+                              </Dropdown.Item>
+                            )}
                             <Dropdown.Item
                               onClick={() => {
-                                handlePauseResume(item.id)
+                                handleDelete(item.url)
                                 setOpenDropdown(null)
                               }}
                             >
-                              {item.isPaused ? (
-                                <FaPlay className="me-2" />
-                              ) : (
-                                <FaPause className="me-2" />
-                              )}
-                              {item.isPaused ? 'Resume' : 'Pause'}
+                              <FaTrash className="me-2" /> Delete
                             </Dropdown.Item>
-                          )}
-                          <Dropdown.Item
-                            onClick={() => {
-                              handleDelete(item.url)
-                              setOpenDropdown(null)
-                            }}
-                          >
-                            <FaTrash className="me-2" /> Delete
-                          </Dropdown.Item>
-                        </Dropdown.Menu>
-                      </Dropdown>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
+            ) : (
+              // Display "No Data Found" when filteredList is empty
+              <tr>
+                <td
+                  colSpan="5"
+                  style={{
+                    textAlign: 'center',
+                    padding: '20px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'gray'
+                  }}
+                >
+                  No Data Found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

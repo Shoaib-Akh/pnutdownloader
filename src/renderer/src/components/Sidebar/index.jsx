@@ -3,6 +3,7 @@ import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars } from 'react-icons/fa'
 import { IoMdDownload } from 'react-icons/io'
 import { GiSquirrel } from 'react-icons/gi'
 import squirrel from '../../assets/Images/squirrel.png'
+
 function Sidebar({
   isOpen,
   setIsOpen,
@@ -19,7 +20,9 @@ function Sidebar({
     { icon: FaVideo, label: 'Video' },
     { icon: FaList, label: 'Playlist' }
   ]
-
+  const handleClick = () => {
+    window.api.openExternal('https://ko-fi.com/pnutdownloader');
+  };
   return (
     <div
       className={`sidebar ${isOpen ? 'expanded' : 'collapsed'}`}
@@ -104,13 +107,14 @@ function Sidebar({
                 // padding: '5px',
                 height: 30,
                 width: 30,
-                // fontSize: '20px',
+                marginRight:10,
+                
                 color: selectedItem === item.label ? '#fff' : '#BB4F28' // 🔥 Icon color logic
               }}
             >
               <item.icon
                 style={{
-                  fontSize: '10px'
+                  fontSize: '14px'
                   // 🔥 Icon color logic
                 }}
               />
@@ -153,6 +157,7 @@ function Sidebar({
                 fontSize: '14px',
                 cursor: 'pointer'
               }}
+              onClick={handleClick}
             >
               <GiSquirrel style={{ marginRight: '8px' }} /> Buy Me Nuts
             </button>

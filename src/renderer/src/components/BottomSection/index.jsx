@@ -195,6 +195,8 @@ function BottomSection({
   }
 
   const getVideoInfo = async (url) => {
+    console.log("url",url);
+    
     try {
       const videoId = extractVideoId(url)
       const playlistId = extractPlaylistId(url)
@@ -366,8 +368,35 @@ function BottomSection({
 
           setDownloadList((prev) => updateItem(prev, url, updatedItem))
           storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem)
-          const handleProgress = (progressData) => {
+          const handleProgress = async (progressData) => {
+            // console.log("progressData",progressData);
+            
+            const urlMatch = progressData.message.match(/(https?:\/\/www\.youtube\.com\/watch\?v=[\w-]+)/);
+            const isPlaylistOpen = storedDownloads[itemIndex]?.isPlaylist || false;
+           console.log("isPlaylistOpen",isPlaylistOpen);
+           
+            if (urlMatch && isPlaylistOpen ) {
+              const youtubeUrl = urlMatch[1];
+          //  console.log("urlMatch",urlMatch[1]);
 
+             let info = await getVideoInfo(youtubeUrl)
+console.log("info",info);
+
+const updatedItem = {
+  ...storedDownloads[itemIndex],
+  title: info?.title || 'Unknown',
+  thumbnail: info?.thumbnail || '',
+
+  duration: info?.duration || 'Unknown',
+  status: 'Downloading',
+ 
+}
+       console.log("updatedItem",updatedItem);
+       
+              // Store the URL in localStorage
+              setDownloadList((prev) => updateItem(prev, url, updatedItem))
+              storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem)
+          }
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
             )
@@ -542,18 +571,19 @@ function BottomSection({
 
     if (item.isPaused) {
       // ✅ Resume Download (if paused, restart from 0)
-      window.api.resumeDownload({
-        url: item.url,
-        isAudioOnly: item.downloadType === 'Audio',
-        selectedFormat: item.format,
-        selectedQuality: item.quality,
-        saveTo: item.saveTo
-      })
+      // window.api.resumeDownload({
+      //   url: item.url,
+      //   isAudioOnly: item.downloadType === 'Audio',
+      //   selectedFormat: item.format,
+      //   selectedQuality: item.quality,
+      //   saveTo: item.saveTo
+      // })
+      addToQueue(item.url)
 
       setDownloadList((prev) => {
         const updatedList = prev.map((itm) =>
           itm.id === id
-            ? { ...itm, isPaused: false, status: 'Downloading', progress: 0 } // 🔄 Reset progress on resume
+            ? { ...itm, isPaused: false, status: 'Downloading',  } // 🔄 Reset progress on resume
             : itm
         )
 
