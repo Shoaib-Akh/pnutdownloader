@@ -49,6 +49,11 @@
     "vite": "^6.1.0"
   },
   "build": {
+    "publish": {
+    "provider": "github",
+    "owner": "your-github-username",
+    "repo": "your-repository-name"
+  },
     "win32": {
       "icon": "public/icon.ico"
     },
