@@ -26,6 +26,8 @@ autoUpdater.on('update-downloaded', (info) => {
 autoUpdater.on('error', (err) => {
   mainWindow.webContents.send('update-error', err);
 });
+setInterval(checkForUpdates, 60 * 60 * 1000); // Check every hour
+checkForUpdates();
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
   : join(__dirname, '../../public/ffmpeg.exe')

@@ -1,26 +1,33 @@
-import React, { useState } from 'react'
-import Navbar from './components/Navbar'
-import BottomSection from './components/BottomSection'
-import Sidebar from './components/Sidebar'
+import React, { useState, useEffect } from 'react';
+import Navbar from './components/Navbar';
+import BottomSection from './components/BottomSection';
+import Sidebar from './components/Sidebar';
+import UpdateNotification from './components/UpdateNotification'; // Import the UpdateNotification component
 
 function App() {
-  const [downloadType, setDownloadType] = useState('Video')
-  const [quality, setQuality] = useState('1080p')
-  const [format, setFormat] = useState('')
-  const [saveTo, setSaveTo] = useState('Downloads')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [selectedItem, setSelectedItem] = useState('')
-  const [download, setDownload] = useState(false)
-  const [showWebView, setShowWebView] = useState(false)
-   const [downloadListOpen, setDownloadListOpen] = useState(false);
-   const [pastLinkUrl, setPastLinkUrl] = useState("");
+  const [downloadType, setDownloadType] = useState('Video');
+  const [quality, setQuality] = useState('1080p');
+  const [format, setFormat] = useState('');
+  const [saveTo, setSaveTo] = useState('Downloads');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedItem, setSelectedItem] = useState('');
+  const [download, setDownload] = useState(false);
+  const [showWebView, setShowWebView] = useState(false);
+  const [downloadListOpen, setDownloadListOpen] = useState(false);
+  const [pastLinkUrl, setPastLinkUrl] = useState('');
+
+  // Add update checking on component mount
+  useEffect(() => {
+    if (window.api?.update?.check) {
+      window.api.update.check();
+    }
+  }, []);
 
   return (
-    <div className=" vh-100">
-      {/* Sidebar Component */}
-
-      {/* Main Content with Navbar */}
-
+    <div className="vh-100">
+      {/* Add the UpdateNotification component at the root level */}
+      <UpdateNotification />
+      
       <Navbar
         downloadType={downloadType}
         setDownloadType={setDownloadType}
@@ -34,6 +41,7 @@ function App() {
         setIsSidebarOpen={setIsSidebarOpen}
         setPastLinkUrl={setPastLinkUrl}
       />
+      
       <div
         className=""
         style={{
@@ -72,7 +80,7 @@ function App() {
         />
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

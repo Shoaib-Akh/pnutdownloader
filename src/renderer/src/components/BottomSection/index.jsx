@@ -130,7 +130,8 @@ function BottomSection({
     setUrl('')
     setShowWebView(false)
     setIsDownloadable(false)
-    setIsSidebarOpen(true)
+    setSelectedItem("")
+
   }
 
   // Handle resume browser

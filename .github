@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18.x
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          
+      - name: Publish Release
+        run: npm run publish:release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}

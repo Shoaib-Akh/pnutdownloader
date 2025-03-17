@@ -15,7 +15,8 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:linux": "npm run build && electron-builder --linux",
+    "publish:release": "electron-builder -p always"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -51,39 +52,41 @@
   "build": {
     "publish": {
     "provider": "github",
-    "owner": "your-github-username",
-    "repo": "your-repository-name"
+    "owner": "Shoaib-Akh",
+    "repo": "https://github.com/Shoaib-Akh/pnutdownloader.git"
   },
-    "win32": {
-      "icon": "public/icon.ico"
+  "win": {
+    "icon": "public/icon.ico",
+    "target": "nsis"
+  },
+  "linux": {
+    "icon": "resources/icon.png",
+    "target": "AppImage"
+  },
+  "mac": {
+    "icon": "resources/icon.icns",
+    "target": "dmg"
+  },
+  "extraResources": [
+    {
+      "from": "public/yt-dlp.exe",
+      "to": "yt-dlp.exe"
     },
-    "linux": {
-      "icon": "resources/icon.png"
+    {
+      "from": "public/ffmpeg.exe",
+      "to": "ffmpeg.exe"
     },
-    "mac": {
-      "icon": "resources/icon.icns"
+    {
+      "from": "public/ffplay.exe",
+      "to": "ffplay.exe"
     },
-    "extraResources": [
-      {
-        "from": "public/yt-dlp.exe",
-        "to": "yt-dlp.exe"
-      },
-      {
-        "from": "public/ffmpeg.exe",
-        "to": "ffmpeg.exe"
-      },
-      {
-        "from": "public/ffplay.exe",
-        "to": "ffplay.exe"
-      },
-      {
-        "from": "public/ffprobe.exe",
-        "to": "ffprobe.exe"
-      },
-      {
-        "from": "public/cookies.txt",
-        "to": "cookies.txt"
-      }
-    ]
-  }
-}
+    {
+      "from": "public/ffprobe.exe",
+      "to": "ffprobe.exe"
+    },
+    {
+      "from": "public/cookies.txt",
+      "to": "cookies.txt"
+    }
+  ]
+  }}
