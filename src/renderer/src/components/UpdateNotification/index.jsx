@@ -6,14 +6,14 @@ export default function UpdateNotification() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    window.api.update.available((_event, info) => setUpdateInfo(info));
-    window.api.update.downloaded((_event, info) => setUpdateInfo(info));
-    window.api.update.error((_event, err) => setError(err.message));
-    window.api.update.check();
+    window.api.available((_event, info) => setUpdateInfo(info));
+    window.api.onDownloaded((_event, info) => setUpdateInfo(info));
+    window.api.error((_event, err) => setError(err.message));
+    window.api.check();
   }, []);
 
   const handleInstall = () => {
-    window.api.update.install();
+    window.api  .install();
   };
 
   return (

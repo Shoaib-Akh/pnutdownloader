@@ -18,8 +18,8 @@ function App() {
 
   // Add update checking on component mount
   useEffect(() => {
-    if (window.api?.update?.check) {
-      window.api.update.check();
+    if (window.api?.check) {
+      window.api  .check();
     }
   }, []);
 

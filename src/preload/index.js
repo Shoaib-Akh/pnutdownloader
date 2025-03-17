@@ -47,14 +47,14 @@ const api = {
 
   removeListener: (channel) => ipcRenderer.removeAllListeners(channel),
 
-  update: {
+ 
     check: () => ipcRenderer.send('check-for-updates'),
     download: () => ipcRenderer.send('download-update'),
     install: () => ipcRenderer.send('install-update'),
-    onAvailable: (callback) => ipcRenderer.on('update-available', callback),
+    available: (callback) => ipcRenderer.on('update-available', callback),
     onDownloaded: (callback) => ipcRenderer.on('update-downloaded', callback),
-    onError: (callback) => ipcRenderer.on('update-error', callback)
-  }
+    error: (callback) => ipcRenderer.on('update-error', callback)
+  
   
 }
 
