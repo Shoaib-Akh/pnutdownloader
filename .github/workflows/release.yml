@@ -7,7 +7,7 @@ on:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Change to Windows runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
