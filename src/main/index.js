@@ -5,6 +5,29 @@ import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
+import { autoUpdater } from 'electron-updater';
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
+// Check for updates
+function checkForUpdates() {
+  autoUpdater.checkForUpdates();
+}
+
+// Handle update events
+autoUpdater.on('update-available', (info) => {
+  mainWindow.webContents.send('update-available', info);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  mainWindow.webContents.send('update-downloaded', info);
+});
+
+autoUpdater.on('error', (err) => {
+  mainWindow.webContents.send('update-error', err);
+});
+setInterval(checkForUpdates, 60 * 60 * 1000); // Check every hour
+checkForUpdates();
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
   : join(__dirname, '../../public/ffmpeg.exe')
@@ -31,7 +54,8 @@ switch (process.platform) {
   default:
     iconPath = join(process.resourcesPath, 'icon.png')
 }
-
+require('dotenv').config();
+console.log('GH_TOKEN:', process.env.GH_TOKEN);
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {

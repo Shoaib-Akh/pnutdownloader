@@ -1,44 +1,28 @@
-appId: com.electron.app
-productName: pnutdownloader
-directories:
-  buildResources: build
-files:
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-asarUnpack:
-  - resources/**
-win:
-  executableName: pnutdownloader
-nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
-mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
-dmg:
-  artifactName: ${name}-${version}.${ext}
-linux:
-  target:
-    - AppImage
-    - snap
-    - deb
-  maintainer: electronjs.org
-  category: Utility
-appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
+  provider: github
+  owner: Shoaib-Akh
+  repo: pnutdownloader
+
+win:
+  target: nsis
+  icon: public/icon.ico
+
+linux:
+  target: AppImage
+  icon: resources/icon.png
+
+mac:
+  target: dmg
+  icon: resources/icon.icns
+
+extraResources:
+  - from: public/yt-dlp.exe
+    to: yt-dlp.exe
+  - from: public/ffmpeg.exe
+    to: ffmpeg.exe
+  - from: public/ffplay.exe
+    to: ffplay.exe
+  - from: public/ffprobe.exe
+    to: ffprobe.exe
+  - from: public/cookies.txt
+    to: cookies.txt
