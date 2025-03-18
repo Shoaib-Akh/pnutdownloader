@@ -9,6 +9,9 @@ export default defineConfig({
   preload: {
     plugins: [externalizeDepsPlugin()]
   },
+  build: {
+    outDir: 'dist',  // Ensure this is set to "dist" or your desired output folder
+  },
   renderer: {
     resolve: {
       alias: {
@@ -18,3 +21,4 @@ export default defineConfig({
     plugins: [react()]
   }
 })
+

@@ -49,7 +49,7 @@
     "vite": "^6.1.0"
   },
   "build": {
-    "output": "out" ,
+    
     "publish": {
       "provider": "github",
       "owner": "Shoaib-Akh",
@@ -61,7 +61,7 @@
       "!node_modules"
     ],
     "directories": {
-      "output": "dist", 
+    "output": "out" ,
       "buildResources": "public" 
     },
     "win": {
