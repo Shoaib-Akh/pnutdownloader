@@ -49,7 +49,7 @@
     "vite": "^6.1.0"
   },
   "build": {
-    "win32": {
+    "win": {
       "icon": "public/icon.ico"
     },
     "linux": {
