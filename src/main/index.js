@@ -5,39 +5,19 @@ import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
-import { autoUpdater } from 'electron-updater';
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = false;
+import ffmpeg from '@ffmpeg-installer/ffmpeg';
+import ffmpegFluent from 'fluent-ffmpeg';
 
-// Check for updates
-function checkForUpdates() {
-  autoUpdater.checkForUpdates();
-}
-
-// Handle update events
-autoUpdater.on('update-available', (info) => {
-  mainWindow.webContents.send('update-available', info);
-});
-
-autoUpdater.on('update-downloaded', (info) => {
-  mainWindow.webContents.send('update-downloaded', info);
-});
-
-autoUpdater.on('error', (err) => {
-  mainWindow.webContents.send('update-error', err);
-});
-setInterval(checkForUpdates, 60 * 60 * 1000); // Check every hour
-checkForUpdates();
-const ffmpegPath = app.isPackaged
-  ? join(process.resourcesPath, 'ffmpeg.exe')
-  : join(__dirname, '../../public/ffmpeg.exe')
-const ffprobePath = app.isPackaged
-  ? join(process.resourcesPath, 'ffprobe.exe')
-  : join(__dirname, '../../public/ffprobe.exe')
-let mainWindow
+// const ffmpegPath = app.isPackaged
+//   ? join(process.resourcesPath, 'ffmpeg.exe')
+//   : join(__dirname, '../../public/ffmpeg.exe')
+// const ffprobePath = app.isPackaged
+//   ? join(process.resourcesPath, 'ffprobe.exe')
+//   : join(__dirname, '../../public/ffprobe.exe')
 const cookiesPath = app.isPackaged
   ? join(process.resourcesPath, 'cookies.txt')
   : join(__dirname, '../../public/cookies.txt')
+let mainWindow
 
 const ytdlpPath = app.isPackaged
   ? join(process.resourcesPath, 'yt-dlp.exe')
@@ -110,7 +90,8 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
-
+ffmpegFluent.setFfmpegPath(ffmpeg.path);
+const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
@@ -244,9 +225,9 @@ function formatDuration(seconds) {
 }
 
 // 🛠 Ensure ffmpeg & ffprobe exist
-if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
-  console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
-}
+// if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
+//   console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
+// }
 
 let downloadProcess = null; // Track the current download process
 const activeDownloads = {};

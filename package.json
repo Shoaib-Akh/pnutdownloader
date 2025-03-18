@@ -49,24 +49,8 @@
     "vite": "^6.1.0"
   },
   "build": {
-    
-    "publish": {
-      "provider": "github",
-      "owner": "Shoaib-Akh",
-      "repo": "pnutdownloader"
-    },
-    "files": [
-      "out/**/*", 
-      "public/**/*",
-      "!node_modules"
-    ],
-    "directories": {
-    "output": "out" ,
-      "buildResources": "public" 
-    },
     "win": {
-      "icon": "public/icon.ico",
-      "target": "nsis"
+      "icon": "public/icon.ico"
     },
     "linux": {
       "icon": "resources/icon.png"
@@ -78,18 +62,6 @@
       {
         "from": "public/yt-dlp.exe",
         "to": "yt-dlp.exe"
-      },
-      {
-        "from": "public/ffmpeg.exe",
-        "to": "ffmpeg.exe"
-      },
-      {
-        "from": "public/ffplay.exe",
-        "to": "ffplay.exe"
-      },
-      {
-        "from": "public/ffprobe.exe",
-        "to": "ffprobe.exe"
       },
       {
         "from": "public/cookies.txt",
