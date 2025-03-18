@@ -25,4 +25,4 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded }) {
   );
 }
 
-export default UpdateNotification;s
+export default UpdateNotification;
