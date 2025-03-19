@@ -1,6 +1,6 @@
 {
   "name": "pnutdownloader",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "description": "An Electron application with React",
   "main": "./out/main/index.js",
   "author": "video downloader",
@@ -13,7 +13,7 @@
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
-  "build:win": "rimraf dist out && npm run build && electron-builder --win",
+  "build:win": "rimraf dist out && npm run build && electron-builder --win && electron-builder --publish=always",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "publish:release": "electron-builder --publish=always"

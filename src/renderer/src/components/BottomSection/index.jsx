@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { FaDownload, FaTimes, FaGlobe, FaArrowRight } from 'react-icons/fa'
+import { FaDownload, FaTimes, FaGlobe, FaArrowLeft } from 'react-icons/fa'
 import '../common.css'
 import PlatformIcons from '../PlatformIcons'
 import DownloadList from '../DownloadList'
@@ -195,8 +195,6 @@ function BottomSection({
   }
 
   const getVideoInfo = async (url) => {
-    console.log("url",url);
-    
     try {
       const videoId = extractVideoId(url)
       const playlistId = extractPlaylistId(url)
@@ -370,33 +368,31 @@ function BottomSection({
           storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem)
           const handleProgress = async (progressData) => {
             // console.log("progressData",progressData);
-            
-            const urlMatch = progressData.message.match(/(https?:\/\/www\.youtube\.com\/watch\?v=[\w-]+)/);
-            const isPlaylistOpen = storedDownloads[itemIndex]?.isPlaylist || false;
-           console.log("isPlaylistOpen",isPlaylistOpen);
-           
-            if (urlMatch && isPlaylistOpen ) {
-              const youtubeUrl = urlMatch[1];
-          //  console.log("urlMatch",urlMatch[1]);
 
-             let info = await getVideoInfo(youtubeUrl)
-console.log("info",info);
+            const urlMatch = progressData.message.match(
+              /(https?:\/\/www\.youtube\.com\/watch\?v=[\w-]+)/
+            )
+            const isPlaylistOpen = storedDownloads[itemIndex]?.isPlaylist || false
 
-const updatedItem = {
-  ...storedDownloads[itemIndex],
-  title: info?.title || 'Unknown',
-  thumbnail: info?.thumbnail || '',
+            if (urlMatch && isPlaylistOpen) {
+              const youtubeUrl = urlMatch[1]
+              //  console.log("urlMatch",urlMatch[1]);
 
-  duration: info?.duration || 'Unknown',
-  status: 'Downloading',
- 
-}
-       console.log("updatedItem",updatedItem);
-       
+              let info = await getVideoInfo(youtubeUrl)
+
+              const updatedItem = {
+                ...storedDownloads[itemIndex],
+                title: info?.title || 'Unknown',
+                thumbnail: info?.thumbnail || '',
+
+                duration: info?.duration || 'Unknown',
+                status: 'Downloading'
+              }
+
               // Store the URL in localStorage
               setDownloadList((prev) => updateItem(prev, url, updatedItem))
               storedDownloads = updateLocalStorageItem(storedDownloads, url, updatedItem)
-          }
+            }
             const parseMessage = progressData.message.match(
               /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
             )
@@ -426,7 +422,6 @@ const updatedItem = {
 
             if (Downloadingitemcount) {
               const [, currentItem, totalItems] = Downloadingitemcount
-              console.log(`Downloading item ${currentItem} of ${totalItems}`)
 
               // Update the current item count in localStorage
               storedDownloads = storedDownloads.map((item) =>
@@ -548,10 +543,12 @@ const updatedItem = {
   useEffect(() => {
     // Load stored downloads from localStorage
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-    setDownloadList(storedDownloads)
 
     // Check for any 'Queued' downloads and add them to the queue
-    const queuedDownloads = storedDownloads.filter((item) => item.status === 'Queued')
+    const queuedDownloads = storedDownloads.filter(
+      (item) =>
+        item.isPaused !== true && (item.status === 'Queued' || item.status === 'Downloading')
+    )
     if (queuedDownloads.length > 0) {
       console.log('Found queued downloads in localStorage. Adding to queue...')
       queuedDownloads.forEach((item) => {
@@ -583,7 +580,7 @@ const updatedItem = {
       setDownloadList((prev) => {
         const updatedList = prev.map((itm) =>
           itm.id === id
-            ? { ...itm, isPaused: false, status: 'Downloading',  } // 🔄 Reset progress on resume
+            ? { ...itm, isPaused: false, status: 'Downloading' } // 🔄 Reset progress on resume
             : itm
         )
 
@@ -632,6 +629,7 @@ const updatedItem = {
       }
     }
   }
+
   // Render the component
   return (
     <div>
@@ -678,10 +676,11 @@ const updatedItem = {
                       } else {
                         setShowWebView(false)
                         setDownloadListOpen(false)
+                        setSelectedItem('')
                       }
                     }}
                   >
-                    <FaArrowRight size={20} />
+                    <FaArrowLeft size={20} />
                   </button>
                 </OverlayTrigger>
                 // <button

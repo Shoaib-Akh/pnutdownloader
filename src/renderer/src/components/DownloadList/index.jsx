@@ -43,7 +43,7 @@ function DownloadList({
       }
     }
     fetchDownloadedFiles()
-  }, [setDownloadList])
+  }, [])
 
   const handleDelete = (url) => {
     setDownloadList((prev) => {
@@ -121,8 +121,21 @@ function DownloadList({
                 const progress = progressMap.get(item.id)?.progress || 0
                 const remainingTime = calculateRemainingTime(item.duration, progress)
                 const formattedRemainingTime = formatTime(remainingTime)
-                console.log('Progress Map:', progressMap)
-                console.log('Item ID:', item.id, 'Progress:', progress)
+
+                if (progress === 100) {
+                  // Retrieve existing downloads
+                  let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+
+                  // Update the specific item's isCompleted status
+                  storedDownloads = storedDownloads.map((download) =>
+                    download.id === item.id
+                      ? { ...download, isCompleted: true, status: 'Completed' }
+                      : download
+                  )
+
+                  // Save back to localStorage
+                  localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
+                }
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
@@ -154,8 +167,6 @@ function DownloadList({
                       )}
                     </td>
                     <td className="data-cell status-cell">
-                      {console.log('item.status', item.status)}
-
                       {['Fetching Info..', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isCompleted || progress === 100 ? (
@@ -186,8 +197,6 @@ function DownloadList({
                               )}
                             </>
                           )}
-
-                          {console.log('item.isCompleted', item.isCompleted)}
 
                           {item.isPlaylist
                             ? `${item.currentItem}/${item.totalItems} videos downloaded`
