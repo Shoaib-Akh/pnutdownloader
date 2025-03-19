@@ -34,8 +34,7 @@ switch (process.platform) {
   default:
     iconPath = join(process.resourcesPath, 'icon.png')
 }
-require('dotenv').config();
-console.log('GH_TOKEN:', process.env.GH_TOKEN);
+
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
@@ -59,7 +58,7 @@ function createWindow() {
     minHeight: 670,
     maxWidth: 1200,
     maxHeight: 670,
-    autoHideMenuBar: true,
+    // autoHideMenuBar: true,
     icon: iconPath,
 
     webPreferences: {

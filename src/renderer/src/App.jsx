@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState,useEffect } from 'react'
 import Navbar from './components/Navbar'
 import BottomSection from './components/BottomSection'
 import Sidebar from './components/Sidebar'
@@ -19,10 +19,17 @@ function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
+console.log("updateAvailable",updateAvailable);
+console.log("updateInfo",updateInfo);
+console.log("updateDownloaded",updateDownloaded);
+
+
 
   // Listen for update events from the main process
   useEffect(() => {
     if (window.api) {
+      console.log("rr");
+      
       // Check for updates on app start
       window.api.checkForUpdates();
 
