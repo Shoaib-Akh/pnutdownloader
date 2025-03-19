@@ -42,7 +42,15 @@ function App() {
       });
     }
   }, []);
-
+  const handleInstallUpdate = () => {
+    if (window.api) {
+      window.api.installUpdate();
+      // Reset update states after installation
+      setUpdateAvailable(false);
+      setUpdateDownloaded(false);
+      setUpdateInfo(null);
+    }
+  };
   return (
     <div className="vh-100">
       {/* Render the UpdateNotification component if an update is available */}
