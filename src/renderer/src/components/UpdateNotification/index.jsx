@@ -2,8 +2,6 @@ import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded }) {
-  console.log("updateInfo",updateInfo);
-  
   return (
     <Modal show={true} onHide={() => {}} backdrop="static" keyboard={false}>
       <Modal.Header closeButton>
@@ -13,13 +11,17 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded }) {
         {isDownloaded ? (
           <p>A new version ({updateInfo?.version}) has been downloaded. Restart the app to install the update.</p>
         ) : (
-          <p>A new version ({updateInfo?.version}) is available. Downloading...</p>
+          <p>A new version ({updateInfo?.version}) is available. Click below to download.</p>
         )}
       </Modal.Body>
       <Modal.Footer>
-        {isDownloaded && (
-          <Button variant="primary" onClick={onInstall}>
-            Install Update
+        {!isDownloaded ? (
+          <Button variant="primary" onClick={() => window.api.downloadUpdate()}>
+            Download Update
+          </Button>
+        ) : (
+          <Button variant="success" onClick={onInstall}>
+            Install & Restart
           </Button>
         )}
       </Modal.Footer>

@@ -7,6 +7,7 @@ import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import ffmpegFluent from 'fluent-ffmpeg';
+import { autoUpdater } from 'electron-updater';
 
 // const ffmpegPath = app.isPackaged
 //   ? join(process.resourcesPath, 'ffmpeg.exe')
@@ -68,6 +69,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true
     }
+   
   })
 
   mainWindow.once('ready-to-show', () => {
@@ -93,7 +95,9 @@ ffmpegFluent.setFfmpegPath(ffmpeg.path);
 const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
-
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.checkForUpdates()
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -423,4 +427,32 @@ ipcMain.handle('show-confirm-dialog', async (event, options) => {
     cancelId: 1, // Cancel on "No"
   });
   return result.response; // Returns index of clicked button
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log('Update available:', info);
+  mainWindow.webContents.send('update-available', info);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded:', info);
+  mainWindow.webContents.send('update-downloaded', info);
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('Update error:', err);
+  mainWindow.webContents.send('update-error', err);
+});
+
+// IPC Handlers for Renderer
+ipcMain.on('check-for-updates', () => {
+  autoUpdater.checkForUpdates();
+});
+
+ipcMain.on('download-update', () => {
+  autoUpdater.downloadUpdate();
+});
+
+ipcMain.on('install-update', () => {
+  autoUpdater.quitAndInstall();
 });

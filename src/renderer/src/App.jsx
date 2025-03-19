@@ -2,7 +2,7 @@ import React, { useState,useEffect } from 'react'
 import Navbar from './components/Navbar'
 import BottomSection from './components/BottomSection'
 import Sidebar from './components/Sidebar'
-
+import UpdateNotification from './components/UpdateNotification'; 
 function App() {
   const [downloadType, setDownloadType] = useState('Video');
   const [quality, setQuality] = useState('1080p');
@@ -19,47 +19,29 @@ function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
-console.log("updateAvailable",updateAvailable);
-console.log("updateInfo",updateInfo);
-console.log("updateDownloaded",updateDownloaded);
 
-
-
-  // Listen for update events from the main process
   useEffect(() => {
     if (window.api) {
-      console.log("rr");
-      
-      // Check for updates on app start
+      console.log("Checking for updates...");
       window.api.checkForUpdates();
 
-      // Listen for update-available event
       window.api.onUpdateAvailable((info) => {
         console.log('Update available:', info);
         setUpdateAvailable(true);
         setUpdateInfo(info);
       });
 
-      // Listen for update-downloaded event
       window.api.onUpdateDownloaded((info) => {
         console.log('Update downloaded:', info);
         setUpdateDownloaded(true);
         setUpdateInfo(info);
       });
 
-      // Listen for update-error event
       window.api.onUpdateError((err) => {
         console.error('Update error:', err);
       });
     }
   }, []);
-
-  // Handle installing the update
-  const handleInstallUpdate = () => {
-    if (window.api) {
-      window.api.installUpdate();
-    }
-  };
 
   return (
     <div className="vh-100">
