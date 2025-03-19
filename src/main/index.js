@@ -54,10 +54,10 @@ function createWindow() {
 
   mainWindow = new BrowserWindow({
     width: 1200,
-    height: 670,
-    minWidth: 1200,
+   
+    
     minHeight: 670,
-    maxWidth: 1200,
+    maxWidth: 1900,
     maxHeight: 670,
     // autoHideMenuBar: true,
     icon: iconPath,
@@ -95,6 +95,11 @@ ffmpegFluent.setFfmpegPath(ffmpeg.path);
 const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
+  autoUpdater.setFeedURL({
+    provider: "github",
+    owner: "Shoaib-Akh",
+    repo: "pnutdownloader"
+  });
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.checkForUpdates()
