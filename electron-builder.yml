@@ -18,6 +18,11 @@ mac:
 extraResources:
   - from: public/yt-dlp.exe
     to: yt-dlp.exe
- 
+  - from: public/ffmpeg.exe
+    to: ffmpeg.exe
+  - from: public/ffplay.exe
+    to: ffplay.exe
+  - from: public/ffprobe.exe
+    to: ffprobe.exe
   - from: public/cookies.txt
     to: cookies.txt
