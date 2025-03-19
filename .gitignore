@@ -5,4 +5,4 @@ out
 .eslintcache
 *.log*
 cookies.txt
-.env
+ .env file

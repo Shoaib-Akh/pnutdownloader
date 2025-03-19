@@ -2,6 +2,8 @@ import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded }) {
+  console.log("updateInfo",updateInfo);
+  
   return (
     <Modal show={true} onHide={() => {}} backdrop="static" keyboard={false}>
       <Modal.Header closeButton>
