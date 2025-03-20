@@ -1,0 +1,10 @@
+{
+    "videoPatterns": [
+      "youtube\\.com\\/watch\\?v=",
+      "youtu\\.be\\/",
+      "vimeo\\.com\\/\\d+",
+      "facebook\\.com\\/watch\\/",
+      "tiktok\\.com\\/@.+\\/video\\/\\d+",
+      "twitter\\.com\\/.+\\/status\\/\\d+"
+    ]
+  }

@@ -70,6 +70,10 @@
         "to": "cookies.txt"
       },
       {
+        "from": "public/all.josn",
+        "to": "all.josn"
+      },
+      {
         "from": ".env",
         "to": ".env"
       }

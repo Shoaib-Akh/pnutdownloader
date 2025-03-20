@@ -5,6 +5,7 @@ import PlatformIcons from '../PlatformIcons'
 import DownloadList from '../DownloadList'
 import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
+import alljson from "../../../../../public/all.json"
 function BottomSection({
   downloadType,
   quality,
@@ -26,7 +27,6 @@ function BottomSection({
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
   const [currentWebViewUrl, setCurrentWebViewUrl] = useState('')
-
   const [downloading, setDownloading] = useState(false)
   const [downloadList, setDownloadList] = useState([])
   const webviewRef = useRef(null)
@@ -171,15 +171,7 @@ function BottomSection({
 
   // Check if the URL is downloadable
   const checkIfDownloadable = (currentUrl) => {
-    const videoPatterns = [
-      /youtube\.com\/watch\?v=/,
-      /youtu\.be\//,
-      /vimeo\.com\/\d+/,
-      /facebook\.com\/watch\//,
-      /tiktok\.com\/@.+\/video\/\d+/,
-      /twitter\.com\/.+\/status\/\d+/
-    ]
-    setIsDownloadable(videoPatterns.some((pattern) => pattern.test(currentUrl)))
+    setIsDownloadable(alljson.videoPatterns.some((pattern) => pattern.test(currentUrl)))
   }
   // Handle download click
   const handleDownloadClick = () => {
