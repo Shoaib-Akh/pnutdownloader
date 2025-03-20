@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { FaDownload, FaTimes, FaGlobe, FaArrowLeft } from 'react-icons/fa'
+import { FaDownload, FaTimes, FaGlobe, FaArrowLeft, FaArrowRight, FaSync, FaUndo, FaPlus, FaMinus, FaExclamationTriangle, FaSpinner } from 'react-icons/fa'
 import '../common.css'
 import PlatformIcons from '../PlatformIcons'
 import DownloadList from '../DownloadList'
 import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
-
 function BottomSection({
   downloadType,
   quality,
@@ -34,7 +33,31 @@ function BottomSection({
   const downloadQueue = useRef([])
   const isDownloading = useRef(false)
   const [progressMap, setProgressMap] = useState(new Map())
+  const [zoomLevel, setZoomLevel] = useState(1.0)
+  useEffect(() => {
+    if (webviewRef.current) {
+      webviewRef.current.setZoomFactor(zoomLevel);
+    }
+  }, [zoomLevel]);
 
+  // Zoom control functions
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => {
+      const newZoom = Math.min(prev + 0.1, 5.0); // Max zoom: 500%
+      return newZoom;
+    });
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => {
+      const newZoom = Math.max(prev - 0.1, 0.1); // Min zoom: 10%
+      return newZoom;
+    });
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(1.0); // Reset to 100%
+  };
   useEffect(() => {
     if (pastLinkUrl) {
       const fetchAndDownload = async () => {
@@ -56,6 +79,7 @@ function BottomSection({
       fetchAndDownload()
     }
   }, [pastLinkUrl])
+ 
   const extractVideoId = (url) => {
     // Handle full YouTube URL (https://www.youtube.com/watch?v=VIDEO_ID)
     const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
@@ -72,8 +96,8 @@ function BottomSection({
     // If no match, return null
     return null
   }
-  const API_KEY = 'AIzaSyAqOmz88j_a10_Eoa7-Z9lgW8b-J6YrXI4'
-
+  
+  const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY;
   const extractPlaylistId = (url) => {
     // Handle playlist URL (https://www.youtube.com/playlist?list=PLAYLIST_ID)
     const playlistMatch = url.match(/[?&]list=([^&]+)/)
@@ -139,6 +163,8 @@ function BottomSection({
       setUrl(lastUrl)
       setShowWebView(true)
       setIsSidebarOpen(false)
+      setSelectedItem("")
+
     }
   }
   const isPlaylist = url.includes('playlist') || url.includes('&list=') || url.includes('?list=')
@@ -609,7 +635,10 @@ function BottomSection({
 
         // Check for any 'Queued' downloads in localStorage
         const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-        const queuedDownloads = storedDownloads.filter((item) => item.status === 'Queued')
+        const queuedDownloads = storedDownloads.filter(
+          (item) =>
+            item.isPaused !== true && (item.status === 'Queued' || item.status === 'Downloading')
+        )
 
         if (queuedDownloads.length > 0) {
           console.log('Found queued downloads in localStorage. Adding to queue...')
@@ -629,6 +658,7 @@ function BottomSection({
       }
     }
   }
+
 
   // Render the component
   return (
@@ -720,7 +750,89 @@ function BottomSection({
           className="webview-container"
           style={{ margin: isSidebarOpen ? '10px 20px 10px 60px' : '10px 20px 10px 30px' }}
         >
-          <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
+           <div className="browser-header">
+    <div className="navigation-controls">
+      <button
+        className="nav-btn"
+        onClick={() => webviewRef.current?.goBack()}
+        disabled={!webviewRef.current?.canGoBack()}
+      >
+        <FaArrowLeft size={16} />
+      </button>
+      <button
+        className="nav-btn"
+        onClick={() => webviewRef.current?.goForward()}
+        disabled={!webviewRef.current?.canGoForward()}
+      >
+        <FaArrowRight size={16} />
+      </button>
+      <button className="nav-btn" onClick={() => webviewRef.current?.reload()}>
+        <FaSync size={16} />
+      </button>
+    </div>
+    <div className="zoom-controls">
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="zoom-out-tooltip">Zoom Out</Tooltip>}
+              >
+                <button className="zoom-btn" onClick={handleZoomOut}>
+                  <FaMinus size={14} />
+                </button>
+              </OverlayTrigger>
+              <span className="zoom-level">{Math.round(zoomLevel * 100)}%</span>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="zoom-in-tooltip">Zoom In</Tooltip>}
+              >
+                <button className="zoom-btn" onClick={handleZoomIn}>
+                  <FaPlus size={14} />
+                </button>
+              </OverlayTrigger>
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="zoom-reset-tooltip">Reset Zoom</Tooltip>}
+              >
+                <button className="zoom-btn" onClick={handleZoomReset}>
+                  <FaUndo size={14} />
+                </button>
+              </OverlayTrigger>
+            </div>
+    <div className="url-bar">
+      <FaGlobe size={16} className="url-icon" />
+      <input
+        type="text"
+        value={currentWebViewUrl}
+        onChange={(e) => setCurrentWebViewUrl(e.target.value)}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            webviewRef.current.src = currentWebViewUrl;
+          }
+        }}
+        placeholder="Enter URL or search..."
+      />
+    </div>
+    <OverlayTrigger
+      placement="top"
+      overlay={<Tooltip id="close-tooltip">Close Browser</Tooltip>}
+    >
+      <button
+        className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
+        style={{ width: '40px', height: '40px' }}
+        onClick={handleCloseWebView}
+      >
+        <FaTimes size={18} />
+      </button>
+    </OverlayTrigger>
+  </div>
+  <div style={{height:"88%",marginBottom:30}}>
+ 
+  <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }}
+  
+ 
+  />
+
+  </div>
+
           {/* <button className="close-webview-btn" onClick={handleCloseWebView}>
             Close Browser
           </button> */}
@@ -749,6 +861,7 @@ function BottomSection({
             </button>
           )}
         </div>
+      
       )}
     </div>
   )
