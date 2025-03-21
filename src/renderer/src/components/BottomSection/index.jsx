@@ -170,9 +170,11 @@ function BottomSection({
   const isPlaylist = url.includes('playlist') || url.includes('&list=') || url.includes('?list=')
 
   // Check if the URL is downloadable
-  const checkIfDownloadable = (currentUrl) => {
-    setIsDownloadable(alljson.videoPatterns.some((pattern) => pattern.test(currentUrl)))
-  }
+  const checkIfDownloadable = (currentUrl) => { 
+    setIsDownloadable(
+        alljson?.videoPatterns?.some((pattern) => new RegExp(pattern).test(currentUrl))
+    );
+};
   // Handle download click
   const handleDownloadClick = () => {
     const urlToDownload = pastLinkUrl || currentWebViewUrl
@@ -359,14 +361,27 @@ function BottomSection({
           // Update status to Fetching Info
           setDownloadList((prev) => updateStatus(prev, url, 'Fetching Info...'))
           storedDownloads = updateLocalStorage(storedDownloads, url, 'Fetching Info...')
+          const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
 
           let info
+          console.log("url",url);
+          
+          let videoIdMatch = url.match(youtubeRegex);
+          console.log("videoIdMatch",videoIdMatch);
+          
           try {
-            info = await getVideoInfo(url)
-          } catch (error) {
-            setDownloadList((prev) => markFailed(prev, url))
-            storedDownloads = markFailed(storedDownloads, url)
-            continue
+            
+            if (videoIdMatch) {
+              console.log("Fetching YouTube video info...");
+              info = await getVideoInfo(url);
+          } else {
+              console.log("Fetching non-YouTube video info...");
+              info = await window.api.fetchVideoInfo(url);
+          }
+        } catch (error) {
+            setDownloadList((prev) => markFailed(prev, url));
+            storedDownloads = markFailed(storedDownloads, url);  
+                      continue
           }
 
           // Update with fetched info and save to localStorage

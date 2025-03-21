@@ -1,10 +1,20 @@
 {
-    "videoPatterns": [
-      "youtube\\.com\\/watch\\?v=",
-      "youtu\\.be\\/",
+  "videoPatterns": [
+      "youtube\\.com\\/watch\\?v=[A-Za-z0-9_-]+",
+      "youtu\\.be\\/[A-Za-z0-9_-]+",
       "vimeo\\.com\\/\\d+",
-      "facebook\\.com\\/watch\\/",
-      "tiktok\\.com\\/@.+\\/video\\/\\d+",
-      "twitter\\.com\\/.+\\/status\\/\\d+"
-    ]
-  }
+      "facebook\\.com\\/watch\\/.*",
+      "facebook\\.com\\/.*\\/videos\\/\\d+",
+      "tiktok\\.com\\/@[^/]+\\/video\\/\\d+",
+      "twitter\\.com\\/[^/]+\\/status\\/\\d+",
+      "x\\.com\\/[^/]+\\/status\\/\\d+",
+      "instagram\\.com\\/p\\/[A-Za-z0-9_-]+",
+      "instagram\\.com\\/reels\\/[A-Za-z0-9_-]+",
+      "instagram\\.com\\/stories\\/[^/]+\\/\\d+",
+      "dailymotion\\.com\\/video\\/[A-Za-z0-9]+",
+      "twitch\\.tv\\/videos\\/\\d+",
+      "twitch\\.com\\/[^/]+\\/clip\\/[A-Za-z0-9_-]+",
+      "rumble\\.com\\/v[A-Za-z0-9_-]+",
+      "bitchute\\.com\\/video\\/[A-Za-z0-9_-]+"
+  ]
+}

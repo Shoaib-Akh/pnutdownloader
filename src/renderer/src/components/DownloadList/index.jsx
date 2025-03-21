@@ -4,6 +4,7 @@ import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
+import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 
 function DownloadList({
   selectedItem,
@@ -12,6 +13,8 @@ function DownloadList({
   progressMap,
   handlePauseResume
 }) {
+  const [openDropdown, setOpenDropdown] = useState(null)
+
   useEffect(() => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
     setDownloadList(storedDownloads)
@@ -58,36 +61,15 @@ function DownloadList({
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
 
-      if (selectedItem === 'Playlist') return isPlaylist // Only show playlists
-      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist // Exclude playlists
+      if (selectedItem === 'Playlist') return isPlaylist
+      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
       if (selectedItem === 'Audio') return item.format === 'MP3'
       if (selectedItem === 'Recent Download') return true
       return false
     })
     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-    .filter(
-      (item, index, self) => index === self.findIndex((t) => t.url === item.url) // Remove duplicate URLs
-    )
+    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
 
-  const [openDropdown, setOpenDropdown] = useState(null)
-
-  // Function to convert ISO duration to seconds
-  const convertISODurationToSeconds = (duration) => {
-    if (typeof duration !== 'string' || !duration.startsWith('PT')) {
-      return 0 // Invalid format
-    }
-
-    const matches = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/)
-    if (!matches) return 0
-
-    const hours = matches[1] ? parseInt(matches[1]) : 0
-    const minutes = matches[2] ? parseInt(matches[2]) : 0
-    const seconds = matches[3] ? parseInt(matches[3]) : 0
-
-    return hours * 3600 + minutes * 60 + seconds
-  }
-
-  // Function to calculate remaining download time
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
@@ -95,11 +77,7 @@ function DownloadList({
   }
 
   // Function to format seconds into MM:SS
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${minutes}:${secs.toString().padStart(2, '0')}`
-  }
+
 
   return (
     <div className="container-fluid p-0">
@@ -109,7 +87,6 @@ function DownloadList({
             <tr>
               <th className="header-cell">Files</th>
               <th className="header-cell">DURATION</th>
-              {/* <th className="header-cell">REMAINING</th> */}
               <th className="header-cell">Format</th>
               <th className="header-cell">Status</th>
               <th className="header-cell">Action</th>
@@ -123,23 +100,19 @@ function DownloadList({
                 const formattedRemainingTime = formatTime(remainingTime)
 
                 if (progress === 100) {
-                  // Retrieve existing downloads
                   let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-
-                  // Update the specific item's isCompleted status
                   storedDownloads = storedDownloads.map((download) =>
                     download.id === item.id
                       ? { ...download, isCompleted: true, status: 'Completed' }
                       : download
                   )
-
-                  // Save back to localStorage
                   localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
                 }
+
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
-                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={100} height={50} />
                       ) : (
                         <>
@@ -147,27 +120,30 @@ function DownloadList({
                             src={item.thumbnail}
                             style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
                             alt="Thumbnail"
+                            onError={(e) => {
+                              e.target.style.display = 'none'
+                            }}
                           />
                           {`${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`}
                         </>
                       )}
                     </td>
                     <td className="data-cell">
-                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={50} />
                       ) : (
                         formatTime(convertISODurationToSeconds(item.duration))
                       )}
                     </td>
                     <td className="data-cell">
-                      {item.status === 'Fetching Info..' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={50} />
                       ) : (
                         item.format
                       )}
                     </td>
                     <td className="data-cell status-cell">
-                      {['Fetching Info..', 'Queued'].includes(item.status) ? (
+                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isCompleted || progress === 100 ? (
                         <>
@@ -217,7 +193,7 @@ function DownloadList({
                     </td>
 
                     <td className="data-cell action-cell">
-                      {item.status === 'Fetching Info..' ? (
+                      {item.status === 'Fetching Info...' ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
@@ -259,7 +235,6 @@ function DownloadList({
                 )
               })
             ) : (
-              // Display "No Data Found" when filteredList is empty
               <tr>
                 <td
                   colSpan="5"
