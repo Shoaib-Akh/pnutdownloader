@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaPause, FaPlay, FaEllipsisV, FaTrash } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaPause, FaPlay, FaEllipsisV, FaTrash,FaInstagram,FaFacebook } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
+import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({
   selectedItem,
@@ -108,24 +109,13 @@ function DownloadList({
                   )
                   localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
                 }
-
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
                       {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={100} height={50} />
                       ) : (
-                        <>
-                          <img
-                            src={item.thumbnail}
-                            style={{ width: 50, height: 50, borderRadius: 10, marginRight: 10 }}
-                            alt="Thumbnail"
-                            onError={(e) => {
-                              e.target.style.display = 'none'
-                            }}
-                          />
-                          {`${item.title.slice(0, 20)}${item.title.length > 15 ? '...' : ''}`}
-                        </>
+                      <MediaThumbnail thumbnail={item.thumbnail} title={item.title} url={item.url} />
                       )}
                     </td>
                     <td className="data-cell">
