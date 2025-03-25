@@ -7,12 +7,9 @@ import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
 
-function DownloadList({
-  selectedItem,
-  progressMap,
-  videoInfo
-}) {
+function DownloadList({ selectedItem, progressMap, videoInfo }) {
   const [openDropdown, setOpenDropdown] = useState(null)
+console.log("videoInfo",videoInfo);
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -41,22 +38,23 @@ function DownloadList({
     fetchDownloadedFiles()
   }, [])
 
-  const handleDelete = (url) => {
+  const handleDelete = (item) => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
-    const updatedList = storedDownloads.filter((item) => item.url !== url)
+    const updatedList = storedDownloads.filter((item) => item.url !== item.url)
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
-  }
+    window.api.pauseDownload(item.id)
+    }
 
   const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo))
   .filter((item) => {
-    const isPlaylist =
+      const isPlaylist =
       item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
-    if (selectedItem === 'Playlist') return isPlaylist
+      if (selectedItem === 'Playlist') return isPlaylist
     if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
     if (selectedItem === 'Audio') return item.format === 'MP3'
-    if (selectedItem === 'Recent Download') return true
-    return false
-  })
+      if (selectedItem === 'Recent Download') return true
+      return false
+    })
   .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   const calculateRemainingTime = (duration, progress) => {
@@ -95,14 +93,21 @@ function DownloadList({
                   )
                   localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
                 }
-
+                const isPlaylist =
+                  item?.url?.includes('playlist') ||
+                  item?.url?.includes('&list=') ||
+                  item?.url?.includes('?list=')
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
                       {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={100} height={50} />
                       ) : (
-                        <MediaThumbnail thumbnail={item.thumbnail} title={item.title} url={item.url} />
+                        <MediaThumbnail
+                          thumbnail={item.thumbnail}
+                          title={item.title}
+                          url={item.url}
+                        />
                       )}
                     </td>
                     <td className="data-cell">
@@ -122,6 +127,8 @@ function DownloadList({
                     <td className="data-cell status-cell">
                       {['Fetching Info...', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
+                      ) : isPlaylist ? (
+                        `${item.currentItem}/${item.totalItems} videos download`
                       ) : item.isCompleted || progress === 100 ? (
                         <>
                           <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
@@ -129,10 +136,9 @@ function DownloadList({
                         </>
                       ) : (
                         <div>
+                          {console.log('item.isPlaylist', isPlaylist)}
                           <FaRegClock className="text-success" style={{ marginRight: 5 }} />
-                          {item.isPlaylist
-                            ? `${item.currentItem}/${item.totalItems} videos downloaded`
-                            : item.status}
+                          {item.status}
                           {!item.isCompleted && (
                             <ProgressBar
                               now={progressMap.get(item.id)?.progress || 0}
@@ -144,8 +150,9 @@ function DownloadList({
                         </div>
                       )}
                     </td>
+
                     <td className="data-cell action-cell">
-                      {item.status === 'Fetching Info...' ? (
+                      {item.status === 'Fetching Info...'  || !item.isCompleted  ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
@@ -158,7 +165,7 @@ function DownloadList({
                           <Dropdown.Menu className="dropdown-menu">
                             <Dropdown.Item
                               onClick={() => {
-                                handleDelete(item.url)
+                                handleDelete(item)
                                 setOpenDropdown(null)
                               }}
                             >
@@ -180,7 +187,7 @@ function DownloadList({
                     padding: '20px',
                     fontSize: '18px',
                     fontWeight: 'bold',
-                    color: 'gray',
+                    color: 'gray'
                   }}
                 >
                   No Data Found
