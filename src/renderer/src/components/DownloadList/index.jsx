@@ -9,7 +9,8 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({
   selectedItem,
-  progressMap
+  progressMap,
+  videoInfo
 }) {
   const [openDropdown, setOpenDropdown] = useState(null)
 
@@ -46,7 +47,7 @@ function DownloadList({
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
   }
 
-  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || '[]'))
+  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo))
   .filter((item) => {
     const isPlaylist =
       item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
