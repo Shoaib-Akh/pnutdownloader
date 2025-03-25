@@ -236,6 +236,145 @@ function formatDuration(seconds) {
 // if (!existsSync(ffmpegPath) || !existsSync(ffprobePath)) {
 //   console.error('FFmpeg or FFprobe not found! Please install FFmpeg.')
 // }
+// const activeDownloads = {};
+
+// const getAvailableFormats = (url) => {
+//   return new Promise((resolve, reject) => {
+//     const args = ['--list-formats', url];
+//     const listProcess = spawn(ytdlpPath, args, { windowsHide: true });
+//     let output = '';
+
+//     listProcess.stdout.on('data', (data) => {
+//       output += data.toString();
+//     });
+
+//     listProcess.stderr.on('data', (data) => {
+//       console.error('Error listing formats:', data.toString());
+//     });
+
+//     listProcess.on('close', (code) => {
+//       if (code !== 0) {
+//         return reject(new Error(`Failed to list formats with exit code ${code}`));
+//       }
+//       resolve(output);
+//     });
+//   });
+// };
+
+// const getFormatIdForHeight = (formatsOutput, selectedHeight) => {
+//   const heightNumber = selectedHeight.replace(/[pP]$/, '');
+//   const lines = formatsOutput.split('\n');
+  
+//   for (const line of lines) {
+//     const resolutionMatch = line.match(/(\d+)x(\d+)/);
+//     if (resolutionMatch) {
+//       const height = resolutionMatch[2];
+//       if (height === heightNumber && line.includes('mp4')) {
+//         const columns = line.trim().split(/\s+/);
+//         const formatId = columns[0];
+//         if (formatId && !isNaN(formatId)) {
+//           return formatId;
+//         }
+//       }
+//     }
+//   }
+//   return null;
+// };
+
+// const startDownload = async (event, options) => {
+//   console.log("Options:", options);
+
+//   const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
+
+//   try {
+//     // Get available formats
+//     const formatsOutput = await getAvailableFormats(url);
+//     console.log("Formats Output:\n", formatsOutput);
+
+//     // Find format ID based on height
+//     const formatId = getFormatIdForHeight(formatsOutput, selectedQuality);
+//     console.log("Selected Format ID for height", selectedQuality, ":", formatId);
+
+//     if (!formatId) {
+//       const errorMsg = `No format found with height ${selectedQuality}. Available formats:\n${formatsOutput}`;
+//       event.sender.send('download-progress', { error: errorMsg });
+//       throw new Error(errorMsg);
+//     }
+
+//     // Build format specifier with fallback
+//     const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
+//     const formatSpecifier = isAudioOnly
+//       ? '--extract-audio --audio-format mp3 --audio-quality best'
+//       : `-f bestvideo[height=${selectedQuality.replace('p', '')}][ext=mp4]+bestaudio/best --merge-output-format ${format}`;
+
+//     // Set download directory
+//     const downloadDir = saveTo === 'Desktop'
+//       ? join(app.getPath('desktop'), 'pnutdownloader')
+//       : join(app.getPath('downloads'), 'pnutdownloader');
+
+//     if (!existsSync(downloadDir)) {
+//       mkdirSync(downloadDir, { recursive: true });
+//     }
+//     const downloadPath = join(downloadDir, '%(title)s.%(ext)s');
+
+//     // Construct yt-dlp arguments
+//     const args = [
+//       '--continue',
+//       '--ffmpeg-location', ffmpegPath,
+//       '-o', downloadPath,
+//       '--cookies', cookiesPath,
+//       '--newline',
+//       '--ignore-errors',
+//       '--progress',
+      
+//       ...formatSpecifier.split(' '),
+//       url,
+//       '--no-playlist'
+//     ];
+
+//     console.log("yt-dlp Arguments:", args);
+
+//     // Start download process without global tracking
+//     const process = spawn(ytdlpPath, args, { windowsHide: true });
+//     activeDownloads[downloadId] = true;
+
+//     process.stdout.on('data', (data) => {
+//       const line = data.toString().trim();
+//       console.log("Progress:", line);
+//       event.sender.send('download-progress', { message: line });
+//     });
+
+//     process.stderr.on('data', (data) => {
+//       const errorMessage = data.toString().trim();
+//       console.error("Error Output:", errorMessage);
+//       event.sender.send('download-progress', { error: errorMessage });
+//     });
+
+//     process.on('close', (code) => {
+//       delete activeDownloads[downloadId];
+//       if (code === 0) {
+//         event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
+//       } else {
+//         const errorMsg = `Download failed with code ${code}`;
+//         event.sender.send('download-progress', { error: errorMsg });
+//         throw new Error(errorMsg);
+//       }
+//     });
+
+//     process.on('error', (err) => {
+//       console.error("Process Error:", err.message);
+//       event.sender.send('download-progress', { error: err.message });
+//       delete activeDownloads[downloadId];
+//       throw err;
+//     });
+
+//   } catch (err) {
+//     console.error("Caught Error:", err.message);
+//     event.sender.send('download-progress', { error: err.message });
+//     delete activeDownloads[downloadId];
+//     throw err;
+//   }
+// };
 
 let downloadProcess = null; // Track the current download process
 const activeDownloads = {};
@@ -348,8 +487,6 @@ const startDownload = async (event, options) => {
     }
   });
 };
-
-
 ipcMain.handle('downloadVideo', async (event, options) => {
   console.log('Starting download...');
   try {

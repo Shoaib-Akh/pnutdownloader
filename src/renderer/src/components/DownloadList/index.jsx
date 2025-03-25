@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaPause, FaPlay, FaEllipsisV, FaTrash,FaInstagram,FaFacebook } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -9,17 +9,9 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({
   selectedItem,
-  setDownloadList,
-  downloadList,
-  progressMap,
-  handlePauseResume
+  progressMap
 }) {
   const [openDropdown, setOpenDropdown] = useState(null)
-
-  useEffect(() => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
-    setDownloadList(storedDownloads)
-  }, [setDownloadList])
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -40,7 +32,6 @@ function DownloadList({
             : item
         })
 
-        setDownloadList(updatedList)
         localStorage.setItem('downloadList', JSON.stringify(updatedList))
       } catch (error) {
         console.error('❌ Error reading directory:', error)
@@ -50,35 +41,28 @@ function DownloadList({
   }, [])
 
   const handleDelete = (url) => {
-    setDownloadList((prev) => {
-      const updatedList = prev.filter((item) => item.url !== url)
-      localStorage.setItem('downloadList', JSON.stringify(updatedList))
-      return updatedList
-    })
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    const updatedList = storedDownloads.filter((item) => item.url !== url)
+    localStorage.setItem('downloadList', JSON.stringify(updatedList))
   }
 
-  const filteredList = downloadList
-    .filter((item) => {
-      const isPlaylist =
-        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
-
-      if (selectedItem === 'Playlist') return isPlaylist
-      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-      if (selectedItem === 'Audio') return item.format === 'MP3'
-      if (selectedItem === 'Recent Download') return true
-      return false
-    })
-    .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
-
+  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || '[]'))
+  .filter((item) => {
+    const isPlaylist =
+      item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
+    if (selectedItem === 'Playlist') return isPlaylist
+    if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
+    if (selectedItem === 'Audio') return item.format === 'MP3'
+    if (selectedItem === 'Recent Download') return true
+    return false
+  })
+  .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+  .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
-
-  // Function to format seconds into MM:SS
-
 
   return (
     <div className="container-fluid p-0">
@@ -94,152 +78,115 @@ function DownloadList({
             </tr>
           </thead>
           <tbody>
-  {filteredList.length > 0 ? (
-    // Use a Set to ensure unique items by id, then map over them
-    [...new Set(filteredList.map(item => item.id))].map(uniqueId => {
-      const item = filteredList.find(i => i.id === uniqueId); // Find the first occurrence of the item
-      const progress = progressMap.get(item.id)?.progress || 0;
-      const remainingTime = calculateRemainingTime(item.duration, progress);
-      const formattedRemainingTime = formatTime(remainingTime);
+            {filteredList.length > 0 ? (
+              [...new Set(filteredList.map(item => item.id))].map(uniqueId => {
+                const item = filteredList.find(i => i.id === uniqueId)
+                const progress = progressMap.get(item.id)?.progress || 0
+                const remainingTime = calculateRemainingTime(item.duration, progress)
+                const formattedRemainingTime = formatTime(remainingTime)
 
-      if (progress === 100) {
-        let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-        storedDownloads = storedDownloads.map((download) =>
-          download.id === item.id
-            ? { ...download, isCompleted: true, status: 'Completed' }
-            : download
-        );
-        localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-      }
+                if (progress === 100) {
+                  let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+                  storedDownloads = storedDownloads.map((download) =>
+                    download.id === item.id
+                      ? { ...download, isCompleted: true, status: 'Completed' }
+                      : download
+                  )
+                  localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
+                }
 
-      return (
-        <tr key={item.id} className="data-row">
-          <td className="data-cell">
-            {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
-              <Skeleton width={100} height={50} />
-            ) : (
-              <MediaThumbnail thumbnail={item.thumbnail} title={item.title} url={item.url} />
-            )}
-          </td>
-          <td className="data-cell">
-            {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
-              <Skeleton width={50} />
-            ) : (
-              formatTime(convertISODurationToSeconds(item.duration))
-            )}
-          </td>
-          <td className="data-cell">
-            {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
-              <Skeleton width={50} />
-            ) : (
-              item.format
-            )}
-          </td>
-          <td className="data-cell status-cell">
-            {['Fetching Info...', 'Queued'].includes(item.status) ? (
-              <Skeleton width={100} />
-            ) : item.isCompleted || progress === 100 ? (
-              <>
-                {item.status === 'Downloading' && (
-                  <FaRegClock className="text-success" style={{ marginRight: 5 }} />
-                )}
-                {item.status === 'Completed' && (
-                  <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-                )}
-                {item.status}
-              </>
-            ) : (
-              <div>
-                {['Paused', 'Downloading', 'Completed'].includes(item.status) && (
-                  <>
-                    {item.status === 'Paused' && (
-                      <FaPause className="text-success" style={{ marginRight: 5 }} />
-                    )}
-                    {item.status === 'Downloading' && (
-                      <FaRegClock className="text-success" style={{ marginRight: 5 }} />
-                    )}
-                    {item.status === 'Completed' && (
-                      <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-                    )}
-                  </>
-                )}
-
-                {item.isPlaylist
-                  ? `${item.currentItem}/${item.totalItems} videos downloaded`
-                  : item.status}
-
-                {!item.isCompleted &&
-                  item.status !== 'Paused' &&
-                  item.status !== 'Completed' && (
-                    <ProgressBar
-                      now={progressMap.get(item.id)?.progress || 0}
-                      className="flex-grow-1"
-                      style={{ height: 4 }}
-                      key={item.id}
-                    />
-                  )}
-              </div>
-            )}
-          </td>
-          <td className="data-cell action-cell">
-            {item.status === 'Fetching Info...' ? (
-              <Skeleton width={40} height={40} borderRadius={100} />
-            ) : (
-              <Dropdown
-                show={openDropdown === item.id}
-                onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
-              >
-                <Dropdown.Toggle as="button" className="three-dots-btn">
-                  <FaEllipsisV />
-                </Dropdown.Toggle>
-                <Dropdown.Menu className="dropdown-menu">
-                  {!item.isCompleted && (
-                    <Dropdown.Item
-                      onClick={() => {
-                        handlePauseResume(item.id);
-                        setOpenDropdown(null);
-                      }}
-                    >
-                      {item.isPaused ? (
-                        <FaPlay className="me-2" />
+                return (
+                  <tr key={item.id} className="data-row">
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                        <Skeleton width={100} height={50} />
                       ) : (
-                        <FaPause className="me-2" />
+                        <MediaThumbnail thumbnail={item.thumbnail} title={item.title} url={item.url} />
                       )}
-                      {item.isPaused ? 'Resume' : 'Pause'}
-                    </Dropdown.Item>
-                  )}
-                  <Dropdown.Item
-                    onClick={() => {
-                      handleDelete(item.url);
-                      setOpenDropdown(null);
-                    }}
-                  >
-                    <FaTrash className="me-2" /> Delete
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
+                    </td>
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                        <Skeleton width={50} />
+                      ) : (
+                        formatTime(convertISODurationToSeconds(item.duration))
+                      )}
+                    </td>
+                    <td className="data-cell">
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                        <Skeleton width={50} />
+                      ) : (
+                        item.format
+                      )}
+                    </td>
+                    <td className="data-cell status-cell">
+                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
+                        <Skeleton width={100} />
+                      ) : item.isCompleted || progress === 100 ? (
+                        <>
+                          <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                          Completed
+                        </>
+                      ) : (
+                        <div>
+                          <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+                          {item.isPlaylist
+                            ? `${item.currentItem}/${item.totalItems} videos downloaded`
+                            : item.status}
+                          {!item.isCompleted && (
+                            <ProgressBar
+                              now={progressMap.get(item.id)?.progress || 0}
+                              className="flex-grow-1"
+                              style={{ height: 4 }}
+                              key={item.id}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="data-cell action-cell">
+                      {item.status === 'Fetching Info...' ? (
+                        <Skeleton width={40} height={40} borderRadius={100} />
+                      ) : (
+                        <Dropdown
+                          show={openDropdown === item.id}
+                          onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
+                        >
+                          <Dropdown.Toggle as="button" className="three-dots-btn">
+                            <FaEllipsisV />
+                          </Dropdown.Toggle>
+                          <Dropdown.Menu className="dropdown-menu">
+                            <Dropdown.Item
+                              onClick={() => {
+                                handleDelete(item.url)
+                                setOpenDropdown(null)
+                              }}
+                            >
+                              <FaTrash className="me-2" /> Delete
+                            </Dropdown.Item>
+                          </Dropdown.Menu>
+                        </Dropdown>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
+            ) : (
+              <tr>
+                <td
+                  colSpan="5"
+                  style={{
+                    textAlign: 'center',
+                    padding: '20px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    color: 'gray',
+                  }}
+                >
+                  No Data Found
+                </td>
+              </tr>
             )}
-          </td>
-        </tr>
-      );
-    })
-  ) : (
-    <tr>
-      <td
-        colSpan="5"
-        style={{
-          textAlign: 'center',
-          padding: '20px',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          color: 'gray',
-        }}
-      >
-        No Data Found
-      </td>
-    </tr>
-  )}
-</tbody>
+          </tbody>
         </table>
       </div>
     </div>
