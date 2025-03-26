@@ -92,11 +92,11 @@ function BottomSection({
   const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
   const extractPlaylistId = (url) => {
     const playlistMatch = url.match(
-      /(?:youtube\.com|music\.youtube\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/
-    )
-
-    return playlistMatch ? playlistMatch[1] : null
-  }
+      /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i
+    );
+  
+    return playlistMatch ? playlistMatch[1] : null;
+  };
 
   useEffect(() => {
     if (webviewRef.current) {
@@ -184,6 +184,8 @@ function BottomSection({
     if (!videoId && !playlistId) return null
 
     if (videoId && !playlistId) {
+      console.log("videoId",videoId);
+      
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
       )
@@ -256,11 +258,12 @@ function BottomSection({
       speed: 'Unknown',
       eta: 'Unknown',
       status: 'Queued',
+      isPlaylistCompleted:false,
       isCompleted: false,
       isFailed: false,
       isPlaylist: videoInfo?.isPlaylist || false,
       currentItem: 0,
-      totalItems: videoInfo?.totalVideos || 0
+    
     }
 
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
@@ -307,22 +310,29 @@ function BottomSection({
         fileSize: info?.fileSize || 'Unknown',
         status: 'Downloading',
         isPlaylist: info?.isPlaylist || false,
-        totalItems: info?.totalVideos || 0,
-        currentItem: info?.isPlaylist ? 1 : 0
+        
+      
       }
       setVideoInfo(info)
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        console.log("stored",stored);
+        
         const itemIdx = stored.findIndex((i) => i.id === currentId)
 
         if (itemIdx === -1) return
 
-        if (progressData.message.match(/(https?:\/\/www\.youtube\.com\/watch\?v=[\w-]+)/)) {
-          const youtubeUrl = progressData.message.match(
-            /(https?:\/\/www\.youtube\.com\/watch\?v=[\w-]+)/
-          )[1]
+        if (progressData.message.match(/(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/)) {
+          const match = progressData.message.match(
+            /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+          );
+          const youtubeUrl = match[0]; // Full URL
+          const videoId = match[2];    // Video ID
+          console.log("youtubeUrl", youtubeUrl);
+          console.log("videoId", videoId);
+        
           getVideoInfo(youtubeUrl).then((ytInfo) => {
             stored[itemIdx] = {
               ...stored[itemIdx],
@@ -358,13 +368,23 @@ function BottomSection({
         }
 
         if (
-          progressData?.status?.includes('Download complete!') ||
-          progressData.message.includes('Finished downloading playlist:')
+          progressData?.status?.includes('Download complete!') 
+        
         ) {
           stored[itemIdx].status = 'Completed'
           stored[itemIdx].isCompleted = true
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
+        if (
+          progressData.message.includes('Finished downloading playlist:')
+        
+        ) {
+          console.log("sddddddddddddddddddddddddddddddddddddddddddd");
+          
+          stored[itemIdx].isPlaylistCompleted = true
+          localStorage.setItem('downloadList', JSON.stringify(stored))
+        }
+       
       }
 
       window.api.onDownloadProgress(handleProgress)

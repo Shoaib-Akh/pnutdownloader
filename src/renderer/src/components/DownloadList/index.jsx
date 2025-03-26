@@ -42,21 +42,21 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     const updatedList = storedDownloads.filter((item) => item.id !== items.id)
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
     window.api.pauseDownload(items.id)
-    }
+  }
 
   const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo || videoInfo.videos
 ))
-  .filter((item) => {
+    .filter((item) => {
       const isPlaylist =
-      item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
+        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
       if (selectedItem === 'Playlist') return isPlaylist
-    if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-    if (selectedItem === 'Audio') return item.format === 'MP3'
+      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
+      if (selectedItem === 'Audio') return item.format === 'MP3'
       if (selectedItem === 'Recent Download') return true
       return false
     })
-  .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-  .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+    .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
@@ -85,7 +85,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                 const progress = progressMap.get(item.id)?.progress || 0
                 const remainingTime = calculateRemainingTime(item.duration, progress)
                 const formattedRemainingTime = formatTime(remainingTime)
-// const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com'
+                // const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com'
                 if (progress === 100) {
                   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
                   storedDownloads = storedDownloads.map((download) =>
@@ -95,7 +95,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                   )
                   localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
                 }
-              
+
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
@@ -124,51 +124,50 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                       )}
                     </td>
                     <td className="data-cell status-cell">
-  {['Fetching Info...', 'Queued'].includes(item.status) ? (
-    <Skeleton width={100} />
-  ) : item.isPlaylist ? (
-    <>
-      <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
-         {`${item.playlistTitle.slice(0, 20)}${item.playlistTitle.length > 20 ? "..." : ""}`|| 'Unnamed Playlist'}
-      </div>
-      <div>
-        {item.currentItem > 0 && item.totalItems > 0 ? (
-          `${item.currentItem}/${item.totalItems} videos downloaded`
-        ) : (
-          'Preparing playlist...'
-        )}
-        {/* {item.title && item.title !== 'Playlist Item' && (
-          <div style={{ fontSize: '0.9em', color: '#666', marginTop: 5 }}>
-            Current: {item.title}
-          </div>
-        )} */}
+                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
+                        <Skeleton width={100} />
+                      ) : item.isPlaylist ? (
+                        <>
+                          <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
+                            {`${item.playlistTitle.slice(0, 20)}${item.playlistTitle.length > 20 ? '...' : ''}` ||
+                              'Unnamed Playlist'}
+                          </div>
+                          <div>
+                          {item.isPlaylistCompleted &&
+                                                      <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+
+                          }
+                            {item.currentItem > 0 && item.totalItems > 0
+                              ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted?"Playlist download Complete":"videos downloaded"} `
+                              : 'Preparing playlist...'}
+                
         
-      </div>
-    </>
-  
-  ) : (
-    <div>
-      <FaRegClock className="text-success" style={{ marginRight: 5 }} />
-      {item.status}
-      {/* {item.title && (
-        <div style={{ fontSize: '0.9em', color: '#666', marginTop: 5 }}>
-          {item.title}
-        </div>
-      )} */}
-      {!item.isCompleted && (
-        <ProgressBar
-          now={progressMap.get(item.id)?.progress || 0}
-          className="flex-grow-1"
-          style={{ height: 4 }}
-          key={item.id}
-        />
-      )}
-    </div>
-  )}
-</td>
+                          </div>
+                         
+                        </>
+                      ) : (
+                        <div>
+                          {item.isCompleted ? (
+                            <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                          ) : (
+                            <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+                          )}
+
+                          {item.status}
+                          {!item.isCompleted && (
+                            <ProgressBar
+                              now={progressMap.get(item.id)?.progress || 0}
+                              className="flex-grow-1"
+                              style={{ height: 4 }}
+                              key={item.id}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </td>
 
                     <td className="data-cell action-cell">
-                      {item.status === 'Fetching Info...'   ? (
+                      {item.status === 'Fetching Info...' ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
