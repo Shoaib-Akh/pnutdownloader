@@ -9,7 +9,6 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({ selectedItem, progressMap, videoInfo }) {
   const [openDropdown, setOpenDropdown] = useState(null)
-console.log("videoInfo",videoInfo);
 
   useEffect(() => {
     async function fetchDownloadedFiles() {
@@ -38,14 +37,15 @@ console.log("videoInfo",videoInfo);
     fetchDownloadedFiles()
   }, [])
 
-  const handleDelete = (item) => {
+  const handleDelete = (items) => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
-    const updatedList = storedDownloads.filter((item) => item.url !== item.url)
+    const updatedList = storedDownloads.filter((item) => item.id !== items.id)
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
-    window.api.pauseDownload(item.id)
+    window.api.pauseDownload(items.id)
     }
 
-  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo))
+  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo || videoInfo.videos
+))
   .filter((item) => {
       const isPlaylist =
       item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
@@ -77,13 +77,15 @@ console.log("videoInfo",videoInfo);
             </tr>
           </thead>
           <tbody>
+            
             {filteredList.length > 0 ? (
               [...new Set(filteredList.map(item => item.id))].map(uniqueId => {
+
                 const item = filteredList.find(i => i.id === uniqueId)
                 const progress = progressMap.get(item.id)?.progress || 0
                 const remainingTime = calculateRemainingTime(item.duration, progress)
                 const formattedRemainingTime = formatTime(remainingTime)
-
+// const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com'
                 if (progress === 100) {
                   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
                   storedDownloads = storedDownloads.map((download) =>
@@ -93,10 +95,7 @@ console.log("videoInfo",videoInfo);
                   )
                   localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
                 }
-                const isPlaylist =
-                  item?.url?.includes('playlist') ||
-                  item?.url?.includes('&list=') ||
-                  item?.url?.includes('?list=')
+              
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell">
@@ -125,34 +124,51 @@ console.log("videoInfo",videoInfo);
                       )}
                     </td>
                     <td className="data-cell status-cell">
-                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
-                        <Skeleton width={100} />
-                      ) : isPlaylist ? (
-                        `${item.currentItem}/${item.totalItems} videos download`
-                      ) : item.isCompleted || progress === 100 ? (
-                        <>
-                          <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-                          Completed
-                        </>
-                      ) : (
-                        <div>
-                          {console.log('item.isPlaylist', isPlaylist)}
-                          <FaRegClock className="text-success" style={{ marginRight: 5 }} />
-                          {item.status}
-                          {!item.isCompleted && (
-                            <ProgressBar
-                              now={progressMap.get(item.id)?.progress || 0}
-                              className="flex-grow-1"
-                              style={{ height: 4 }}
-                              key={item.id}
-                            />
-                          )}
-                        </div>
-                      )}
-                    </td>
+  {['Fetching Info...', 'Queued'].includes(item.status) ? (
+    <Skeleton width={100} />
+  ) : item.isPlaylist ? (
+    <>
+      <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
+         {`${item.playlistTitle.slice(0, 20)}${item.playlistTitle.length > 20 ? "..." : ""}`|| 'Unnamed Playlist'}
+      </div>
+      <div>
+        {item.currentItem > 0 && item.totalItems > 0 ? (
+          `${item.currentItem}/${item.totalItems} videos downloaded`
+        ) : (
+          'Preparing playlist...'
+        )}
+        {/* {item.title && item.title !== 'Playlist Item' && (
+          <div style={{ fontSize: '0.9em', color: '#666', marginTop: 5 }}>
+            Current: {item.title}
+          </div>
+        )} */}
+        
+      </div>
+    </>
+  
+  ) : (
+    <div>
+      <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+      {item.status}
+      {/* {item.title && (
+        <div style={{ fontSize: '0.9em', color: '#666', marginTop: 5 }}>
+          {item.title}
+        </div>
+      )} */}
+      {!item.isCompleted && (
+        <ProgressBar
+          now={progressMap.get(item.id)?.progress || 0}
+          className="flex-grow-1"
+          style={{ height: 4 }}
+          key={item.id}
+        />
+      )}
+    </div>
+  )}
+</td>
 
                     <td className="data-cell action-cell">
-                      {item.status === 'Fetching Info...'  || !item.isCompleted  ? (
+                      {item.status === 'Fetching Info...'   ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
