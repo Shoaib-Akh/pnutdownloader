@@ -37,6 +37,15 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     fetchDownloadedFiles()
   }, [])
 
+  const handleDeleteAll = () => {
+    localStorage.setItem('downloadList', JSON.stringify([])) // Clear the entire list
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    // Pause all downloads before clearing
+    storedDownloads.forEach((item) => window.api.pauseDownload(item.id))
+    setOpenDropdown(null) // Close the dropdown after deletion
+  }
+
+  // Existing delete single item function
   const handleDelete = (items) => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
     const updatedList = storedDownloads.filter((item) => item.id !== items.id)
@@ -44,8 +53,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     window.api.pauseDownload(items.id)
   }
 
-  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo || videoInfo.videos
-))
+  const filteredList = JSON.parse(
+    localStorage.getItem('downloadList') || videoInfo || videoInfo.videos
+  )
     .filter((item) => {
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
@@ -67,21 +77,30 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     <div className="container-fluid p-0">
       <div className="table-container">
         <table className="file-table">
-          <thead>
+          <thead
+            style={{
+              position: 'sticky',
+              top: 0,
+              background: '#fff',
+              zIndex: 1
+            }}
+          >
             <tr>
-              <th className="header-cell">Files</th>
+              <th className="header-cell" style={{ textAlign: 'start' }}>
+                Files
+              </th>
               <th className="header-cell">DURATION</th>
               <th className="header-cell">Format</th>
               <th className="header-cell">Status</th>
-              <th className="header-cell">Action</th>
+              <th className="header-cell" style={{ textAlign: 'start' }}>
+                Action
+              </th>
             </tr>
           </thead>
           <tbody>
-            
             {filteredList.length > 0 ? (
-              [...new Set(filteredList.map(item => item.id))].map(uniqueId => {
-
-                const item = filteredList.find(i => i.id === uniqueId)
+              [...new Set(filteredList.map((item) => item.id))].map((uniqueId) => {
+                const item = filteredList.find((i) => i.id === uniqueId)
                 const progress = progressMap.get(item.id)?.progress || 0
                 const remainingTime = calculateRemainingTime(item.duration, progress)
                 const formattedRemainingTime = formatTime(remainingTime)
@@ -98,7 +117,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
 
                 return (
                   <tr key={item.id} className="data-row">
-                    <td className="data-cell">
+                    <td className="data-cell" style={{ textAlign: 'start' }}>
                       {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={100} height={50} />
                       ) : (
@@ -123,7 +142,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                         item.format
                       )}
                     </td>
-                    <td className="data-cell status-cell">
+                    <td className="data-cell">
                       {['Fetching Info...', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isPlaylist ? (
@@ -133,17 +152,13 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                               'Unnamed Playlist'}
                           </div>
                           <div>
-                          {item.isPlaylistCompleted &&
-                                                      <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-
-                          }
+                            {item.isPlaylistCompleted && (
+                              <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                            )}
                             {item.currentItem > 0 && item.totalItems > 0
-                              ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted?"Playlist download Complete":"videos downloaded"} `
+                              ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted ? 'Playlist download Complete' : 'videos downloaded'} `
                               : 'Preparing playlist...'}
-                
-        
                           </div>
-                         
                         </>
                       ) : (
                         <div>
@@ -166,11 +181,12 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                       )}
                     </td>
 
-                    <td className="data-cell action-cell">
+                    <td className="data-cell">
                       {item.status === 'Fetching Info...' ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
+                          style={{ marginLeft: '27px' }}
                           show={openDropdown === item.id}
                           onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
                         >
@@ -185,6 +201,14 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                               }}
                             >
                               <FaTrash className="me-2" /> Delete
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                              onClick={() => {
+                                handleDeleteAll()
+                                setOpenDropdown(null)
+                              }}
+                            >
+                              <FaTrash className="me-2" /> Delete All
                             </Dropdown.Item>
                           </Dropdown.Menu>
                         </Dropdown>

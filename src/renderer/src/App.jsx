@@ -75,14 +75,17 @@ function App() {
         setIsSidebarOpen={setIsSidebarOpen}
         setPastLinkUrl={setPastLinkUrl}
       />
+
+
       <div
-        className=""
+        className="d-flex"
         style={{
-          marginLeft: isSidebarOpen ? '200px' : '60px',
+          
           transition: 'margin-left 0.3s ease-in-out',
         }}
       >
-        <Sidebar
+        {!showWebView &&
+          <Sidebar
           isOpen={isSidebarOpen}
           setIsOpen={setIsSidebarOpen}
           setSelectedItem={setSelectedItem}
@@ -93,6 +96,8 @@ function App() {
           showWebView={showWebView}
           setDownloadListOpen={setDownloadListOpen}
         />
+}
+        
 
         <BottomSection
           downloadType={downloadType}

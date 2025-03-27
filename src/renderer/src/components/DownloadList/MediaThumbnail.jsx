@@ -42,7 +42,7 @@ const MediaThumbnail = ({ thumbnail, title, url }) => {
           onError={(e) => (e.target.style.display = "none")}
         />
       )}
-      {`${title.slice(0, 20)}${title.length > 20 ? "..." : ""}`}
+      {`${title.slice(0, 40)}${title.length > 40 ? "..." : ""}`}
     </>
   );
 };

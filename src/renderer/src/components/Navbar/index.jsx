@@ -45,85 +45,67 @@ function Navbar({
     return null;
   };
   return (
-    <nav
-      className="navbar navbar-expand-lg navbar-light justify-content-between p-4"
-      style={{ gap: 70 }}
-    >
+    <nav className="navbar navbar-expand-lg navbar-light p-3">
+    <div className="d-flex align-items-center w-100">
       {/* Left Side - Logo */}
-      <a className="navbar-brand d-flex align-items-center" href="#" style={{ cursor: "default" }}>
-        <img src={Logo} alt="PNUT Logo" className="me-2" width={150} />
+      <a className="me-3" href="#" style={{ cursor: "default" }}>
+        <img src={Logo} alt="PNUT Logo" width={150} />
       </a>
-
+  
       {/* Center Section - Options */}
       <div
-        className="d-flex flex-grow-1 justify-content-center shadow-sm bg-body "
+        className="d-flex align-items-center justify-content-between flex-grow-1 shadow-sm bg-body"
         style={{ padding: 10 }}
       >
-        <div className="d-flex flex-grow-1 " style={{ gap: 10 }}>
+        <div className="d-flex" style={{ gap: 10 }}>
           {/* Paste Link Button */}
           <button
-  className="btn btn-danger d-flex align-items-center me-3"
-  style={{ background: '#BB4F28' }}
-  onClick={async () => {
-    try {
-      // Read text from clipboard
-      const clipboardText = await navigator.clipboard.readText();
-
-      // Check if the clipboard text is a valid URL
-      if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
-        // Extract video ID from the URL
-        const videoId = extractVideoId(clipboardText);
-
-        if (!videoId) {
-          alert('The URL does not contain a valid video ID.');
-          return;
-        }
-
-        // Retrieve stored downloads from localStorage
-        let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-
-        // Check if the video ID already exists in the download list
-        const existingDownload = storedDownloads.some((item) => extractVideoId(item.url) === videoId);
-
-        if (existingDownload) {
-          // Show a warning message if the video ID already exists
-          if (!window.alertShown) {
-            window.api.showMessageBox({
-              type: 'warning',
-              title: 'Duplicate Download',
-              message: 'This video is already in the download list.',
-            });
-            window.alertShown = true;
-            setTimeout(() => (window.alertShown = false), 1000); // Reset the flag after 1 second
-          }
-          return; // Exit the function if the video ID already exists
-        }
-
-        // If the video ID does not exist, set the URL as the pastLinkUrl
-        setPastLinkUrl(clipboardText);
-      } else {
-        // Show an alert if the clipboard content is not a valid URL
-        alert('Copied content is not a valid URL.');
-      }
-    } catch (error) {
-      console.error('Failed to read clipboard: ', error);
-    }
-  }}
->
+            className="btn btn-danger d-flex align-items-center me-2"
+            style={{ background: '#BB4F28',fontSize:16}}
+            onClick={async () => {
+              try {
+                const clipboardText = await navigator.clipboard.readText();
+                if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
+                  const videoId = extractVideoId(clipboardText);
+                  if (!videoId) {
+                    alert('The URL does not contain a valid video ID.');
+                    return;
+                  }
+                  let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+                  const existingDownload = storedDownloads.some((item) => extractVideoId(item.url) === videoId);
+                  if (existingDownload) {
+                    if (!window.alertShown) {
+                      window.api.showMessageBox({
+                        type: 'warning',
+                        title: 'Duplicate Download',
+                        message: 'This video is already in the download list.',
+                      });
+                      window.alertShown = true;
+                      setTimeout(() => (window.alertShown = false), 1000);
+                    }
+                    return;
+                  }
+                  setPastLinkUrl(clipboardText);
+                } else {
+                  alert('Copied content is not a valid URL.');
+                }
+              } catch (error) {
+                console.error('Failed to read clipboard: ', error);
+              }
+            }}
+          >
             <FaPaste className="me-2" /> Paste Link
           </button>
-
+  
           {/* Dropdown for Download Type */}
           <CustomDropdown
             label="Download"
             options={Object.keys(formatOptions)}
             selected={downloadType}
-            onSelect={(value) => {
-              setDownloadType(value)
-            }}
+            onSelect={(value) => setDownloadType(value)}
           />
-
-          {/* Quality Dropdown (Not applicable for Audio and Subtitles) */}
+  
+          {/* Quality Dropdown */}
           {downloadType === 'Video' && (
             <CustomDropdown
               label="Quality"
@@ -132,8 +114,8 @@ function Navbar({
               onSelect={setQuality}
             />
           )}
-
-          {/* Format Dropdown - Based on Download Type */}
+  
+          {/* Format Dropdown */}
           {formatOptions[downloadType] && (
             <CustomDropdown
               label="Format"
@@ -142,7 +124,7 @@ function Navbar({
               onSelect={setFormat}
             />
           )}
-
+  
           {/* Dropdown for Save Location */}
           <CustomDropdown
             label="Save To"
@@ -151,14 +133,15 @@ function Navbar({
             onSelect={setSaveTo}
           />
         </div>
-
+  
         {/* Right Side - Settings & Profile Icons */}
-        <div className="d-flex align-items-center">
+        {/* <div className="d-flex align-items-center">
           <FaCog className="fs-5 me-3 cursor-pointer" title="Settings" />
           <FaUser className="fs-5 cursor-pointer" title="Profile" />
-        </div>
+        </div> */}
       </div>
-    </nav>
+    </div>
+  </nav>
   )
 }
 

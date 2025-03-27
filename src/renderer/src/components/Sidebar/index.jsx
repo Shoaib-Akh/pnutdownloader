@@ -32,15 +32,17 @@ function Sidebar({
         backgroundColor: '#f8f9fa',
         color: '#333',
         height: '80%',
-        position: 'fixed',
+        // position: 'fixed',
         left: 0,
-
+        fontSize:12,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         paddingTop: '20px',
         // boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
-        zIndex: 1000
+        // zIndex: 1000
+        justifyContent:"space-between",
+        height:"80vh"
       }}
     >
       {/* Menu Button for Collapsed Mode */}
@@ -85,13 +87,13 @@ function Sidebar({
             style={{
               display: 'flex',
               alignItems: 'center',
-              padding: '18px 15px',
+              padding: '5px 10px',
               borderRadius: '8px',
               cursor: 'pointer',
               marginBottom: '10px',
               // backgroundColor: selectedItem === item.label ? "#BB4F28" : "#fff", // 🔥 Selected item background
               color: selectedItem === item.label ? 'black' : '#A0AEC0', // 🔥 Selected text color
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: '600',
               border: selectedItem === item.label ? '1px solid #BB4F28' : '1px solid #fff',
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
@@ -120,7 +122,7 @@ function Sidebar({
               />
             </div>
 
-            {isOpen && <span>{item.label}</span>}
+            {isOpen && <span style={{fontSize:8}}>{item.label}</span>}
           </div>
         ))}
       </div>
@@ -128,14 +130,15 @@ function Sidebar({
       {/* Buy Me Nuts Button */}
       <div
         style={{
-          position: 'absolute',
-          bottom: '0',
+          // position: 'absolute',
+          // bottom: '0',
           width: '90%',
-          textAlign: 'center'
+          textAlign: 'center',
+          
         }}
       >
         {isOpen && (
-          <>
+          < >
             <img
               src={squirrel}
               alt="PNUT Logo"
@@ -145,16 +148,14 @@ function Sidebar({
 
             <button
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '100%',
+                
+                // width: '100%',s
                 padding: '10px',
                 backgroundColor: '#BB4F28',
                 borderRadius: '8px',
                 border: 'none',
                 color: 'white',
-                fontSize: '14px',
+                fontSize: '8px',
                 cursor: 'pointer'
               }}
               onClick={handleClick}

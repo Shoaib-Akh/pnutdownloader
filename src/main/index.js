@@ -53,12 +53,9 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    width: 1200,
+    minWidth: 900,    // Changed from 700 to 900
    
-    
-    minHeight: 670,
-    maxWidth: 1900,
-    maxHeight: 670,
+     // Already set to 700 as requested
     // autoHideMenuBar: true,
     icon: iconPath,
 
@@ -69,7 +66,6 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true
     }
-   
   })
 
   mainWindow.once('ready-to-show', () => {

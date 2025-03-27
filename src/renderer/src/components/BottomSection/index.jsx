@@ -41,7 +41,7 @@ function BottomSection({
   const [downloading, setDownloading] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1.0)
   const [progressMap, setProgressMap] = useState(new Map())
-  const [videoInfo, setVideoInfo] = useState()
+  const [videoInfo, setVideoInfo] = useState([])
 
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
@@ -84,7 +84,7 @@ function BottomSection({
     const shortsUrlMatch = url.match(/youtube\.com\/shorts\/([^?]+)/)
     if (shortsUrlMatch) return shortsUrlMatch[1]
     const musicUrlMatch = url.match(/music\.youtube\.com\/watch\?.*v=([^&]+)/)
-    
+
     if (musicUrlMatch) return musicUrlMatch[1]
     return null
   }
@@ -93,10 +93,10 @@ function BottomSection({
   const extractPlaylistId = (url) => {
     const playlistMatch = url.match(
       /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i
-    );
-  
-    return playlistMatch ? playlistMatch[1] : null;
-  };
+    )
+
+    return playlistMatch ? playlistMatch[1] : null
+  }
 
   useEffect(() => {
     if (webviewRef.current) {
@@ -184,15 +184,15 @@ function BottomSection({
     if (!videoId && !playlistId) return null
 
     if (videoId && !playlistId) {
-      console.log("videoId",videoId);
-      
+      console.log('videoId', videoId)
+
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
       )
       const data = await response.json()
       if (data.items.length === 0) return null
       const { snippet, contentDetails } = data.items[0]
-      
+
       return {
         videoUrl: url,
         title: snippet.title,
@@ -258,12 +258,11 @@ function BottomSection({
       speed: 'Unknown',
       eta: 'Unknown',
       status: 'Queued',
-      isPlaylistCompleted:false,
+      isPlaylistCompleted: false,
       isCompleted: false,
       isFailed: false,
       isPlaylist: videoInfo?.isPlaylist || false,
-      currentItem: 0,
-    
+      currentItem: 0
     }
 
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
@@ -309,30 +308,32 @@ function BottomSection({
         duration: info?.duration || 'Unknown',
         fileSize: info?.fileSize || 'Unknown',
         status: 'Downloading',
-        isPlaylist: info?.isPlaylist || false,
-        
-      
+        isPlaylist: info?.isPlaylist || false
       }
       setVideoInfo(info)
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
-        console.log("stored",stored);
-        
+        console.log('stored', stored)
+
         const itemIdx = stored.findIndex((i) => i.id === currentId)
 
         if (itemIdx === -1) return
 
-        if (progressData.message.match(/(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/)) {
+        if (
+          progressData.message.match(
+            /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+          )
+        ) {
           const match = progressData.message.match(
             /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-          );
-          const youtubeUrl = match[0]; // Full URL
-          const videoId = match[2];    // Video ID
-          console.log("youtubeUrl", youtubeUrl);
-          console.log("videoId", videoId);
-        
+          )
+          const youtubeUrl = match[0] // Full URL
+          const videoId = match[2] // Video ID
+          console.log('youtubeUrl', youtubeUrl)
+          console.log('videoId', videoId)
+
           getVideoInfo(youtubeUrl).then((ytInfo) => {
             stored[itemIdx] = {
               ...stored[itemIdx],
@@ -367,24 +368,17 @@ function BottomSection({
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
 
-        if (
-          progressData?.status?.includes('Download complete!') 
-        
-        ) {
+        if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed'
           stored[itemIdx].isCompleted = true
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
-        if (
-          progressData.message.includes('Finished downloading playlist:')
-        
-        ) {
-          console.log("sddddddddddddddddddddddddddddddddddddddddddd");
-          
+        if (progressData.message.includes('Finished downloading playlist:')) {
+          console.log('sddddddddddddddddddddddddddddddddddddddddddd')
+
           stored[itemIdx].isPlaylistCompleted = true
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
-       
       }
 
       window.api.onDownloadProgress(handleProgress)
@@ -439,11 +433,11 @@ function BottomSection({
   }, [])
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       {!showWebView ? (
         <>
           {downloadListOpen && selectedItem ? (
-            <div className="video-preview" style={{ marginLeft: 60, marginRight: 10 }}>
+            <div className="video-preview" style={{ marginRight: 10 }}>
               <DownloadList
                 downloadType={downloadType}
                 quality={quality}
@@ -456,7 +450,7 @@ function BottomSection({
                 progressMap={progressMap}
                 videoInfo={videoInfo}
               />
-              <OverlayTrigger
+              {/* <OverlayTrigger
                 placement="top"
                 overlay={
                   <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>
@@ -473,34 +467,62 @@ function BottomSection({
                 >
                   {lastUrl ? <FaGlobe size={16} /> : <FaArrowLeft size={20} />}
                 </button>
-              </OverlayTrigger>
+              </OverlayTrigger> */}
+              <OverlayTrigger
+              placement="top"
+              overlay={ <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>}
+            >
+              <button
+                className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
+                style={{ width: '150px', height: '40px', }}
+                onClick={() =>
+                  lastUrl
+                    ? handleResumeBrowser()
+                    : (setShowWebView(false), setDownloadListOpen(false), setSelectedItem(''))
+                }
+              >
+              {lastUrl ? <FaGlobe size={20} />:  <FaArrowLeft size={20} />}
+                <span className="ms-2 fw-medium" style={{whiteSpace:"nowrap"}}> {lastUrl ? 'Resume Browser' : 'Back'}</span>
+              </button>
+            </OverlayTrigger>
             </div>
           ) : (
             <div className="bottom-container">
               <h1>Select a service below and enter your search query</h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
+                // <OverlayTrigger
+                //   placement="top"
+                //   overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+                // >
+                //   <button
+                //     className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
+                //     style={{ width: '48px', height: '48px' }}
+                //     onClick={handleResumeBrowser}
+                //   >
+                //     <FaGlobe size={16} />
+                //   </button>
+                // </OverlayTrigger>
                 <OverlayTrigger
-                  placement="top"
-                  overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+                placement="top"
+                overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+              >
+                <button
+                  className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
+                  style={{ width: '150px', height: '40px', }}
+                  onClick={handleResumeBrowser}
                 >
-                  <button
-                    className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-                    style={{ width: '48px', height: '48px' }}
-                    onClick={handleResumeBrowser}
-                  >
-                    <FaGlobe size={16} />
-                  </button>
-                </OverlayTrigger>
+             <FaGlobe size={50} />
+                  <span className="ms-2 fw-medium" style={{whiteSpace:"nowrap"}}> Resume Browser</span>
+                </button>
+              </OverlayTrigger>
               )}
+              
             </div>
           )}
         </>
       ) : (
-        <div
-          className="webview-container"
-          style={{ margin: isSidebarOpen ? '10px 20px 10px 60px' : '10px 20px 10px 30px' }}
-        >
+        <div className="webview-container" style={{ margin: '10px 20px 10px 30px' }}>
           <div className="browser-header">
             <div className="navigation-controls">
               <button
@@ -565,18 +587,19 @@ function BottomSection({
               overlay={<Tooltip id="close-tooltip">Close Browser</Tooltip>}
             >
               <button
-                className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-                style={{ width: '40px', height: '40px' }}
+                className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
+                style={{ width: '100px', height: '40px', padding: '0 15px' }}
                 onClick={handleCloseWebView}
               >
-                <FaTimes size={18} />
+                <FaTimes size={16} />
+                <span className="ms-2 fw-medium">Close</span>
               </button>
             </OverlayTrigger>
           </div>
           <div style={{ height: '88%', marginBottom: 30 }}>
             <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
           </div>
-          <OverlayTrigger
+          {/* <OverlayTrigger
             placement="top"
             overlay={<Tooltip id="close-tooltip">Close Process</Tooltip>}
           >
@@ -587,7 +610,7 @@ function BottomSection({
             >
               <FaTimes size={20} />
             </button>
-          </OverlayTrigger>
+          </OverlayTrigger> */}
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
               {downloading ? (
