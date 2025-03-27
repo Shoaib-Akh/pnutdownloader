@@ -184,7 +184,6 @@ function BottomSection({
     if (!videoId && !playlistId) return null
 
     if (videoId && !playlistId) {
-      console.log('videoId', videoId)
 
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
@@ -315,11 +314,11 @@ function BottomSection({
 
       const handleProgress = (progressData) => {
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
-        console.log('stored', stored)
 
         const itemIdx = stored.findIndex((i) => i.id === currentId)
 
         if (itemIdx === -1) return
+
 
         if (
           progressData.message.match(
@@ -331,8 +330,7 @@ function BottomSection({
           )
           const youtubeUrl = match[0] // Full URL
           const videoId = match[2] // Video ID
-          console.log('youtubeUrl', youtubeUrl)
-          console.log('videoId', videoId)
+         
 
           getVideoInfo(youtubeUrl).then((ytInfo) => {
             stored[itemIdx] = {
@@ -368,17 +366,32 @@ function BottomSection({
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
 
+        if (progressData?.message?.includes('has already been downloaded')) {
+          stored[itemIdx].status = 'Completed'
+          stored[itemIdx].isCompleted = true
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
+            return newMap;
+          });
+          localStorage.setItem('downloadList', JSON.stringify(stored))
+        }
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed'
           stored[itemIdx].isCompleted = true
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
+            return newMap;
+          });
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
         if (progressData.message.includes('Finished downloading playlist:')) {
-          console.log('sddddddddddddddddddddddddddddddddddddddddddd')
 
           stored[itemIdx].isPlaylistCompleted = true
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
+
       }
 
       window.api.onDownloadProgress(handleProgress)
@@ -400,14 +413,29 @@ function BottomSection({
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
       }
     } catch (error) {
-      console.error('Download error:', error)
-      const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
-      const failedIndex = storedDownloads.findIndex((i) => i.id === currentId)
+      const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
+      const failedIndex = storedDownloads.findIndex((i) => i.id === currentId);
       if (failedIndex !== -1) {
-        storedDownloads[failedIndex].status = 'Failed'
-        storedDownloads[failedIndex].isFailed = true
-        localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
+        const getError = error.message.match(/Download failed with code 1/);
+        if (getError) {
+          storedDownloads[failedIndex].status = 'Failed';
+          storedDownloads[failedIndex].isFailed = true;
+          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+          setVideoInfo((prev) => ({
+            ...prev,
+            status: 'Failed',
+            isFailed: true,
+            error: 'Download failed with code 1',
+          }));
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
+            return newMap;
+          });
+        }
       }
+    
+    
     } finally {
       downloadQueue.current.shift()
       isProcessing.current = false
