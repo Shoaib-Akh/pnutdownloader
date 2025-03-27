@@ -42,7 +42,7 @@ function BottomSection({
   const [zoomLevel, setZoomLevel] = useState(1.0)
   const [progressMap, setProgressMap] = useState(new Map())
   const [videoInfo, setVideoInfo] = useState([])
-
+  const currentFileTypes = useRef(new Map());
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
@@ -195,7 +195,8 @@ function BottomSection({
       return {
         videoUrl: url,
         title: snippet.title,
-        thumbnail: snippet.thumbnails.standard.url,
+        thumbnail: snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url  
+        ,
         duration: contentDetails.duration,
         isPlaylist: false
       }
@@ -221,16 +222,16 @@ function BottomSection({
         videoId: item.snippet.resourceId.videoId,
         title: item.snippet.title,
         thumbnail: isYouTubeMusic
-          ? item.snippet.thumbnails?.standard?.url
-          : item.snippet.thumbnails?.standard?.url
+          ? snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
+          : snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
       }))
 
       return {
         playlistUrl: url,
         playlistTitle: snippet.title, // Explicitly use playlistTitle
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails?.standard?.url
-          : snippet.thumbnails?.standard?.url,
+          ? snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
+          :  snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url  ,
         // totalVideos: playlistData.items[0].contentDetails.itemCount ||0,
         videos,
         isPlaylist: true
@@ -344,17 +345,56 @@ function BottomSection({
           })
         }
 
-        const progressMatch = progressData.message.match(
-          /(\d+\.\d+)% of\s+([\d\.]+[KMGT]?iB)(?: at\s+([\d\.]+[KMGT]?iB\/s))?(?: ETA\s+([\d+:]+))?/
-        )
-        if (progressMatch) {
-          const [, progress, fileSize, speed, eta] = progressMatch
-          setProgressMap((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(currentId, { progress: parseFloat(progress), fileSize, speed, eta })
-            return newMap
-          })
-        }
+
+        console.log(`Processing message for currentId ${currentId}: ${progressData.message}`);
+
+    // Handle "Destination" message to set file type
+    if (progressData.message.includes('Destination:')) {
+      console.log(`Destination message detected`);
+      if (progressData.message.includes('.mp4')) {
+        currentFileTypes.current.set(currentId, 'video');
+        console.log(`Set currentFileType for ${currentId} to 'video'`);
+      } else if (progressData.message.includes('.m4a')) {
+        currentFileTypes.current.set(currentId, 'audio');
+        console.log(`Set currentFileType for ${currentId} to 'audio'`);
+      } else {
+        console.log(`No .mp4 or .m4a found in Destination message`);
+      }
+      return; // Exit early as there's no progress to calculate yet
+    }
+
+    // Process progress messages
+    const progressMatch = progressData.message.match(/(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/);
+    if (progressMatch) {
+      const [, progress, fileSize, speed, eta] = progressMatch;
+      const rawProgress = parseFloat(progress);
+      console.log(`rawProgress ${rawProgress}`);
+
+      let totalProgress = 0;
+      // Get the file type for this currentId
+      const currentFileType = currentFileTypes.current.get(currentId);
+      console.log(`Retrieved currentFileType for ${currentId}: ${currentFileType}`);
+
+      // Calculate totalProgress based on file type
+      if (currentFileType === 'video') {
+        totalProgress = rawProgress * 0.5; // Scale video to 0-50%
+        console.log(`Calculating video progress: ${totalProgress}`);
+      } else if (currentFileType === 'audio') {
+        totalProgress = 50 + rawProgress * 0.5; // Scale audio to 50-100%
+        console.log(`Calculating audio progress: ${totalProgress}`);
+      } else {
+        console.log(`No valid file type for ${currentId}, totalProgress remains ${totalProgress}`);
+      }
+
+      console.log(`progress ${totalProgress.toFixed(1)}`);
+
+      // Update the progress map
+      setProgressMap((prev) => {
+        const newMap = new Map(prev);
+        newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
+        return newMap;
+      });
+    }
 
         const itemCountMatch = progressData.message.match(
           /\[download\] Downloading item (\d+) of (\d+)/

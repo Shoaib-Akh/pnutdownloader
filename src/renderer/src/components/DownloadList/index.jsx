@@ -9,33 +9,33 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({ selectedItem, progressMap, videoInfo }) {
   const [openDropdown, setOpenDropdown] = useState(null)
+log
+  // useEffect(() => {
+  //   async function fetchDownloadedFiles() {
+  //     try {
+  //       const desktopPath = await window.api.getPath('downloads')
+  //       const downloadDir = `${desktopPath}/pnutdownloader`
+  //       const files = await window.api.readDirectory(downloadDir)
+  //       const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
 
-  useEffect(() => {
-    async function fetchDownloadedFiles() {
-      try {
-        const desktopPath = await window.api.getPath('downloads')
-        const downloadDir = `${desktopPath}/pnutdownloader`
-        const files = await window.api.readDirectory(downloadDir)
-        const storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || []
+  //       const updatedList = storedDownloads.map((item) => {
+  //         const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
+  //         const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi']
+  //         const fileExists = files.some((file) =>
+  //           possibleExtensions.some((ext) => file === `${normalizedTitle}.${ext}`)
+  //         )
+  //         return fileExists
+  //           ? { ...item, status: 'Completed', isCompleted: true, progress: 100 }
+  //           : item
+  //       })
 
-        const updatedList = storedDownloads.map((item) => {
-          const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
-          const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi']
-          const fileExists = files.some((file) =>
-            possibleExtensions.some((ext) => file === `${normalizedTitle}.${ext}`)
-          )
-          return fileExists
-            ? { ...item, status: 'Completed', isCompleted: true, progress: 100 }
-            : item
-        })
-
-        localStorage.setItem('downloadList', JSON.stringify(updatedList))
-      } catch (error) {
-        console.error('❌ Error reading directory:', error)
-      }
-    }
-    fetchDownloadedFiles()
-  }, [])
+  //       localStorage.setItem('downloadList', JSON.stringify(updatedList))
+  //     } catch (error) {
+  //       console.error('❌ Error reading directory:', error)
+  //     }
+  //   }
+  //   fetchDownloadedFiles()
+  // }, [])
 
   const handleDeleteAll = () => {
     localStorage.setItem('downloadList', JSON.stringify([])) // Clear the entire list
@@ -54,7 +54,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
   }
 
   const filteredList = JSON.parse(
-    localStorage.getItem('downloadList') || videoInfo || videoInfo.videos
+    localStorage.getItem('downloadList') || videoInfo 
   )
     .filter((item) => {
       const isPlaylist =
