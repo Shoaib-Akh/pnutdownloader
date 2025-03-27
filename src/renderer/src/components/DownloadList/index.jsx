@@ -9,7 +9,6 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({ selectedItem, progressMap, videoInfo }) {
   const [openDropdown, setOpenDropdown] = useState(null)
-log
   // useEffect(() => {
   //   async function fetchDownloadedFiles() {
   //     try {
@@ -72,6 +71,7 @@ log
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
+console.log("filteredList",filteredList);
 
   return (
     <div className="container-fluid p-0">

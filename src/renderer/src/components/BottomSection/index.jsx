@@ -84,7 +84,6 @@ function BottomSection({
     const shortsUrlMatch = url.match(/youtube\.com\/shorts\/([^?]+)/)
     if (shortsUrlMatch) return shortsUrlMatch[1]
     const musicUrlMatch = url.match(/music\.youtube\.com\/watch\?.*v=([^&]+)/)
-
     if (musicUrlMatch) return musicUrlMatch[1]
     return null
   }
@@ -94,7 +93,6 @@ function BottomSection({
     const playlistMatch = url.match(
       /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i
     )
-
     return playlistMatch ? playlistMatch[1] : null
   }
 
@@ -184,7 +182,6 @@ function BottomSection({
     if (!videoId && !playlistId) return null
 
     if (videoId && !playlistId) {
-
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
       )
@@ -195,8 +192,7 @@ function BottomSection({
       return {
         videoUrl: url,
         title: snippet.title,
-        thumbnail: snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url  
-        ,
+        thumbnail: snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url,
         duration: contentDetails.duration,
         isPlaylist: false
       }
@@ -222,32 +218,42 @@ function BottomSection({
         videoId: item.snippet.resourceId.videoId,
         title: item.snippet.title,
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
-          : snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
+          ? snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
+          : snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
       }))
 
       return {
         playlistUrl: url,
-        playlistTitle: snippet.title, // Explicitly use playlistTitle
+        playlistTitle: snippet.title,
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url 
-          :  snippet.thumbnails.standard.url ||snippet.thumbnails.default.url || snippet.thumbnails.high.url  ,
-        // totalVideos: playlistData.items[0].contentDetails.itemCount ||0,
+          ? snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
+          : snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url,
         videos,
         isPlaylist: true
       }
     }
   }
 
+  const isAnyDownloadInProgress = () => {
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
+    return storedDownloads.some(item => 
+      !item.isCompleted && 
+      item.status !== 'Queued' && 
+      item.status !== 'Waiting' && 
+      item.status !== 'Failed' &&
+      item.status !== 'Fetching Info...'
+    );
+  };
+
   const addToQueue = async (url) => {
     if (!url) return
     const newId = uuidv4()
-    const videoInfo = await getVideoInfo(url) // Fetch video/playlist info
+    const videoInfo = await getVideoInfo(url)
     const newDownload = {
       id: newId,
       url,
-      title: videoInfo?.isPlaylist ? 'Playlist Item' : videoInfo?.title || 'Pending...', // Individual video title or placeholder
-      playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null, // Store playlist title if applicable
+      title: videoInfo?.isPlaylist ? 'Playlist Item' : videoInfo?.title || 'Pending...',
+      playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null,
       thumbnail: videoInfo?.thumbnail || '',
       filename: '',
       quality,
@@ -257,7 +263,7 @@ function BottomSection({
       fileSize: 'Unknown',
       speed: 'Unknown',
       eta: 'Unknown',
-      status: 'Queued',
+      status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued', // Set status based on active downloads
       isPlaylistCompleted: false,
       isCompleted: false,
       isFailed: false,
@@ -299,8 +305,8 @@ function BottomSection({
 
       storedDownloads[itemIndex] = {
         ...storedDownloads[itemIndex],
-        title: info?.isPlaylist ? 'Playlist Item' : info?.title || 'Unknown', // Individual video title
-        playlistTitle: info?.isPlaylist ? info.playlistTitle : null, // Playlist title
+        title: info?.isPlaylist ? 'Playlist Item' : info?.title || 'Unknown',
+        playlistTitle: info?.isPlaylist ? info.playlistTitle : null,
         thumbnail: info?.thumbnail || '',
         filename:
           info?.filename ||
@@ -315,11 +321,9 @@ function BottomSection({
 
       const handleProgress = (progressData) => {
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
-
         const itemIdx = stored.findIndex((i) => i.id === currentId)
 
         if (itemIdx === -1) return
-
 
         if (
           progressData.message.match(
@@ -329,15 +333,14 @@ function BottomSection({
           const match = progressData.message.match(
             /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
           )
-          const youtubeUrl = match[0] // Full URL
-          const videoId = match[2] // Video ID
-         
+          const youtubeUrl = match[0]
+          const videoId = match[2]
 
           getVideoInfo(youtubeUrl).then((ytInfo) => {
             stored[itemIdx] = {
               ...stored[itemIdx],
-              title: ytInfo?.title || 'Unknown', // Update individual video title
-              thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail, // Preserve playlist thumbnail if already set
+              title: ytInfo?.title || 'Unknown',
+              thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
               duration: ytInfo?.duration || 'Unknown',
               status: 'Downloading'
             }
@@ -345,56 +348,37 @@ function BottomSection({
           })
         }
 
+        if (progressData.message.includes('Destination:')) {
+          if (progressData.message.includes('.mp4')) {
+            currentFileTypes.current.set(currentId, 'video');
+          } else if (progressData.message.includes('.m4a')) {
+            currentFileTypes.current.set(currentId, 'audio');
+          } else {
+            console.log(`No .mp4 or .m4a found in Destination message`);
+          }
+          return;
+        }
 
-        console.log(`Processing message for currentId ${currentId}: ${progressData.message}`);
+        const progressMatch = progressData.message.match(/(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/);
+        if (progressMatch) {
+          const [, progress, fileSize, speed, eta] = progressMatch;
+          const rawProgress = parseFloat(progress);
+          let totalProgress = 0;
+          const currentFileType = currentFileTypes.current.get(currentId);
+          if (currentFileType === 'video') {
+            totalProgress = rawProgress * 0.5;
+          } else if (currentFileType === 'audio') {
+            totalProgress = 50 + rawProgress * 0.5;
+          } else {
+            console.log(`No valid file type for ${currentId}, totalProgress remains ${totalProgress}`);
+          }
 
-    // Handle "Destination" message to set file type
-    if (progressData.message.includes('Destination:')) {
-      console.log(`Destination message detected`);
-      if (progressData.message.includes('.mp4')) {
-        currentFileTypes.current.set(currentId, 'video');
-        console.log(`Set currentFileType for ${currentId} to 'video'`);
-      } else if (progressData.message.includes('.m4a')) {
-        currentFileTypes.current.set(currentId, 'audio');
-        console.log(`Set currentFileType for ${currentId} to 'audio'`);
-      } else {
-        console.log(`No .mp4 or .m4a found in Destination message`);
-      }
-      return; // Exit early as there's no progress to calculate yet
-    }
-
-    // Process progress messages
-    const progressMatch = progressData.message.match(/(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/);
-    if (progressMatch) {
-      const [, progress, fileSize, speed, eta] = progressMatch;
-      const rawProgress = parseFloat(progress);
-      console.log(`rawProgress ${rawProgress}`);
-
-      let totalProgress = 0;
-      // Get the file type for this currentId
-      const currentFileType = currentFileTypes.current.get(currentId);
-      console.log(`Retrieved currentFileType for ${currentId}: ${currentFileType}`);
-
-      // Calculate totalProgress based on file type
-      if (currentFileType === 'video') {
-        totalProgress = rawProgress * 0.5; // Scale video to 0-50%
-        console.log(`Calculating video progress: ${totalProgress}`);
-      } else if (currentFileType === 'audio') {
-        totalProgress = 50 + rawProgress * 0.5; // Scale audio to 50-100%
-        console.log(`Calculating audio progress: ${totalProgress}`);
-      } else {
-        console.log(`No valid file type for ${currentId}, totalProgress remains ${totalProgress}`);
-      }
-
-      console.log(`progress ${totalProgress.toFixed(1)}`);
-
-      // Update the progress map
-      setProgressMap((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
-        return newMap;
-      });
-    }
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
+            return newMap;
+          });
+        }
 
         const itemCountMatch = progressData.message.match(
           /\[download\] Downloading item (\d+) of (\d+)/
@@ -427,11 +411,9 @@ function BottomSection({
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
         if (progressData.message.includes('Finished downloading playlist:')) {
-
           stored[itemIdx].isPlaylistCompleted = true
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
-
       }
 
       window.api.onDownloadProgress(handleProgress)
@@ -474,12 +456,17 @@ function BottomSection({
           });
         }
       }
-    
-    
     } finally {
       downloadQueue.current.shift()
       isProcessing.current = false
       if (downloadQueue.current.length > 0) {
+        // Move the next "Waiting" item to "Queued" if no downloads are in progress
+        const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
+        const nextItemIndex = storedDownloads.findIndex(item => item.id === downloadQueue.current[0]);
+        if (nextItemIndex !== -1 && !isAnyDownloadInProgress()) {
+          storedDownloads[nextItemIndex].status = 'Queued';
+          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+        }
         processQueue()
       }
     }
@@ -518,74 +505,45 @@ function BottomSection({
                 progressMap={progressMap}
                 videoInfo={videoInfo}
               />
-              {/* <OverlayTrigger
+              <OverlayTrigger
                 placement="top"
-                overlay={
-                  <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>
-                }
+                overlay={<Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>}
               >
                 <button
-                  className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-                  style={{ width: '48px', height: '48px' }}
+                  className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
+                  style={{ width: '150px', height: '40px' }}
                   onClick={() =>
                     lastUrl
                       ? handleResumeBrowser()
                       : (setShowWebView(false), setDownloadListOpen(false), setSelectedItem(''))
                   }
                 >
-                  {lastUrl ? <FaGlobe size={16} /> : <FaArrowLeft size={20} />}
+                  {lastUrl ? <FaGlobe size={20} /> : <FaArrowLeft size={20} />}
+                  <span className="ms-2 fw-medium" style={{ whiteSpace: "nowrap" }}>
+                    {lastUrl ? 'Resume Browser' : 'Back'}
+                  </span>
                 </button>
-              </OverlayTrigger> */}
-              <OverlayTrigger
-              placement="top"
-              overlay={ <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>}
-            >
-              <button
-                className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
-                style={{ width: '150px', height: '40px', }}
-                onClick={() =>
-                  lastUrl
-                    ? handleResumeBrowser()
-                    : (setShowWebView(false), setDownloadListOpen(false), setSelectedItem(''))
-                }
-              >
-              {lastUrl ? <FaGlobe size={20} />:  <FaArrowLeft size={20} />}
-                <span className="ms-2 fw-medium" style={{whiteSpace:"nowrap"}}> {lastUrl ? 'Resume Browser' : 'Back'}</span>
-              </button>
-            </OverlayTrigger>
+              </OverlayTrigger>
             </div>
           ) : (
             <div className="bottom-container">
               <h1>Select a service below and enter your search query</h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
-                // <OverlayTrigger
-                //   placement="top"
-                //   overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
-                // >
-                //   <button
-                //     className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-                //     style={{ width: '48px', height: '48px' }}
-                //     onClick={handleResumeBrowser}
-                //   >
-                //     <FaGlobe size={16} />
-                //   </button>
-                // </OverlayTrigger>
                 <OverlayTrigger
-                placement="top"
-                overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
-              >
-                <button
-                  className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
-                  style={{ width: '150px', height: '40px', }}
-                  onClick={handleResumeBrowser}
+                  placement="top"
+                  overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
                 >
-             <FaGlobe size={50} />
-                  <span className="ms-2 fw-medium" style={{whiteSpace:"nowrap"}}> Resume Browser</span>
-                </button>
-              </OverlayTrigger>
+                  <button
+                    className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
+                    style={{ width: '150px', height: '40px' }}
+                    onClick={handleResumeBrowser}
+                  >
+                    <FaGlobe size={50} />
+                    <span className="ms-2 fw-medium" style={{ whiteSpace: "nowrap" }}>Resume Browser</span>
+                  </button>
+                </OverlayTrigger>
               )}
-              
             </div>
           )}
         </>
@@ -667,18 +625,6 @@ function BottomSection({
           <div style={{ height: '88%', marginBottom: 30 }}>
             <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
           </div>
-          {/* <OverlayTrigger
-            placement="top"
-            overlay={<Tooltip id="close-tooltip">Close Process</Tooltip>}
-          >
-            <button
-              className="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow close-webview-btn"
-              style={{ width: '48px', height: '48px' }}
-              onClick={handleCloseWebView}
-            >
-              <FaTimes size={20} />
-            </button>
-          </OverlayTrigger> */}
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
               {downloading ? (

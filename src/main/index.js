@@ -53,7 +53,7 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    minWidth: 900,    // Changed from 700 to 900
+    minWidth: 950,    // Changed from 700 to 900
    
      // Already set to 700 as requested
     // autoHideMenuBar: true,
