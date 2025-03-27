@@ -57,7 +57,7 @@ function Navbar({
         className="d-flex align-items-center justify-content-between flex-grow-1 shadow-sm bg-body"
         style={{ padding: 10 }}
       >
-        <div className="d-flex" style={{ gap: 10 }}>
+        <div className="d-flex" style={{ gap: 2 }}>
           {/* Paste Link Button */}
           <button
             className="btn btn-danger d-flex align-items-center me-2"

@@ -27,11 +27,11 @@ function Sidebar({
     <div
       className={`sidebar ${isOpen ? 'expanded' : 'collapsed'}`}
       style={{
-        width: isOpen ? '250px' : '80px',
+        width: isOpen ? '230px' : '80px',
         transition: 'width 0.3s ease-in-out',
         backgroundColor: '#f8f9fa',
         color: '#333',
-        height: '80%',
+       
         // position: 'fixed',
         left: 0,
         fontSize:12,
@@ -42,7 +42,8 @@ function Sidebar({
         // boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
         // zIndex: 1000
         justifyContent:"space-between",
-        height:"80vh"
+        height:"80vh",
+        marginBottom:10
       }}
     >
       {/* Menu Button for Collapsed Mode */}
@@ -109,7 +110,7 @@ function Sidebar({
                 // padding: '5px',
                 height: 30,
                 width: 30,
-                marginRight:10,
+                marginRight:7,
                 
                 color: selectedItem === item.label ? '#fff' : '#BB4F28' // 🔥 Icon color logic
               }}
@@ -122,7 +123,7 @@ function Sidebar({
               />
             </div>
 
-            {isOpen && <span style={{fontSize:8}}>{item.label}</span>}
+            {isOpen && <span style={{fontSize:13,whiteSpace:"nowrap"}}>{item.label}</span>}
           </div>
         ))}
       </div>
@@ -132,6 +133,9 @@ function Sidebar({
         style={{
           // position: 'absolute',
           // bottom: '0',
+          display:"flex",
+          alignItems:"center",
+          flexDirection:"column",
           width: '90%',
           textAlign: 'center',
           
@@ -143,7 +147,7 @@ function Sidebar({
               src={squirrel}
               alt="PNUT Logo"
               className="me-2"
-              style={{ width: '50px', marginBottom: '10px' }}
+              style={{ width: '90px', marginBottom: '10px' }}
             />
 
             <button
@@ -155,7 +159,7 @@ function Sidebar({
                 borderRadius: '8px',
                 border: 'none',
                 color: 'white',
-                fontSize: '8px',
+                fontSize: '14px',
                 cursor: 'pointer'
               }}
               onClick={handleClick}
