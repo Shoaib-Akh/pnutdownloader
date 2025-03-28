@@ -19,7 +19,7 @@ function Navbar({
   const formatOptions = {
     Video: ['MP4', 'AVI', 'MKV'],
     Audio: ['MP3', 'FLAC', 'WAV'],
-    Subtitles: ['SRT']
+    // Subtitles: ['SRT']
   }
 
   // Ensure format is always in sync with the selected download type

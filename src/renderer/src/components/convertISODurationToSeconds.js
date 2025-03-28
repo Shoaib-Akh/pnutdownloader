@@ -1,11 +1,15 @@
-// convertISODurationToSeconds.js
-
 export const convertISODurationToSeconds = (duration) => {
-    // Handle "m:s.sssss" format (e.g., "2:7.219999999999999")
-    if (typeof duration === 'string' && /^\d+:\d+\.\d+$/.test(duration)) {
-        const [minutes, secondsWithDecimal] = duration.split(':');
+    // Handle "h:m:s.sssss" format (e.g., "1:2:7.219999999999999")
+    if (typeof duration === 'string' && /^\d+:\d+:\d+\.\d+$/.test(duration)) {
+        const [hours, minutes, secondsWithDecimal] = duration.split(':');
         const seconds = Math.floor(parseFloat(secondsWithDecimal));
-        return parseInt(minutes) * 60 + seconds;
+        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + seconds;
+    }
+
+    // Handle "h:mm:ss" format (e.g., "1:03:18")
+    if (typeof duration === 'string' && /^\d+:\d+:\d+$/.test(duration)) {
+        const [hours, minutes, seconds] = duration.split(':');
+        return parseInt(hours) * 3600 + parseInt(minutes) * 60 + parseInt(seconds);
     }
 
     // Handle "m:ss" format (e.g., "3:18")
@@ -30,16 +34,21 @@ export const convertISODurationToSeconds = (duration) => {
 };
 
 export const formatTime = (seconds) => {
-    // If already in "m:ss" format, return as is
-    if (typeof seconds === 'string' && /^\d+:\d+$/.test(seconds)) {
+    // If already in "h:mm:ss" or "m:ss" format, return as is
+    if (typeof seconds === 'string' && /^\d+:\d+(:\d+)?$/.test(seconds)) {
         return seconds;
     }
 
     if (typeof seconds !== 'number' || isNaN(seconds)) {
-        return "0:00"; // Handle invalid cases safely
+        return "0:00:00"; // Handle invalid cases safely
     }
 
-    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    
+    if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`; // Maintain original format for < 1 hour
 };

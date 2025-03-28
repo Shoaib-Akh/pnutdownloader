@@ -174,7 +174,7 @@ console.log("filteredList",filteredList);
         </>
       ) : (
         <>
-          <FaRegClock className="text-success" style={{ marginRight: 5 }} />
+          <FaRegClock className="text-success" style={{ marginRight: 3 }} />
           {item.status}
           {!item.isCompleted && (
             <ProgressBar

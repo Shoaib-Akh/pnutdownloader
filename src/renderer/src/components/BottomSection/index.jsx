@@ -527,7 +527,9 @@ function BottomSection({
             </div>
           ) : (
             <div className="bottom-container">
-              <h1>Select a service below and enter your search query</h1>
+           <h1 style={{ color: '#333', fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center' }}>
+  Select a service below and enter your search query
+</h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
                 <OverlayTrigger
