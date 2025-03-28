@@ -48,7 +48,7 @@ function Navbar({
     <nav className="navbar navbar-expand-lg navbar-light p-3">
     <div className="d-flex align-items-center w-100">
       {/* Left Side - Logo */}
-      <a className="me-3" href="#" style={{ cursor: "default" }}>
+      <a className="me-4" href="#" style={{ cursor: "default" }}>
         <img src={Logo} alt="PNUT Logo" width={150} />
       </a>
   

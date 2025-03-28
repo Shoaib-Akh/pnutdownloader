@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash,FaTimesCircle } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -52,26 +52,27 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     window.api.pauseDownload(items.id)
   }
 
-  const filteredList = JSON.parse(
-    localStorage.getItem('downloadList') || videoInfo 
-  )
-    .filter((item) => {
-      const isPlaylist =
-        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
-      if (selectedItem === 'Playlist') return isPlaylist
-      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-      if (selectedItem === 'Audio') return item.format === 'MP3'
-      if (selectedItem === 'Recent Download') return true
-      return false
-    })
-    .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+  const filteredList =
+    JSON.parse(localStorage.getItem('downloadList')) ||
+    videoInfo
+      .filter((item) => {
+        const isPlaylist =
+          item.url.includes('playlist') ||
+          item.url.includes('&list=') ||
+          item.url.includes('?list=')
+        if (selectedItem === 'Playlist') return isPlaylist
+        if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
+        if (selectedItem === 'Audio') return item.format === 'MP3'
+        if (selectedItem === 'Recent Download') return true
+        return false
+      })
+      .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+      .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
-console.log("filteredList",filteredList);
 
   return (
     <div className="container-fluid p-0">
@@ -143,52 +144,52 @@ console.log("filteredList",filteredList);
                       )}
                     </td>
                     <td className="data-cell">
-  {['Fetching Info...', 'Queued'].includes(item.status) ? (
-    <Skeleton width={100} />
-  ) : item.isPlaylist ? (
-    <>
-      <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
-        {`${item.playlistTitle.slice(0, 20)}${item.playlistTitle.length > 20 ? '...' : ''}` ||
-          'Unnamed Playlist'}
-      </div>
-      <div>
-        {item.isPlaylistCompleted && (
-          <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-        )}
-        {item.currentItem > 0 && item.totalItems > 0
-          ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted ? 'Playlist download Complete' : 'videos downloaded'} `
-          : 'Preparing playlist...'}
-      </div>
-    </>
-  ) : (
-    <div>
-      {item.status === 'Failed' ? (
-        <>
-          <FaTimesCircle className="text-danger" style={{ marginRight: 5 }} />
-          Failed
-        </>
-      ) : item.isCompleted ? (
-        <>
-          <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-          {item.status}
-        </>
-      ) : (
-        <>
-          <FaRegClock className="text-success" style={{ marginRight: 3 }} />
-          {item.status}
-          {!item.isCompleted && (
-            <ProgressBar
-              now={progressMap.get(item.id)?.progress || 0}
-              className="flex-grow-1"
-              style={{ height: 4 }}
-              key={item.id}
-            />
-          )}
-        </>
-      )}
-    </div>
-  )}
-</td>
+                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
+                        <Skeleton width={100} />
+                      ) : item.isPlaylist ? (
+                        <>
+                          <div style={{ fontWeight: 'bold', marginBottom: 5 }}>
+                            {`${item.playlistTitle.slice(0, 20)}${item.playlistTitle.length > 20 ? '...' : ''}` ||
+                              'Unnamed Playlist'}
+                          </div>
+                          <div>
+                            {item.isPlaylistCompleted && (
+                              <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                            )}
+                            {item.currentItem > 0 && item.totalItems > 0
+                              ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted ? 'Playlist download Complete' : 'videos downloaded'} `
+                              : 'Preparing playlist...'}
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          {item.status === 'Failed' ? (
+                            <>
+                              <FaTimesCircle className="text-danger" style={{ marginRight: 5 }} />
+                              Failed
+                            </>
+                          ) : item.isCompleted ? (
+                            <>
+                              <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                              {item.status}
+                            </>
+                          ) : (
+                            <>
+                              <FaRegClock className="text-success" style={{ marginRight: 3 }} />
+                              {item.status}
+                              {!item.isCompleted && (
+                                <ProgressBar
+                                  now={progressMap.get(item.id)?.progress || 0}
+                                  className="flex-grow-1"
+                                  style={{ height: 4 }}
+                                  key={item.id}
+                                />
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </td>
 
                     <td className="data-cell">
                       {item.status === 'Fetching Info...' ? (

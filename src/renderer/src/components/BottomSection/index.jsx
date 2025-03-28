@@ -42,7 +42,7 @@ function BottomSection({
   const [zoomLevel, setZoomLevel] = useState(1.0)
   const [progressMap, setProgressMap] = useState(new Map())
   const [videoInfo, setVideoInfo] = useState([])
-  const currentFileTypes = useRef(new Map());
+  const currentFileTypes = useRef(new Map())
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
@@ -192,7 +192,10 @@ function BottomSection({
       return {
         videoUrl: url,
         title: snippet.title,
-        thumbnail: snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url,
+        thumbnail:
+          snippet.thumbnails.standard.url ||
+          snippet.thumbnails.default.url ||
+          snippet.thumbnails.high.url,
         duration: contentDetails.duration,
         isPlaylist: false
       }
@@ -218,16 +221,24 @@ function BottomSection({
         videoId: item.snippet.resourceId.videoId,
         title: item.snippet.title,
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
-          : snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
+          ? snippet.thumbnails.standard.url ||
+            snippet.thumbnails.default.url ||
+            snippet.thumbnails.high.url
+          : snippet.thumbnails.standard.url ||
+            snippet.thumbnails.default.url ||
+            snippet.thumbnails.high.url
       }))
 
       return {
         playlistUrl: url,
         playlistTitle: snippet.title,
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url
-          : snippet.thumbnails.standard.url || snippet.thumbnails.default.url || snippet.thumbnails.high.url,
+          ? snippet.thumbnails.standard.url ||
+            snippet.thumbnails.default.url ||
+            snippet.thumbnails.high.url
+          : snippet.thumbnails.standard.url ||
+            snippet.thumbnails.default.url ||
+            snippet.thumbnails.high.url,
         videos,
         isPlaylist: true
       }
@@ -235,15 +246,16 @@ function BottomSection({
   }
 
   const isAnyDownloadInProgress = () => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
-    return storedDownloads.some(item => 
-      !item.isCompleted && 
-      item.status !== 'Queued' && 
-      item.status !== 'Waiting' && 
-      item.status !== 'Failed' &&
-      item.status !== 'Fetching Info...'
-    );
-  };
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    return storedDownloads.some(
+      (item) =>
+        !item.isCompleted &&
+        item.status !== 'Queued' &&
+        item.status !== 'Waiting' &&
+        item.status !== 'Failed' &&
+        item.status !== 'Fetching Info...'
+    )
+  }
 
   const addToQueue = async (url) => {
     if (!url) return
@@ -350,34 +362,46 @@ function BottomSection({
 
         if (progressData.message.includes('Destination:')) {
           if (progressData.message.includes('.mp4')) {
-            currentFileTypes.current.set(currentId, 'video');
+            currentFileTypes.current.set(currentId, 'video')
           } else if (progressData.message.includes('.m4a')) {
-            currentFileTypes.current.set(currentId, 'audio');
+            currentFileTypes.current.set(currentId, 'audio')
+          } else if (progressData.message.includes('.webm')) {
+            currentFileTypes.current.set(currentId, 'justAudio') // Fixed typo from 'just adio'
           } else {
-            console.log(`No .mp4 or .m4a found in Destination message`);
+            console.log(`No .mp4, .m4a, or .webm found in Destination message`)
           }
-          return;
+          return
         }
 
-        const progressMatch = progressData.message.match(/(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/);
+        const progressMatch = progressData.message.match(
+          /(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/
+        )
         if (progressMatch) {
-          const [, progress, fileSize, speed, eta] = progressMatch;
-          const rawProgress = parseFloat(progress);
-          let totalProgress = 0;
-          const currentFileType = currentFileTypes.current.get(currentId);
+          const [, progress, fileSize, speed, eta] = progressMatch
+          const rawProgress = parseFloat(progress)
+          let totalProgress = 0
+          const currentFileType = currentFileTypes.current.get(currentId)
+
           if (currentFileType === 'video') {
-            totalProgress = rawProgress * 0.5;
+            // First stage: 100% contributes 90% to total progress
+            totalProgress = rawProgress * 0.9 // Scales 0-100% to 0-90%
           } else if (currentFileType === 'audio') {
-            totalProgress = 50 + rawProgress * 0.5;
+            // Second stage: 100% contributes 10% to total progress
+            totalProgress = 90 + rawProgress * 0.1 // Starts at 90%, scales 0-100% to 90-100%
+          } else if (currentFileType === 'justAudio') {
+            // Independent stage: 100% contributes 100% to total progress
+            totalProgress = rawProgress // Scales 0-100% to 0-100%
           } else {
-            console.log(`No valid file type for ${currentId}, totalProgress remains ${totalProgress}`);
+            console.log(
+              `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
+            )
           }
 
           setProgressMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
-            return newMap;
-          });
+            const newMap = new Map(prev)
+            newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta })
+            return newMap
+          })
         }
 
         const itemCountMatch = progressData.message.match(
@@ -394,20 +418,20 @@ function BottomSection({
           stored[itemIdx].status = 'Completed'
           stored[itemIdx].isCompleted = true
           setProgressMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
-            return newMap;
-          });
+            const newMap = new Map(prev)
+            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+            return newMap
+          })
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed'
           stored[itemIdx].isCompleted = true
           setProgressMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
-            return newMap;
-          });
+            const newMap = new Map(prev)
+            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+            return newMap
+          })
           localStorage.setItem('downloadList', JSON.stringify(stored))
         }
         if (progressData.message.includes('Finished downloading playlist:')) {
@@ -435,25 +459,25 @@ function BottomSection({
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
       }
     } catch (error) {
-      const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
-      const failedIndex = storedDownloads.findIndex((i) => i.id === currentId);
+      const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+      const failedIndex = storedDownloads.findIndex((i) => i.id === currentId)
       if (failedIndex !== -1) {
-        const getError = error.message.match(/Download failed with code 1/);
+        const getError = error.message.match(/Download failed with code 1/)
         if (getError) {
-          storedDownloads[failedIndex].status = 'Failed';
-          storedDownloads[failedIndex].isFailed = true;
-          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+          storedDownloads[failedIndex].status = 'Failed'
+          storedDownloads[failedIndex].isFailed = true
+          localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
           setVideoInfo((prev) => ({
             ...prev,
             status: 'Failed',
             isFailed: true,
-            error: 'Download failed with code 1',
-          }));
+            error: 'Download failed with code 1'
+          }))
           setProgressMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
-            return newMap;
-          });
+            const newMap = new Map(prev)
+            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+            return newMap
+          })
         }
       }
     } finally {
@@ -461,11 +485,13 @@ function BottomSection({
       isProcessing.current = false
       if (downloadQueue.current.length > 0) {
         // Move the next "Waiting" item to "Queued" if no downloads are in progress
-        const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
-        const nextItemIndex = storedDownloads.findIndex(item => item.id === downloadQueue.current[0]);
+        const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        const nextItemIndex = storedDownloads.findIndex(
+          (item) => item.id === downloadQueue.current[0]
+        )
         if (nextItemIndex !== -1 && !isAnyDownloadInProgress()) {
-          storedDownloads[nextItemIndex].status = 'Queued';
-          localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+          storedDownloads[nextItemIndex].status = 'Queued'
+          localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
         }
         processQueue()
       }
@@ -507,7 +533,9 @@ function BottomSection({
               />
               <OverlayTrigger
                 placement="top"
-                overlay={<Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>}
+                overlay={
+                  <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>
+                }
               >
                 <button
                   className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
@@ -519,7 +547,7 @@ function BottomSection({
                   }
                 >
                   {lastUrl ? <FaGlobe size={20} /> : <FaArrowLeft size={20} />}
-                  <span className="ms-2 fw-medium" style={{ whiteSpace: "nowrap" }}>
+                  <span className="ms-2 fw-medium" style={{ whiteSpace: 'nowrap' }}>
                     {lastUrl ? 'Resume Browser' : 'Back'}
                   </span>
                 </button>
@@ -527,9 +555,17 @@ function BottomSection({
             </div>
           ) : (
             <div className="bottom-container">
-           <h1 style={{ color: '#333', fontSize: '24px', fontWeight: 'bold', marginBottom: '20px', textAlign: 'center' }}>
-  Select a service below and enter your search query
-</h1>
+              <h1
+                style={{
+                  color: '#333',
+                  fontSize: '24px',
+                  fontWeight: 'bold',
+                  marginBottom: '20px',
+                  textAlign: 'center'
+                }}
+              >
+                Select a service below and enter your search query
+              </h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
                 <OverlayTrigger
@@ -542,7 +578,9 @@ function BottomSection({
                     onClick={handleResumeBrowser}
                   >
                     <FaGlobe size={50} />
-                    <span className="ms-2 fw-medium" style={{ whiteSpace: "nowrap" }}>Resume Browser</span>
+                    <span className="ms-2 fw-medium" style={{ whiteSpace: 'nowrap' }}>
+                      Resume Browser
+                    </span>
                   </button>
                 </OverlayTrigger>
               )}
