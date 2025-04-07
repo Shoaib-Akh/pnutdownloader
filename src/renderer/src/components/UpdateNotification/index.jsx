@@ -2,6 +2,7 @@ import React from 'react';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvailable,downloadProgress }) {
   console.log("downloadProgress",downloadProgress);
+  console.log("updateInfo",updateInfo);
   
   return (
     <div 
@@ -72,7 +73,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvail
           <div className="modal-footer border-top-0 justify-content-center">
             {!isDownloaded ? (
               <button 
-                className=" btn btn-primary btn-lg px-5 rounded-pill fw-medium"
+                className="btn btn-primary btn-lg px-5 rounded-pill fw-medium"
                 style={{backgroundColor:"#BB4F28"}}
                 onClick={() => window.api.downloadUpdate()}
               >
@@ -82,6 +83,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvail
               <button 
                 className="btn btn-success btn-lg px-5 rounded-pill fw-medium"
                 onClick={onInstall}
+                style={{backgroundColor:"green"}}
               >
                 Install & Restart
                 <span role="img" aria-label="Rocket" className="ms-2">🚀</span>

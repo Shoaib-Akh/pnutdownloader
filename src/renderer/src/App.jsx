@@ -68,7 +68,7 @@ function App() {
         setUpdateDownloaded(true);
         setUpdateInfo(info);
       });
-      window.api.onDownloadProgress((progress) => {
+      window.api.onUpdateDownloadedProgress((progress) => {
         console.log("Progress:", progress);
         setDownloadProgress(progress.percent); // assuming percent is sent from main process
       });

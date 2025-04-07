@@ -53,7 +53,7 @@ const api = {
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
   onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_, info) => callback(info)),
-  s: (callback) => ipcRenderer.on('update-download-progress', (_, info) => callback(info)),
+  onUpdateDownloadedProgress: (callback) => ipcRenderer.on('update-download-progress', (_, info) => callback(info)),
 
   onUpdateError: (callback) => ipcRenderer.on('update-error', (_, err) => callback(err)),
   downloadUpdate: () => ipcRenderer.send('download-update'),
