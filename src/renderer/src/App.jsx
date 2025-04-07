@@ -91,7 +91,7 @@ function App() {
   return (
     <div className="vh-100">
       {/* Render the UpdateNotification component if an update is available */}
-      {!updateAvailable && (
+      {updateAvailable && (
         <UpdateNotification
           updateInfo={updateInfo}
           onInstall={handleInstallUpdate}
