@@ -51,23 +51,37 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
     window.api.pauseDownload(items.id)
   }
+console.log("selectedItem",selectedItem);
 
-  const filteredList =
-    JSON.parse(localStorage.getItem('downloadList')) ||
-    videoInfo
-      .filter((item) => {
-        const isPlaylist =
-          item.url.includes('playlist') ||
-          item.url.includes('&list=') ||
-          item.url.includes('?list=')
-        if (selectedItem === 'Playlist') return isPlaylist
-        if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-        if (selectedItem === 'Audio') return item.format === 'MP3'
-        if (selectedItem === 'Recent Download') return true
-        return false
-      })
-      .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-      .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+  // const filteredList =
+  //   JSON.parse(localStorage.getItem('downloadList')) ||
+  //   videoInfo
+  //     .filter((item) => {
+  //       const isPlaylist =
+  //         item.url.includes('playlist') ||
+  //         item.url.includes('&list=') ||
+  //         item.url.includes('?list=')
+  //       if (selectedItem === 'Playlist') return isPlaylist
+  //       if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
+  //       if (selectedItem === 'Audio') return item.format === 'MP3'
+  //       if (selectedItem === 'Recent Download') return true
+  //       return false
+  //     })
+  //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+  //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+
+  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo))
+  .filter((item) => {
+    const isPlaylist =
+      item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
+    if (selectedItem === 'Playlist') return isPlaylist
+    if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
+    if (selectedItem === 'Audio') return item.format === 'MP3'
+    if (selectedItem === 'Recent Download') return true
+    return false
+  })
+  .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
+  .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100

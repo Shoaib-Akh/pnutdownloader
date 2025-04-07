@@ -332,113 +332,117 @@ function BottomSection({
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
-        const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
-        const itemIdx = stored.findIndex((i) => i.id === currentId)
-
-        if (itemIdx === -1) return
-
-        if (
-          progressData.message.match(
-            /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-          )
-        ) {
-          const match = progressData.message.match(
-            /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-          )
-          const youtubeUrl = match[0]
-          const videoId = match[2]
-
-          getVideoInfo(youtubeUrl).then((ytInfo) => {
-            stored[itemIdx] = {
-              ...stored[itemIdx],
-              title: ytInfo?.title || 'Unknown',
-              thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
-              duration: ytInfo?.duration || 'Unknown',
-              status: 'Downloading'
-            }
-            localStorage.setItem('downloadList', JSON.stringify(stored))
-          })
-        }
-
-        if (progressData.message.includes('Destination:')) {
-          if (progressData.message.includes('.mp4')) {
-            currentFileTypes.current.set(currentId, 'video')
-          } else if (progressData.message.includes('.m4a')) {
-            currentFileTypes.current.set(currentId, 'audio')
-          } else if (progressData.message.includes('.webm')) {
-            currentFileTypes.current.set(currentId, 'justAudio') // Fixed typo from 'just adio'
-          } else {
-            console.log(`No .mp4, .m4a, or .webm found in Destination message`)
-          }
-          return
-        }
-
-        const progressMatch = progressData.message.match(
-          /(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/
-        )
-        if (progressMatch) {
-          const [, progress, fileSize, speed, eta] = progressMatch
-          const rawProgress = parseFloat(progress)
-          let totalProgress = 0
-          const currentFileType = currentFileTypes.current.get(currentId)
-
-          if (currentFileType === 'video') {
-            // First stage: 100% contributes 90% to total progress
-            totalProgress = rawProgress * 0.9 // Scales 0-100% to 0-90%
-          } else if (currentFileType === 'audio') {
-            // Second stage: 100% contributes 10% to total progress
-            totalProgress = 90 + rawProgress * 0.1 // Starts at 90%, scales 0-100% to 90-100%
-          } else if (currentFileType === 'justAudio') {
-            // Independent stage: 100% contributes 100% to total progress
-            totalProgress = rawProgress // Scales 0-100% to 0-100%
-          } else {
-            console.log(
-              `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
+        console.log('progressData', progressData);
+      
+        const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
+        const itemIdx = stored.findIndex((i) => i.id === currentId);
+        if (itemIdx === -1) return;
+      
+        // Only process message if it exists and is a string
+        if (typeof progressData.message === 'string') {
+          if (
+            progressData.message.match(
+              /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
             )
+          ) {
+            const match = progressData.message.match(
+              /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+            );
+            const youtubeUrl = match[0];
+            const videoId = match[2];
+      
+            getVideoInfo(youtubeUrl).then((ytInfo) => {
+              stored[itemIdx] = {
+                ...stored[itemIdx],
+                title: ytInfo?.title || 'Unknown',
+                thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
+                duration: ytInfo?.duration || 'Unknown',
+                status: 'Downloading',
+              };
+              localStorage.setItem('downloadList', JSON.stringify(stored));
+            });
           }
-
-          setProgressMap((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta })
-            return newMap
-          })
+      
+          if (progressData.message.includes('Destination:')) {
+            if (progressData.message.includes('.mp4')) {
+              currentFileTypes.current.set(currentId, 'video');
+            } else if (progressData.message.includes('.m4a')) {
+              currentFileTypes.current.set(currentId, 'audio');
+            } else if (progressData.message.includes('.webm')) {
+              currentFileTypes.current.set(currentId, 'justAudio');
+            } else {
+              console.log(`No .mp4, .m4a, or .webm found in Destination message`);
+            }
+            return;
+          }
+      
+          const progressMatch = progressData.message.match(
+            /(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/
+          );
+          if (progressMatch) {
+            const [, progress, fileSize, speed, eta] = progressMatch;
+            const rawProgress = parseFloat(progress);
+            let totalProgress = 0;
+            const currentFileType = currentFileTypes.current.get(currentId);
+      
+            if (currentFileType === 'video') {
+              totalProgress = rawProgress * 0.9;
+            } else if (currentFileType === 'audio') {
+              totalProgress = 90 + rawProgress * 0.1;
+            } else if (currentFileType === 'justAudio') {
+              totalProgress = rawProgress;
+            } else {
+              console.log(
+                `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
+              );
+            }
+      
+            setProgressMap((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
+              return newMap;
+            });
+          }
+      
+          const itemCountMatch = progressData.message.match(
+            /\[download\] Downloading item (\d+) of (\d+)/
+          );
+          if (itemCountMatch) {
+            const [, currentItem, totalItems] = itemCountMatch;
+            stored[itemIdx].currentItem = parseInt(currentItem);
+            stored[itemIdx].totalItems = parseInt(totalItems);
+            localStorage.setItem('downloadList', JSON.stringify(stored));
+          }
+      
+          if (progressData.message.includes('has already been downloaded')) {
+            stored[itemIdx].status = 'Completed';
+            stored[itemIdx].isCompleted = true;
+            setProgressMap((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
+              return newMap;
+            });
+            localStorage.setItem('downloadList', JSON.stringify(stored));
+          }
+      
+          if (progressData.message.includes('Finished downloading playlist:')) {
+            stored[itemIdx].isPlaylistCompleted = true;
+            localStorage.setItem('downloadList', JSON.stringify(stored));
+          }
         }
-
-        const itemCountMatch = progressData.message.match(
-          /\[download\] Downloading item (\d+) of (\d+)/
-        )
-        if (itemCountMatch) {
-          const [, currentItem, totalItems] = itemCountMatch
-          stored[itemIdx].currentItem = parseInt(currentItem)
-          stored[itemIdx].totalItems = parseInt(totalItems)
-          localStorage.setItem('downloadList', JSON.stringify(stored))
-        }
-
-        if (progressData?.message?.includes('has already been downloaded')) {
-          stored[itemIdx].status = 'Completed'
-          stored[itemIdx].isCompleted = true
-          setProgressMap((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
-            return newMap
-          })
-          localStorage.setItem('downloadList', JSON.stringify(stored))
-        }
+      
+        // Handle status updates (e.g., completion) even if message is missing
         if (progressData?.status?.includes('Download complete!')) {
-          stored[itemIdx].status = 'Completed'
-          stored[itemIdx].isCompleted = true
+          stored[itemIdx].status = 'Completed';
+          stored[itemIdx].isCompleted = true;
           setProgressMap((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
-            return newMap
-          })
-          localStorage.setItem('downloadList', JSON.stringify(stored))
+            const newMap = new Map(prev);
+            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
+            return newMap;
+          });
+          localStorage.setItem('downloadList', JSON.stringify(stored));
         }
-        if (progressData.message.includes('Finished downloading playlist:')) {
-          stored[itemIdx].isPlaylistCompleted = true
-          localStorage.setItem('downloadList', JSON.stringify(stored))
-        }
-      }
+      };
 
       window.api.onDownloadProgress(handleProgress)
 
