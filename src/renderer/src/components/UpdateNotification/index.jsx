@@ -1,6 +1,6 @@
 import React from 'react';
 
-function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvailable }) {
+function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvailable,downloadProgress }) {
   return (
     <div 
       className="modal fade show" 
@@ -51,7 +51,22 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvail
               </>
             )}
           </div>
-
+          {!isDownloaded && downloadProgress > 0 && (
+  <div className="mb-3">
+    <div className="progress" style={{ height: '20px' }}>
+      <div
+        className="progress-bar progress-bar-striped progress-bar-animated bg-info"
+        role="progressbar"
+        style={{ width: `${downloadProgress}%` }}
+        aria-valuenow={downloadProgress}
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        {Math.round(downloadProgress)}%
+      </div>
+    </div>
+  </div>
+)}
           <div className="modal-footer border-top-0 justify-content-center">
             {!isDownloaded ? (
               <button 

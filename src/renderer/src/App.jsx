@@ -22,7 +22,7 @@ function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
-  
+  const [downloadProgress, setDownloadProgress] = useState(0);
 
   // Initialize Firebase
  
@@ -68,7 +68,11 @@ function App() {
         setUpdateDownloaded(true);
         setUpdateInfo(info);
       });
-
+      window.api.onDownloadProgress((progress) => {
+        console.log("Progress:", progress);
+        setDownloadProgress(progress.percent); // assuming percent is sent from main process
+      });
+    
       window.api.onUpdateError((err) => {
         console.error('Update error:', err);
       });
@@ -87,11 +91,12 @@ function App() {
   return (
     <div className="vh-100">
       {/* Render the UpdateNotification component if an update is available */}
-      {updateAvailable && (
+      {!updateAvailable && (
         <UpdateNotification
           updateInfo={updateInfo}
           onInstall={handleInstallUpdate}
           isDownloaded={updateDownloaded}
+          downloadProgress={downloadProgress}
         />
       )}
 

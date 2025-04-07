@@ -588,7 +588,14 @@ autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded:', info);
   mainWindow.webContents.send('update-downloaded', info);
 });
+autoUpdater.on('download-progress', (progress) => {
+  console.log(`Download speed: ${progress.bytesPerSecond}`);
+  console.log(`Downloaded ${progress.percent.toFixed(2)}%`);
+  console.log(`${progress.transferred} / ${progress.total}`);
 
+  // Send progress to renderer process
+  mainWindow.webContents.send('update-download-progress', progress);
+})
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
   mainWindow.webContents.send('update-error', err);
