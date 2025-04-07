@@ -5,14 +5,14 @@ import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync } from 'fs'
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
-import ffmpeg from '@ffmpeg-installer/ffmpeg';
-import ffmpegFluent from 'fluent-ffmpeg';
+// import ffmpeg from '@ffmpeg-installer/ffmpeg';
+// import ffmpegFluent from 'fluent-ffmpeg';
 import { autoUpdater } from 'electron-updater';
 import { machineId, machineIdSync } from 'node-machine-id'
 
-// const ffmpegPath = app.isPackaged
-//   ? join(process.resourcesPath, 'ffmpeg.exe')
-//   : join(__dirname, '../../public/ffmpeg.exe')
+const ffmpegPath = app.isPackaged
+  ? join(process.resourcesPath, 'ffmpeg.exe')
+  : join(__dirname, '../../public/ffmpeg.exe')
 // const ffprobePath = app.isPackaged
 //   ? join(process.resourcesPath, 'ffprobe.exe')
 //   : join(__dirname, '../../public/ffprobe.exe')
@@ -99,8 +99,8 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
-ffmpegFluent.setFfmpegPath(ffmpeg.path);
-const ffmpegPath = ffmpeg.path;
+// ffmpegFluent.setFfmpegPath(ffmpeg.path);
+// const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
   autoUpdater.setFeedURL({

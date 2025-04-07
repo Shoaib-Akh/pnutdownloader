@@ -1,6 +1,8 @@
 import React from 'react';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded,setUpdateAvailable,downloadProgress }) {
+  console.log("downloadProgress",downloadProgress);
+  
   return (
     <div 
       className="modal fade show" 
