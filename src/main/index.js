@@ -8,6 +8,7 @@ import fs from 'fs/promises'
 import ffmpeg from '@ffmpeg-installer/ffmpeg';
 import ffmpegFluent from 'fluent-ffmpeg';
 import { autoUpdater } from 'electron-updater';
+import { machineId, machineIdSync } from 'node-machine-id'
 
 // const ffmpegPath = app.isPackaged
 //   ? join(process.resourcesPath, 'ffmpeg.exe')
@@ -35,7 +36,22 @@ switch (process.platform) {
   default:
     iconPath = join(process.resourcesPath, 'icon.png')
 }
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
 
+
+ipcMain.handle('getMachineId', async () => {
+  try {
+    return await machineId();
+  } catch (error) {
+    console.error('Failed to get machine ID:', error);
+    return 'anonymous-machine-id';
+  }
+});
+
+// Or sync version
+;
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
@@ -53,16 +69,12 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    minWidth: 950,    // Changed from 700 to 900
-   
-     // Already set to 700 as requested
-    // autoHideMenuBar: true,
+    minWidth: 950,
     icon: iconPath,
-
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
-      webviewTag: true, // Disabled by default (safer)
+      webviewTag: true,
       nodeIntegration: false,
       contextIsolation: true
     }

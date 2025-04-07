@@ -3,6 +3,9 @@ import Navbar from './components/Navbar'
 import BottomSection from './components/BottomSection'
 import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'; 
+import { initializeApp } from "firebase/app";
+import { getAnalytics, logEvent } from "firebase/analytics";
+import { firebaseConfig } from './firebase-config';
 function App() {
   const [downloadType, setDownloadType] = useState('Video');
   const [quality, setQuality] = useState('1080p');
@@ -19,7 +22,36 @@ function App() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
+  
 
+  // Initialize Firebase
+ 
+  const app = initializeApp (firebaseConfig   );
+  const analytics = getAnalytics(app);
+
+  // Modified event tracking function
+  const sendGAEvent = async (eventName, params = {}) => {
+    try {
+      const clientId = (await window.api?.getMachineId()) ;
+      console.log("clientId",clientId);
+      
+      const appVersion = (await window.api?.getAppVersion()) 
+     console.log("appVersion",appVersion);
+     
+
+      
+      // Using Firebase Analytics SDK
+      logEvent(analytics, eventName, {
+        client_id: clientId,
+        app_version: appVersion,
+        ...params
+      });
+      
+      console.log('Event logged:', eventName);
+    } catch (error) {
+      console.error('Firebase Analytics Error:', error);
+    }
+  };
   useEffect(() => {
     if (window.api) {
       console.log("Checking for updates...");
@@ -41,6 +73,7 @@ function App() {
         console.error('Update error:', err);
       });
     }
+    sendGAEvent()
   }, []);
   const handleInstallUpdate = () => {
     if (window.api) {

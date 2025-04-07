@@ -3,13 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <title>pnutdownloader</title>
-    <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+    <!-- Updated Content Security Policy -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://www.googleapis.com https://i.ytimg.com https://i9.ytimg.com; connect-src 'self' https://www.googleapis.com https://i.ytimg.com;"
+      content="default-src 'self'; 
+               script-src 'self' https://www.googletagmanager.com; 
+               style-src 'self' 'unsafe-inline'; 
+               img-src 'self' data: https://www.googleapis.com https://i.ytimg.com https://i9.ytimg.com; 
+               connect-src 'self' https://www.googleapis.com https://i.ytimg.com https://firebase.googleapis.com https://firebaseinstallations.googleapis.com https://www.googletagmanager.com https://www.google-analytics.com;
+               font-src 'self';
+               frame-src 'self';"
     />
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>

@@ -16,7 +16,10 @@ const api = {
       saveTo,
       id
     }),
+    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 
+    getMachineId: (data) => ipcRenderer.invoke('getMachineId',data),
+    
     pauseDownload: (downloadId) => ipcRenderer.invoke('pauseDownload', downloadId),
   resumeDownload: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id }) =>
     ipcRenderer.invoke('resumeDownload', {
