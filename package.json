@@ -1,7 +1,7 @@
 {
   "name": "pnutdownloader",
-  "version": "1.0.13",
-  "description": "An Electron application with React",
+  "version": "1.0.14",
+  "description": "best video downloader",
   "main": "./out/main/index.js",
   "author": "video downloader",
   "homepage": "https://github.com/Shoaib-Akh/pnutdownloader",
