@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, session, dialog } from 'electron'
 import { join } from 'path'
-
+const tar = require('tar'); // You'll need to install this: npm install tar
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync ,createWriteStream} from 'fs'
@@ -180,7 +180,55 @@ async function updateYtdlp() {
     throw error;
   }
 }
+async function downloadAndExtractFFmpeg() {
+  const ffmpegUrl = 'https://cdn.pnutdownloader.com/ffmpeg.exe.tar.gz';
+  const tempTarPath = join(app.getPath('temp'), 'ffmpeg.exe.tar.gz');
+  const extractPath = dirname(ffmpegPath);
 
+  try {
+    // Check if FFmpeg already exists
+    if (existsSync(ffmpegPath)) {
+      const stats = await fs.stat(ffmpegPath);
+      if (stats.size > 0) {
+        console.log('FFmpeg already exists, skipping download');
+        return;
+      }
+    }
+
+    // Ensure the directory exists
+    if (!existsSync(extractPath)) {
+      mkdirSync(extractPath, { recursive: true });
+    }
+
+    console.log('Downloading FFmpeg...');
+    
+    // Download the tar.gz file
+    await downloadFile(ffmpegUrl, tempTarPath);
+
+    console.log('Extracting FFmpeg...');
+    
+    // Extract the tar.gz
+    await tar.x({
+      file: tempTarPath,
+      cwd: extractPath,
+      filter: (path) => path.endsWith('ffmpeg.exe') // Only extract ffmpeg.exe
+    });
+
+    // Clean up the temporary tar.gz file
+    await fs.unlink(tempTarPath);
+
+    // Ensure executable permissions (important for non-Windows systems)
+    await fs.chmod(ffmpegPath, 0o755).catch(err => 
+      console.warn(`Failed to set FFmpeg permissions: ${err.message}`)
+    );
+
+    const stats = await fs.stat(ffmpegPath);
+    console.log(`FFmpeg downloaded and extracted successfully. Size: ${stats.size} bytes`);
+  } catch (error) {
+    console.error(`Failed to download/extract FFmpeg: ${error.message}`);
+    throw error;
+  }
+}
 function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
@@ -218,7 +266,7 @@ function createWindow() {
 // ffmpegFluent.setFfmpegPath(ffmpeg.path);
 // const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
-
+   downloadAndExtractFFmpeg();
   if (!existsSync(ytdlpPath)) {
     console.log('yt-dlp not found, downloading...');
      updateYtdlp();
