@@ -1,15 +1,17 @@
 import { app, shell, BrowserWindow, ipcMain, session, dialog } from 'electron'
 import { join } from 'path'
+
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { existsSync, mkdirSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, writeFileSync ,createWriteStream} from 'fs'
+// import https  from'https';
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
 // import ffmpeg from '@ffmpeg-installer/ffmpeg';
 // import ffmpegFluent from 'fluent-ffmpeg';
 import { autoUpdater } from 'electron-updater';
 import { machineId, machineIdSync } from 'node-machine-id'
-
+const https = require('https');
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
   : join(__dirname, '../../public/ffmpeg.exe')
@@ -20,7 +22,7 @@ const cookiesPath = app.isPackaged
   ? join(process.resourcesPath, 'cookies.txt')
   : join(__dirname, '../../public/cookies.txt')
 let mainWindow
-
+const { dirname } = require('path');
 const ytdlpPath = app.isPackaged
   ? join(process.resourcesPath, 'yt-dlp.exe')
   : join(__dirname, '../../public/yt-dlp.exe')
@@ -65,6 +67,120 @@ if (!gotTheLock) {
   })
 }
 
+function downloadFile(url, destPath) {
+  return new Promise((resolve, reject) => {
+    const dir = dirname(destPath);
+    if (!existsSync(dir)) {
+      console.log(`Creating directory: ${dir}`);
+      mkdirSync(dir, { recursive: true });
+    }
+
+    const file = createWriteStream(destPath, { flags: 'wx' });
+    console.log(`Starting download of ${url} to ${destPath}`);
+
+    const request = https.get(url, (response) => {
+      if (response.statusCode === 302 || response.statusCode === 301) {
+        file.close();
+        return downloadFile(response.headers.location, destPath).then(resolve).catch(reject);
+      }
+      if (response.statusCode !== 200) {
+        file.close();
+        fs.unlink(destPath).catch(() => {});
+        reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
+        return;
+      }
+
+      response.pipe(file);
+      let downloadedBytes = 0;
+      response.on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        console.log(`Downloaded ${downloadedBytes} bytes`);
+      });
+
+      file.on('finish', () => {
+        file.close();
+        console.log(`Download completed, file size: ${downloadedBytes} bytes`);
+        resolve(destPath);
+      });
+    });
+
+    request.on('error', (err) => {
+      file.close();
+      fs.unlink(destPath).catch(() => {});
+      reject(new Error(`Download failed: ${err.message}`));
+    });
+
+    file.on('error', (err) => {
+      file.close();
+      fs.unlink(destPath).catch(() => {});
+      reject(new Error(`File write failed: ${err.message}`));
+    });
+
+    request.end();
+  });
+}
+
+// Check yt-dlp version with better error handling
+async function checkYtdlpVersion() {
+  if (!existsSync(ytdlpPath)) {
+    throw new Error(`yt-dlp.exe not found at ${ytdlpPath}`);
+  }
+
+  const stats = await fs.stat(ytdlpPath);
+  if (stats.size === 0) {
+    throw new Error(`yt-dlp.exe is empty at ${ytdlpPath}`);
+  }
+
+  return new Promise((resolve, reject) => {
+    console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
+    const proc = spawn(ytdlpPath, ['--version'], { windowsHide: true });
+    
+    let version = '';
+    let errorOutput = '';
+
+    proc.stdout.on('data', (data) => {
+      version += data.toString();
+      console.log(`yt-dlp stdout: ${data.toString().trim()}`);
+    });
+
+    proc.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+      console.error(`yt-dlp stderr: ${data.toString().trim()}`);
+    });
+
+    proc.on('error', (err) => {
+      console.error(`Spawn error: ${err.message}`);
+      reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        console.log(`yt-dlp process closed successfully with version: ${version.trim()}`);
+        resolve(version.trim());
+      } else {
+        console.error(`yt-dlp process failed with code ${code}, error: ${errorOutput}`);
+        reject(new Error(`yt-dlp --version failed with code ${code}: ${errorOutput}`));
+      }
+    });
+  });
+}
+
+// Download latest yt-dlp
+async function updateYtdlp() {
+  const ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+  try {
+    await downloadFile(ytdlpUrl, ytdlpPath);
+    console.log('yt-dlp downloaded successfully');
+    const stats = await fs.stat(ytdlpPath);
+    console.log(`File size after download: ${stats.size} bytes`);
+    // Ensure the file is executable (Windows permissions)
+    await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+  } catch (error) {
+    console.error(`Failed to update yt-dlp: ${error.message}`);
+    throw error;
+  }
+}
+
 function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
@@ -102,6 +218,15 @@ function createWindow() {
 // ffmpegFluent.setFfmpegPath(ffmpeg.path);
 // const ffmpegPath = ffmpeg.path;
 app.whenReady().then(() => {
+
+  if (!existsSync(ytdlpPath)) {
+    console.log('yt-dlp not found, downloading...');
+     updateYtdlp();
+  } else {
+    const ytdlpVersion =  checkYtdlpVersion();
+    console.log('yt-dlp version:', ytdlpVersion);
+    // Optionally check against latest release via GitHub API
+  }
   electronApp.setAppUserModelId('com.electron')
   autoUpdater.setFeedURL({
     provider: "github",
@@ -114,7 +239,6 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
-console.log("autoUpdater",autoUpdater);
 
   ipcMain.on('open-webview', (event, url) => {
     console.log('Received YouTube Video URL:', url)
