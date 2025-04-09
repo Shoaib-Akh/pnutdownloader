@@ -193,8 +193,8 @@ function BottomSection({
         videoUrl: url,
         title: snippet.title,
         thumbnail:
-          snippet.thumbnails.standard.url ||
-          snippet.thumbnails.default.url ||
+          snippet?.thumbnails?.standard?.url ||
+          snippet?.thumbnails.default.url ||
           snippet.thumbnails.high.url,
         duration: contentDetails.duration,
         isPlaylist: false
@@ -244,6 +244,8 @@ function BottomSection({
       }
     }
   }
+  const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+console.log("storedDownloads",storedDownloads);
 
   const isAnyDownloadInProgress = () => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
@@ -251,7 +253,7 @@ function BottomSection({
       (item) =>
         !item.isCompleted &&
         item.status !== 'Queued' &&
-        item.status !== 'Waiting' &&
+        item.status !== "Waiting" &&
         item.status !== 'Failed' &&
         item.status !== 'Fetching Info...'
     )

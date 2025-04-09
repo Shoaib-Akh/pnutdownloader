@@ -58,7 +58,7 @@ const api = {
   onUpdateError: (callback) => ipcRenderer.on('update-error', (_, err) => callback(err)),
   downloadUpdate: () => ipcRenderer.send('download-update'),
   installUpdate: () => ipcRenderer.send('install-update'),
-  
+  checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   
 }
 

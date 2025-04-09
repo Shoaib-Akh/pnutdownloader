@@ -275,6 +275,13 @@ app.whenReady().then(() => {
     console.log('yt-dlp version:', ytdlpVersion);
     // Optionally check against latest release via GitHub API
   }
+  const deps =  checkDependencies();
+  isInitialized = deps.ready;
+  if (isInitialized) {
+    console.log('All dependencies initialized successfully');
+  } else {
+    console.error('Failed to initialize all dependencies');
+  }
   electronApp.setAppUserModelId('com.electron')
   autoUpdater.setFeedURL({
     provider: "github",
@@ -785,4 +792,32 @@ ipcMain.on('download-update', () => {
 
 ipcMain.on('install-update', () => {
   autoUpdater.quitAndInstall();
+});
+
+let isInitialized = false;
+
+async function checkDependencies() {
+  try {
+    const ffmpegExists = await fs.access(ffmpegPath).then(() => true).catch(() => false);
+    const ytdlpExists = await fs.access(ytdlpPath).then(() => true).catch(() => false);
+    
+    // Check if files exist and are non-empty
+    if (ffmpegExists && ytdlpExists) {
+      const ffmpegStats = await fs.stat(ffmpegPath);
+      const ytdlpStats = await fs.stat(ytdlpPath);
+      
+      return {
+        ready: ffmpegStats.size > 0 && ytdlpStats.size > 0,
+        ffmpeg: ffmpegStats.size > 0,
+        ytdlp: ytdlpStats.size > 0
+      };
+    }
+    return { ready: false, ffmpeg: false, ytdlp: false };
+  } catch (error) {
+    console.error('Error checking dependencies:', error);
+    return { ready: false, ffmpeg: false, ytdlp: false };
+  }
+}
+ipcMain.handle('check-dependencies', async () => {
+  return await checkDependencies();
 });
