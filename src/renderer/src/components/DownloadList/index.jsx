@@ -69,8 +69,8 @@ console.log("selectedItem",selectedItem);
   //     })
   //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
-
-  const filteredList = (JSON.parse(localStorage.getItem('downloadList') || videoInfo))
+let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
+  const filteredList = ( downloadListData|| videoInfo)
   .filter((item) => {
     const isPlaylist =
       item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
@@ -113,7 +113,7 @@ console.log("selectedItem",selectedItem);
             </tr>
           </thead>
           <tbody>
-            {filteredList.length > 0 ? (
+            {filteredList?.length > 0 ? (
               [...new Set(filteredList.map((item) => item.id))].map((uniqueId) => {
                 const item = filteredList.find((i) => i.id === uniqueId)
                 const progress = progressMap.get(item.id)?.progress || 0
