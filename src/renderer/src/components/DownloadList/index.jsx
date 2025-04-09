@@ -76,7 +76,7 @@ console.log("selectedItem",selectedItem);
       item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
     if (selectedItem === 'Playlist') return isPlaylist
     if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-    if (selectedItem === 'Audio') return item.format === 'MP3'
+    if (selectedItem === 'Audio') return item.format === 'MP3' ||'FLAC'|| 'WAV' ||'AAC'
     if (selectedItem === 'Recent Download') return true
     return false
   })

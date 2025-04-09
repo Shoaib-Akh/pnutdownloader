@@ -567,6 +567,7 @@ function formatDuration(seconds) {
 let downloadProcess = null; // Track the current download process
 const activeDownloads = {};
 const startDownload = async (event, options) => {
+  
   return new Promise((resolve, reject) => {
     try {
       if (downloadProcess) {
@@ -574,7 +575,10 @@ const startDownload = async (event, options) => {
         return reject(new Error('A download is already in progress.'));
       }
 
-      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo } = options;
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate } = options;
+
+      console.log("selectBitrateselectBitrateselectBitrate",selectBitrate);
+      
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
       }
@@ -587,14 +591,21 @@ const startDownload = async (event, options) => {
       console.log('Download options:', options);
 
       // 🔍 **Check if URL is a Playlist**
-      const isPlaylist = url.includes("playlist") || url.includes("&list=") || url.includes("?list=");
+      const isPlaylist = (url.includes("playlist") || url.includes("&list=") || url.includes("?list=")) && !url.includes('watch');
 
       // Format and quality processing
       const finalQualityVideo = selectedQuality.replace(/[pP]$/, '');
       const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
-      const formatSpecifier = isAudioOnly
-        ? `--extract-audio --audio-format mp3 --audio-quality best`
-        : `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
+      const  audioFormat = selectedFormat ? selectedFormat.toLowerCase():"mp3"
+      let formatSpecifier;
+      if (isAudioOnly) {
+        // Audio-specific format with bitrate
+        const bitrateOption = selectBitrate ? `--audio-quality ${selectBitrate}` : '--audio-quality best';
+        formatSpecifier = `--extract-audio --audio-format ${audioFormat} ${bitrateOption}`;
+      } else {
+        // Video format specifier remains unchanged
+        formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
+      }
       
       console.log('Format Specifier:', formatSpecifier);
 
@@ -624,9 +635,9 @@ const startDownload = async (event, options) => {
 
       // ✅ **Auto-Detect and Apply Playlist Option**
       if (isPlaylist) {
-        args.push('--yes-playlist');  // Enables full playlist downloading
+        args.push('--yes-playlist');
       } else {
-        args.push('--no-playlist');   // Ensures only a single video download
+        args.push('--no-playlist');
       }
 
       console.log('Downloading with args:', args);
@@ -648,7 +659,7 @@ const startDownload = async (event, options) => {
       });
 
       downloadProcess.on('close', (code) => {
-        delete activeDownloads[downloadId];  // Remove from active downloads
+        delete activeDownloads[downloadId];
         downloadProcess = null;
 
         if (code === 0) {

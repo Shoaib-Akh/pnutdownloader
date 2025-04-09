@@ -19,6 +19,8 @@ import alljson from '../../../../../public/all.json'
 
 function BottomSection({
   downloadType,
+  bitrate ,
+  
   quality,
   format,
   saveTo,
@@ -181,7 +183,7 @@ function BottomSection({
 
     if (!videoId && !playlistId) return null
 
-    if (videoId && !playlistId) {
+    if (url.includes('watch') && videoId) {
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
       )
@@ -201,7 +203,7 @@ function BottomSection({
       }
     }
 
-    if (playlistId) {
+    if ( !url.includes('watch') && playlistId) {
       const playlistResponse = await fetch(
         `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
       )
@@ -293,6 +295,7 @@ console.log("storedDownloads",storedDownloads);
       processQueue()
     }
   }
+  console.log(" befor bitrate",bitrate);
 
   const processQueue = useCallback(async () => {
     if (downloadQueue.current.length === 0 || isProcessing.current) return
@@ -447,6 +450,7 @@ console.log("storedDownloads",storedDownloads);
       };
 
       window.api.onDownloadProgress(handleProgress)
+console.log("when download start",bitrate);
 
       await window.api.downloadVideo({
         id: currentId,
@@ -454,6 +458,7 @@ console.log("storedDownloads",storedDownloads);
         isAudioOnly: downloadType === 'Audio',
         selectedFormat: format,
         selectedQuality: quality,
+        selectBitrate:  downloadType === 'Audio'?bitrate:null,
         saveTo
       })
 
@@ -502,13 +507,13 @@ console.log("storedDownloads",storedDownloads);
         processQueue()
       }
     }
-  }, [downloadType, format, quality, saveTo])
+  }, [downloadType, format, quality, saveTo,bitrate])
 
   useEffect(() => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
     const queuedDownloads = storedDownloads.filter(
       (item) =>
-        item.status === 'Queued' || item.status === 'Downloading' || item.status === 'Fetching Info'
+        item.status === 'Queued' || item.status === 'Downloading' || item.status === 'Fetching Info'|| item.status === 'Waiting'
     )
 
     if (queuedDownloads.length > 0) {

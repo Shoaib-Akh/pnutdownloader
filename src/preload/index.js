@@ -7,13 +7,14 @@ const api = {
   fetchVideoInfo: (url) => ipcRenderer.invoke('fetch-video-info', url),
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id }) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id,selectBitrate }) =>
     ipcRenderer.invoke('downloadVideo', {
       url,
       isAudioOnly,
       selectedFormat,
       selectedQuality,
       saveTo,
+      selectBitrate,
       id
     }),
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),

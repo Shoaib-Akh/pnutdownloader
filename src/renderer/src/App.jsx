@@ -8,7 +8,10 @@ import { getAnalytics, logEvent } from "firebase/analytics";
 import { firebaseConfig } from './firebase-config';
 
 function App() {
+ 
   const [downloadType, setDownloadType] = useState('Video');
+  const [bitrate, setBitrate] = useState("64k");
+
   const [quality, setQuality] = useState('1080p');
   const [format, setFormat] = useState('');
   const [saveTo, setSaveTo] = useState('Downloads');
@@ -160,6 +163,8 @@ function App() {
       )}
 
       <Navbar
+      bitrate={bitrate} 
+      setBitrate={setBitrate}
         downloadType={downloadType}
         setDownloadType={setDownloadType}
         quality={quality}
@@ -194,6 +199,8 @@ function App() {
         )}
 
         <BottomSection
+        bitrate={bitrate} 
+        setBitrate={setBitrate}
           downloadType={downloadType}
           quality={quality}
           format={format}
