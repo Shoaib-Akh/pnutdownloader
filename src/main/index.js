@@ -566,8 +566,9 @@ function formatDuration(seconds) {
 
 let downloadProcess = null; // Track the current download process
 const activeDownloads = {};
+
+
 const startDownload = async (event, options) => {
-  
   return new Promise((resolve, reject) => {
     try {
       if (downloadProcess) {
@@ -577,50 +578,57 @@ const startDownload = async (event, options) => {
 
       const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate } = options;
 
-      console.log("selectBitrateselectBitrateselectBitrate",selectBitrate);
-      
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
       }
 
       if (activeDownloads[downloadId]) {
-        console.log(`Download already in progress for ${url}`);
         return reject(new Error('Download already in progress.'));
       }
 
-      console.log('Download options:', options);
-
-      // 🔍 **Check if URL is a Playlist**
-      const isPlaylist = (url.includes("playlist") || url.includes("&list=") || url.includes("?list=")) && !url.includes('watch');
-
-      // Format and quality processing
-      const finalQualityVideo = selectedQuality.replace(/[pP]$/, '');
-      const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
-      const  audioFormat = selectedFormat ? selectedFormat.toLowerCase():"mp3"
-      let formatSpecifier;
-      if (isAudioOnly) {
-        // Audio-specific format with bitrate
-        const bitrateOption = selectBitrate ? `--audio-quality ${selectBitrate}` : '--audio-quality best';
-        formatSpecifier = `--extract-audio --audio-format ${audioFormat} ${bitrateOption}`;
-      } else {
-        // Video format specifier remains unchanged
-        formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
-      }
-      
-      console.log('Format Specifier:', formatSpecifier);
-
-      // Determine save location
-      let downloadDir = saveTo === 'Desktop'
+      // Base directory setup
+      const baseDir = saveTo === 'Desktop'
         ? join(app.getPath('desktop'), 'pnutdownloader')
         : join(app.getPath('downloads'), 'pnutdownloader');
 
-      if (!existsSync(downloadDir)) {
-        mkdirSync(downloadDir, { recursive: true });
+      // Define media-specific directories
+      const audioDir = join(baseDir, 'audio');
+      const videoDir = join(baseDir, 'video');
+      const downloadDir = isAudioOnly ? audioDir : videoDir;
+
+      // Create base directories
+      try {
+        if (!existsSync(baseDir)) {
+          mkdirSync(baseDir, { recursive: true });
+        }
+        if (!existsSync(downloadDir)) {
+          mkdirSync(downloadDir, { recursive: true });
+        }
+      } catch (dirError) {
+        return reject(new Error(`Failed to create directory: ${dirError.message}`));
       }
 
-      const downloadPath = join(downloadDir, '%(title)s.%(ext)s');
+      // Playlist detection
+      const isPlaylist = (url.includes("playlist") || url.includes("&list=") || url.includes("?list=")) && !url.includes('watch');
 
-      // Construct arguments for yt-dlp
+      // Format specifier setup
+      const finalQualityVideo = selectedQuality.replace(/[pP]$/, '');
+      const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
+      const audioFormat = selectedFormat ? selectedFormat.toLowerCase() : 'mp3';
+      let formatSpecifier;
+      if (isAudioOnly) {
+        const bitrateOption = selectBitrate ? `--audio-quality ${selectBitrate}` : '--audio-quality best';
+        formatSpecifier = `--extract-audio --audio-format ${audioFormat} ${bitrateOption}`;
+      } else {
+        formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
+      }
+      const timestampFormat = '%(upload_date)s_';
+      // Download path with playlist support
+      const downloadPath = isPlaylist
+      ? join(baseDir, `${timestampFormat}%(playlist_title)s_%(title)s.%(ext)s`)
+      : join(downloadDir, `${timestampFormat}%(title)s.%(ext)s`);
+
+      // yt-dlp arguments
       const args = [
         '--continue',
         '--ffmpeg-location', ffmpegPath,
@@ -630,15 +638,9 @@ const startDownload = async (event, options) => {
         '--ignore-errors',
         '--progress',
         ...formatSpecifier.split(' '),
-        url
+        url,
+        isPlaylist ? '--yes-playlist' : '--no-playlist'
       ];
-
-      // ✅ **Auto-Detect and Apply Playlist Option**
-      if (isPlaylist) {
-        args.push('--yes-playlist');
-      } else {
-        args.push('--no-playlist');
-      }
 
       console.log('Downloading with args:', args);
 
@@ -648,39 +650,35 @@ const startDownload = async (event, options) => {
 
       downloadProcess.stdout.on('data', (data) => {
         const line = data.toString().trim();
-        console.log('output-ytlp', line);
         event.sender.send('download-progress', { message: line });
       });
 
       downloadProcess.stderr.on('data', (data) => {
         const errorMessage = data.toString().trim();
-        console.error('yt-dlp Error:', errorMessage);
         event.sender.send('download-progress', { error: errorMessage });
       });
 
       downloadProcess.on('close', (code) => {
         delete activeDownloads[downloadId];
         downloadProcess = null;
-
         if (code === 0) {
-          event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
+          event.sender.send('download-progress', { 
+            status: 'Playlist download complete!',
+            file: downloadPath 
+          });
           resolve();
         } else {
-          event.sender.send('download-progress', { error: `Download failed with code ${code}` });
           reject(new Error(`Download failed with code ${code}`));
         }
       });
 
       downloadProcess.on('error', (err) => {
-        console.error('Download process error:', err);
-        event.sender.send('download-progress', { error: err.message });
         delete activeDownloads[downloadId];
         downloadProcess = null;
         reject(err);
       });
 
     } catch (err) {
-      console.error('Download error:', err);
       event.sender.send('download-progress', { error: err.message });
       reject(err);
     }
