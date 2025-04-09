@@ -183,7 +183,7 @@ function BottomSection({
 
     if (!videoId && !playlistId) return null
 
-    if (url.includes('watch') && videoId) {
+    if (url.includes('watch') || videoId) {
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
       )
@@ -246,8 +246,7 @@ function BottomSection({
       }
     }
   }
-  const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
-console.log("storedDownloads",storedDownloads);
+  
 
   const isAnyDownloadInProgress = () => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
@@ -265,6 +264,7 @@ console.log("storedDownloads",storedDownloads);
     if (!url) return
     const newId = uuidv4()
     const videoInfo = await getVideoInfo(url)
+    
     const newDownload = {
       id: newId,
       url,
@@ -295,7 +295,6 @@ console.log("storedDownloads",storedDownloads);
       processQueue()
     }
   }
-  console.log(" befor bitrate",bitrate);
 
   const processQueue = useCallback(async () => {
     if (downloadQueue.current.length === 0 || isProcessing.current) return
@@ -450,7 +449,6 @@ console.log("storedDownloads",storedDownloads);
       };
 
       window.api.onDownloadProgress(handleProgress)
-console.log("when download start",bitrate);
 
       await window.api.downloadVideo({
         id: currentId,

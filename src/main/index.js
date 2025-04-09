@@ -591,7 +591,6 @@ const startDownload = async (event, options) => {
         ? join(app.getPath('desktop'), 'pnutdownloader')
         : join(app.getPath('downloads'), 'pnutdownloader');
 
-      // Define media-specific directories
       const audioDir = join(baseDir, 'audio');
       const videoDir = join(baseDir, 'video');
       const downloadDir = isAudioOnly ? audioDir : videoDir;
@@ -622,11 +621,25 @@ const startDownload = async (event, options) => {
       } else {
         formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
       }
+
+      // Get current timestamp for download start time (e.g., 20250409_143022)
+      const now = new Date();
+      const downloadTimestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDD_HHMMSS
+
+      // Original upload date format from video metadata
       const timestampFormat = '%(upload_date)s_';
-      // Download path with playlist support
-      const downloadPath = isPlaylist
-      ? join(baseDir, `${timestampFormat}%(playlist_title)s_%(title)s.%(ext)s`)
-      : join(downloadDir, `${timestampFormat}%(title)s.%(ext)s`);
+
+      // Download path with download start time
+      let downloadPath;
+      if (isPlaylist) {
+        const playlistDir = join(baseDir, '%(playlist_title)s');
+        downloadPath = join(playlistDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
+        if (!existsSync(playlistDir)) {
+          mkdirSync(playlistDir, { recursive: true });
+        }
+      } else {
+        downloadPath = join(downloadDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
+      }
 
       // yt-dlp arguments
       const args = [
