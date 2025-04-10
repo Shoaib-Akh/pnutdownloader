@@ -591,17 +591,12 @@ const startDownload = async (event, options) => {
         ? join(app.getPath('desktop'), 'pnutdownloader')
         : join(app.getPath('downloads'), 'pnutdownloader');
 
-      const audioDir = join(baseDir, 'audio');
-      const videoDir = join(baseDir, 'video');
-      const downloadDir = isAudioOnly ? audioDir : videoDir;
+    
 
       // Create base directories
       try {
         if (!existsSync(baseDir)) {
           mkdirSync(baseDir, { recursive: true });
-        }
-        if (!existsSync(downloadDir)) {
-          mkdirSync(downloadDir, { recursive: true });
         }
       } catch (dirError) {
         return reject(new Error(`Failed to create directory: ${dirError.message}`));
@@ -634,10 +629,13 @@ const startDownload = async (event, options) => {
       if (isPlaylist) {
         const playlistDir = join(baseDir, '%(playlist_title)s');
         downloadPath = join(playlistDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
-        if (!existsSync(playlistDir)) {
-          mkdirSync(playlistDir, { recursive: true });
-        }
+        // Note: We don't need to create the directory here as yt-dlp will handle it with the %(playlist_title)s template
       } else {
+        const formatDir = isAudioOnly ? 'audio' : 'video';
+        const downloadDir = join(baseDir, formatDir);
+        if (!existsSync(downloadDir)) {
+          mkdirSync(downloadDir, { recursive: true });
+        }
         downloadPath = join(downloadDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
       }
 
