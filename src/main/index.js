@@ -670,15 +670,14 @@ const startDownload = async (event, options) => {
       });
 
       downloadProcess.on('close', (code) => {
-        delete activeDownloads[downloadId];
+        delete activeDownloads[downloadId];  // Remove from active downloads
         downloadProcess = null;
+
         if (code === 0) {
-          event.sender.send('download-progress', { 
-            status: 'Playlist download complete!',
-            file: downloadPath 
-          });
+          event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
           resolve();
         } else {
+          event.sender.send('download-progress', { error: `Download failed with code ${code}` });
           reject(new Error(`Download failed with code ${code}`));
         }
       });
