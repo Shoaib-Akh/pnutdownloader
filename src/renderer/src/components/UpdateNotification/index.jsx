@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvailable, downloadProgress }) {
   console.log("downloadProgress", downloadProgress);
   console.log("updateInfo", updateInfo);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Loader component
   const DownloadLoader = () => (
@@ -10,9 +11,9 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
       <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
         <span className="visually-hidden">Loading...</span>
       </div>
-      <div className="mt-3 text-muted">
+      {/* <div className="mt-3 text-muted">
         Downloading: {Math.round(downloadProgress)}%
-      </div>
+      </div> */}
       <style jsx>{`
         .loader-container {
           display: flex;
@@ -32,6 +33,11 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
       `}</style>
     </div>
   );
+
+  const handleDownload = () => {
+    setIsDownloading(true);
+    window.api.downloadUpdate();
+  };
 
   return (
     <div 
@@ -67,7 +73,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
             ) : (
               <>
                 <p className="lead mb-3 text-dark fw-semibold">New Version Available</p>
-                {downloadProgress > 0 ? (
+                {isDownloading ? (
                   <DownloadLoader />
                 ) : (
                   <p className="text-muted mb-4">
@@ -81,11 +87,11 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
 
           <div className="modal-footer border-top-0 justify-content-center">
             {!isDownloaded && (
-              downloadProgress === 0 && (
+              !isDownloading && (
                 <button 
                   className="btn btn-primary btn-lg px-5 rounded-pill fw-medium"
                   style={{backgroundColor:"#BB4F28"}}
-                  onClick={() => window.api.downloadUpdate()}
+                  onClick={handleDownload}
                 >
                   Download Now
                 </button>

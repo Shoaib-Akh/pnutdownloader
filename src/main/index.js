@@ -840,3 +840,17 @@ async function checkDependencies() {
 ipcMain.handle('check-dependencies', async () => {
   return await checkDependencies();
 });
+
+ipcMain.handle('getPath', (event, pathName) => {
+  return app.getPath(pathName);
+});
+
+// Check if file exists
+ipcMain.handle('fileExists', (event, filePath) => {
+  return existsSync(filePath);
+});
+
+// Open file in default video player
+ipcMain.handle('openFile', (event, filePath) => {
+  shell.openPath(filePath); // Opens the file with the default application
+});

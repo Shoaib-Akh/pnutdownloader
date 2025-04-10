@@ -10,10 +10,11 @@ import {
   FaSnapchat,
   FaReddit,
   FaWhatsapp,
+  FaPlay,
   FaVimeo // Add Vimeo icon
 } from 'react-icons/fa'
 
-const MediaThumbnail = ({ thumbnail, title, url }) => {
+const MediaThumbnail = ({ thumbnail, title, url,onClick }) => {
   const socialIcons = {
     instagram: <FaInstagram className="iconstyle" style={{ color: '#E1306C' }} />,
     facebook: <FaFacebook className="iconstyle" style={{ color: '#1877F2' }} />,
@@ -36,13 +37,15 @@ const MediaThumbnail = ({ thumbnail, title, url }) => {
       <div style={{}}>
         {icon || (
           <img
+          onClick={onClick}
             crossOrigin="anonymous"
             src={thumbnail}
-            style={{ width: 50, height: 50, borderRadius: 10 }}
+            style={{ width: 50, height: 50, borderRadius: 10,cursor:"pointer" }}
             alt="Thumbnail"
             onError={(e) => (e.target.style.display = 'none')}
           />
         )}
+       
       </div>
 
       <span

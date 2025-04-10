@@ -48,7 +48,10 @@ const api = {
 
   // ✅ New function to check if a file exists
   fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
+  getPath: (filePath) => ipcRenderer.invoke('getPath', filePath),
+  openFile: (openFile) => ipcRenderer.invoke('openFile', openFile),
 
+  
   removeListener: (channel) => ipcRenderer.removeAllListeners(channel),
 
   checkForUpdates: () => ipcRenderer.send('check-for-updates'),

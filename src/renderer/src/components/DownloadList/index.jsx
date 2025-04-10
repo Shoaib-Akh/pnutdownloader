@@ -87,7 +87,62 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
+  const handleThumbnailClick = async (item) => {
+  if (item.isCompleted && item.status === 'Completed') {
+    try {
+      const desktopPath = await window.api.getPath('downloads');
+      const audioDownloadDir = `${desktopPath}/pnutdownloader/audio`;
+      const videoDownloadDir = `${desktopPath}/pnutdownloader/video`;
 
+      // Normalize the title: replace pipes and standardize colons
+      const normalizedTitle = item.title
+        .replace(/\|/g, '｜')
+        .replace(/：/g, ':') // Replace full-width colon with regular colon
+        .replace(/’/g, "'") // Standardize apostrophes
+        .trim()
+        .toLowerCase();
+      const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi', 'mp3', 'flac', 'wav', 'aac'];
+
+      const directories = [videoDownloadDir, audioDownloadDir];
+      let filePath = null;
+
+      for (const dir of directories) {
+        const files = await window.api.readDirectory(dir);
+        console.log(`Files in ${dir}:`, files);
+        console.log('Searching for normalized title:', normalizedTitle);
+
+        filePath = files
+          .filter((file) => {
+            const fileName = file.toLowerCase();
+            const titlePart = fileName
+              .split('_')
+              .slice(2)
+              .join('_')
+              .replace(/：/g, ':') // Normalize colons in file name
+              .replace(/’/g, "'"); // Normalize apostrophes in file name
+            console.log(`Comparing titlePart: ${titlePart} with normalizedTitle: ${normalizedTitle}`);
+            return (
+              possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`)) &&
+              titlePart.includes(normalizedTitle)
+            );
+          })
+          .map((file) => `${dir}/${file}`)[0];
+
+        if (filePath) break;
+      }
+
+      if (filePath) {
+        console.log('Found and opening file:', filePath);
+        window.api.openFile(filePath);
+      } else {
+        console.error('File not found for title:', item.title, 'Normalized:', normalizedTitle);
+        console.error('Checked directories:', directories);
+      }
+    } catch (error) {
+      console.error('Error opening file:', error);
+    }
+  }
+};
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -140,6 +195,7 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
                           thumbnail={item.thumbnail}
                           title={item.title}
                           url={item.url}
+                          onClick={()=>handleThumbnailClick(item)}
                         />
                       )}
                     </td>
