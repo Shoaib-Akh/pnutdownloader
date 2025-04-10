@@ -6,4 +6,6 @@ out
 *.log*
  cookies
 .env
-public/cookies.txt
+cookies.txt
+ffmpeg.exe
+yt-dlp.exe
