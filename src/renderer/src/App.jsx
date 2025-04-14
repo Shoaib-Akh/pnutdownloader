@@ -184,6 +184,8 @@ function App() {
           transition: 'margin-left 0.3s ease-in-out',
         }}
       >
+        <div style={{width: showWebView?"0%":"20%"}}>
+
         {!showWebView && (
           <Sidebar
             isOpen={isSidebarOpen}
@@ -197,6 +199,8 @@ function App() {
             setDownloadListOpen={setDownloadListOpen}
           />
         )}
+        </div>
+
 
         <BottomSection
         bitrate={bitrate} 
@@ -217,8 +221,9 @@ function App() {
           setDownloadListOpen={setDownloadListOpen}
           pastLinkUrl={pastLinkUrl}
         />
+        </div>
       </div>
-    </div>
+ 
   );
 }
 

@@ -1,0 +1,115 @@
+/* css/Sidebar.css */
+
+.sidebar {
+   
+    transition: width 0.3s ease-in-out;
+    background-color: #f8f9fa;
+    color: #333;
+    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    height: 80vh;
+    margin-bottom: 10px;
+  }
+ 
+  .sidebar__toggle-button {
+    background-color: #BB4F28;
+    border: none;
+    color: white;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+    width: 90%;
+    margin-bottom: 10px;
+  }
+  
+  .sidebar__menu {
+    width: 90%;
+  }
+  
+  .sidebar__menu-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    color: #A0AEC0;
+    font-size: 14px;
+    font-weight: 600;
+    border: 1px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .sidebar__menu-item--selected {
+    color: black;
+    border: 1px solid #BB4F28;
+  }
+  
+  .sidebar__icon-container {
+    background-color: #fff;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 30px;
+    width: 36px;
+    margin-right: 7px;
+    color: #BB4F28;
+  }
+  
+  .sidebar__menu-item--selected .sidebar__icon-container {
+    background-color: #BB4F28;
+    color: #fff;
+  }
+  
+  .sidebar__icon {
+    font-size: 14px;
+  }
+  
+  .sidebar__label {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  
+  .sidebar__footer {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    width: 90%;
+    text-align: center;
+  }
+  
+  .sidebar__logo {
+    width: 90px;
+    margin-bottom: 10px;
+  }
+  
+  .sidebar__buy-nuts-button {
+    background-color: #BB4F28;
+    border: none;
+    color: white;
+    font-size: 10px;
+    white-space: nowrap;
+    padding: 2px 4px;
+    border-radius: 2px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  @media (min-width: 576px) {
+    .sidebar__buy-nuts-button {
+      padding: 2px 3px;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .sidebar__buy-nuts-button {
+      padding: 2px 4px;
+      width: auto;
+    }
+  }

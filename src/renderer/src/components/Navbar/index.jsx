@@ -59,19 +59,26 @@ function Navbar({
     // If no match, return null
     return null;
   };
-
+  let downloadListData = [];
+  try {
+    downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
+  } catch (e) {
+    console.error("Failed to parse downloadList from localStorage:", e);
+  }
+  console.log("downloadListData", downloadListData);
+  
   return (
     <nav className="navbar navbar-expand-lg navbar-light p-3">
       <div className="d-flex align-items-center w-100">
         {/* Left Side - Logo */}
-        <a className="me-4" href="#" style={{ cursor: "default" }}>
-          <img src={Logo} alt="PNUT Logo" width={150} />
-        </a>
+        <div href="#" style={{ cursor: "default",width:"17% ", }} className= "logo-div">
+          <img src={Logo} alt="PNUT Logo" className='logo' />
+        </div>
   
         {/* Center Section - Options */}
         <div
           className="d-flex align-items-center justify-content-between flex-grow-1 shadow-sm bg-body"
-          style={{ padding: 10 }}
+          style={{ padding: 10,borderRadius:5 }}
         >
           <div className="d-flex" style={{ gap: 2 }}>
             {/* Paste Link Button */}
@@ -110,7 +117,7 @@ function Navbar({
                 }
               }}
             >
-              <FaPaste className="me-2" /> Paste Link
+              <FaPaste className="me-2" /> Paste
             </button>
   
             {/* Dropdown for Download Type */}

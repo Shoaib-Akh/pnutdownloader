@@ -19,7 +19,11 @@ function CustomDropdown({ label, options, selected, onSelect }) {
       }
       variant="light"
       className="border-0"
-      style={{fontSize:"12px"}}
+      style={{fontSize:"12px",
+
+    lineHeight: "30px"
+
+      }}
       onToggle={(isOpen) => setIsOpen(isOpen)}
     >
       {options.map((option, index) => (

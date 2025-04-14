@@ -64,24 +64,32 @@ console.log("selectedItem",selectedItem);
   //       if (selectedItem === 'Playlist') return isPlaylist
   //       if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
   //       if (selectedItem === 'Audio') return item.format === 'MP3'
-  //       if (selectedItem === 'Recent Download') return true
+  //       if (selectedItem === 'All File') return true
   //       return false
   //     })
   //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
-let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
-  const filteredList = ( downloadListData|| videoInfo)
-  .filter((item) => {
-    const isPlaylist =
-      item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=')
-    if (selectedItem === 'Playlist') return isPlaylist
-    if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist
-    if (selectedItem === 'Audio') return item.format === 'MP3' ||'FLAC'|| 'WAV' ||'AAC'
-    if (selectedItem === 'Recent Download') return true
-    return false
-  })
-  .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
-  .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+  let downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
+  const filteredList = (downloadListData || videoInfo)
+    .filter((item) => {
+      const isPlaylist =
+        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=');
+      if (selectedItem === 'Playlist') return isPlaylist;
+      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist;
+      if (selectedItem === 'Audio') return ['MP3', 'FLAC', 'WAV', 'AAC'].includes(item.format);
+      if (selectedItem === 'All File') return true;
+      return false;
+    })
+    .sort((a, b) => {
+      // If filtering by Audio, sort by format; otherwise, sort by URL for Playlists or keep original order
+      if (selectedItem === 'Audio') {
+        const audioFormats = ['MP3', 'FLAC', 'WAV', 'AAC']; // Define order of formats
+        return audioFormats.indexOf(a.format) - audioFormats.indexOf(b.format);
+      }
+      if (selectedItem === 'Playlist') return a.url.localeCompare(b.url);
+      return 0; // No sorting for other cases
+    })
+    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
@@ -94,11 +102,11 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
       const audioDownloadDir = `${desktopPath}/pnutdownloader/audio`;
       const videoDownloadDir = `${desktopPath}/pnutdownloader/video`;
 
-      // Normalize the title: replace pipes and standardize colons
+      // Normalize the title
       const normalizedTitle = item.title
         .replace(/\|/g, '｜')
-        .replace(/：/g, ':') // Replace full-width colon with regular colon
-        .replace(/’/g, "'") // Standardize apostrophes
+        .replace(/：/g, ':')
+        .replace(/’/g, "'")
         .trim()
         .toLowerCase();
       const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi', 'mp3', 'flac', 'wav', 'aac'];
@@ -114,12 +122,8 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
         filePath = files
           .filter((file) => {
             const fileName = file.toLowerCase();
-            const titlePart = fileName
-              .split('_')
-              .slice(2)
-              .join('_')
-              .replace(/：/g, ':') // Normalize colons in file name
-              .replace(/’/g, "'"); // Normalize apostrophes in file name
+            // Use the full filename (minus extension) for comparison
+            const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
             console.log(`Comparing titlePart: ${titlePart} with normalizedTitle: ${normalizedTitle}`);
             return (
               possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`)) &&
@@ -232,32 +236,35 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
                           </div>
                         </>
                       ) : (
-                        <div>
-                          {item.status === 'Failed' ? (
-                            <>
-                              <FaTimesCircle className="text-danger" style={{ marginRight: 5 }} />
-                              Failed
-                            </>
-                          ) : item.isCompleted ? (
-                            <>
-                              <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
-                              {item.status}
-                            </>
-                          ) : (
-                            <>
-                              <FaRegClock className="text-success" style={{ marginRight: 3 }} />
-                              {item.status}
-                              {!item.isCompleted && (
-                                <ProgressBar
-                                  now={progressMap.get(item.id)?.progress || 0}
-                                  className="flex-grow-1"
-                                  style={{ height: 4 }}
-                                  key={item.id}
-                                />
-                              )}
-                            </>
-                          )}
-                        </div>
+                        <div className="">
+                        {item.status === 'Failed' ? (
+                          <div className="text-danger d-flex align-items-center">
+                            <FaTimesCircle className="me-1 align-middle" />
+                            <span className="align-middle d-inline-block">Failed</span>
+                          </div>
+                        ) : item.isCompleted ? (
+                          <div className="text-success d-flex align-items-center">
+                            <FaCheckCircle className="me-1 align-middle" />
+                            <span className="align-middle d-inline-block">{item.status}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="">
+                              <FaRegClock className="me-1 align-middle text-warning" />
+                              <span className="align-middle d-inline-block">{item.status}</span>
+                            </div>
+                            {!item.isCompleted && (
+                              <ProgressBar
+                                now={progressMap.get(item.id)?.progress || 0}
+                                style={{ height: 4, width: '100%', marginTop: 4 }}
+                                key={item.id}
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                      
+                      
                       )}
                     </td>
 
@@ -266,7 +273,7 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
-                          style={{ marginLeft: '27px' }}
+                          style={{ marginLeft: '17px' }}
                           show={openDropdown === item.id}
                           onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
                         >
@@ -314,7 +321,7 @@ let downloadListData= JSON.parse(localStorage.getItem('downloadList'))||[]
               </tr>
             )}
           </tbody>
-        </table>
+        </table >
       </div>
     </div>
   )

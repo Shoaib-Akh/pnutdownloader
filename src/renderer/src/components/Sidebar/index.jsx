@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars } from 'react-icons/fa'
-import { IoMdDownload } from 'react-icons/io'
-import { GiSquirrel } from 'react-icons/gi'
-import squirrel from '../../assets/Images/squirrel.png'
+import React from 'react';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars } from 'react-icons/fa';
+import { IoMdDownload } from 'react-icons/io';
+import { GiSquirrel } from 'react-icons/gi';
+import squirrel from '../../assets/Images/squirrel.png';
+import './Sidebar.css';
 
 function Sidebar({
   isOpen,
@@ -12,165 +13,69 @@ function Sidebar({
   download,
   setDownload,
   setShowWebView,
-  setDownloadListOpen
+  setDownloadListOpen,
 }) {
   const menuItems = [
-    { icon: IoMdDownload, label: 'Recent Download' },
+    { icon: IoMdDownload, label: 'All File' },
     { icon: FaMusic, label: 'Audio' },
     { icon: FaVideo, label: 'Video' },
-    { icon: FaList, label: 'Playlist' }
-  ]
+    { icon: FaList, label: 'Playlist' },
+  ];
+
   const handleClick = () => {
     window.api.openExternal('https://ko-fi.com/pnutdownloader');
   };
+
   return (
-    <div
-      className={`sidebar ${isOpen ? 'expanded' : 'collapsed'}`}
-      style={{
-        width: isOpen ? '230px' : '80px',
-        transition: 'width 0.3s ease-in-out',
-        backgroundColor: '#f8f9fa',
-        color: '#333',
-       
-        // position: 'fixed',
-        left: 0,
-        fontSize:12,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        // paddingTop: '20px',
-        // boxShadow: "2px 0 5px rgba(0,0,0,0.1)",
-        // zIndex: 1000
-        justifyContent:"space-between",
-        height:"80vh",
-        marginBottom:10
-      }}
-    >
+    <div className="sidebar">
       {/* Menu Button for Collapsed Mode */}
       {!isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          style={{
-            backgroundColor: '#BB4F28',
-            border: 'none',
-            color: 'white',
-            padding: '10px',
-            cursor: 'pointer',
-            borderRadius: '5px',
-            width: '90%',
-            marginBottom: '10px'
-          }}
-        >
+        <button className="sidebar__toggle-button" onClick={() => setIsOpen(true)}>
           <FaBars />
         </button>
       )}
 
-      {/* Toggle Button */}
-
-      {/* Recent Download Section */}
-      {/* <div style={{ width: "90%", textAlign: "left", marginBottom: "10px" }}>
-        <h6 style={{ fontSize: "14px", color: "#BB4F28" }}>
-          <IoMdDownload style={{ marginRight: "5px" }} /> Recent Download
-        </h6>
-      </div> */}
-
       {/* Sidebar Menu */}
-      <div style={{ width: '90%' }}>
+      <div className="sidebar__menu">
         {menuItems.map((item, index) => (
           <div
             key={index}
+            className={`sidebar__menu-item ${
+              selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
+            }`}
             onClick={() => {
-              setSelectedItem(item.label)
-              setDownload(false)
-              setShowWebView(false)
-              setDownloadListOpen(true)
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '5px 10px',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              marginBottom: '10px',
-              // backgroundColor: selectedItem === item.label ? "#BB4F28" : "#fff", // 🔥 Selected item background
-              color: selectedItem === item.label ? 'black' : '#A0AEC0', // 🔥 Selected text color
-              fontSize: 14,
-              fontWeight: '600',
-              border: selectedItem === item.label ? '1px solid #BB4F28' : '1px solid #fff',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+              setSelectedItem(item.label);
+              setDownload(false);
+              setShowWebView(false);
+              setDownloadListOpen(true);
             }}
           >
             <div
-              style={{
-                backgroundColor: selectedItem === item.label ? '#BB4F28' : '#fff', // 🔥 Icon background
-                borderRadius: '50%',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                // padding: '5px',
-                height: 30,
-                width: 30,
-                marginRight:7,
-                
-                color: selectedItem === item.label ? '#fff' : '#BB4F28' // 🔥 Icon color logic
-              }}
+              className="sidebar__icon-container"
             >
-              <item.icon
-                style={{
-                  fontSize: '14px'
-                  // 🔥 Icon color logic
-                }}
-              />
+              <item.icon className="sidebar__icon" />
             </div>
-
-            {isOpen && <span style={{fontSize:13,whiteSpace:"nowrap"}}>{item.label}</span>}
+            {isOpen && <span className="sidebar__label">{item.label}</span>}
           </div>
         ))}
       </div>
 
       {/* Buy Me Nuts Button */}
-      <div
-        style={{
-          // position: 'absolute',
-          // bottom: '0',
-          display:"flex",
-          alignItems:"center",
-          flexDirection:"column",
-          width: '90%',
-          textAlign: 'center',
-          
-        }}
-      >
+      <div className="sidebar__footer">
         {isOpen && (
-          < >
-            <img
-              src={squirrel}
-              alt="PNUT Logo"
-              className="me-2"
-              style={{ width: '90px', marginBottom: '10px' }}
-            />
-
+          <>
+            <img src={squirrel} alt="PNUT Logo" className="sidebar__logo" />
             <button
-              style={{
-                
-                // width: '100%',s
-                padding: '10px',
-                backgroundColor: '#BB4F28',
-                borderRadius: '8px',
-                border: 'none',
-                color: 'white',
-                fontSize: '14px',
-                cursor: 'pointer'
-              }}
+              className="sidebar__buy-nuts-button"
               onClick={handleClick}
             >
-              <GiSquirrel style={{ marginRight: '8px' }} /> Buy Me Nuts
+              Buy Me Nuts
             </button>
           </>
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;

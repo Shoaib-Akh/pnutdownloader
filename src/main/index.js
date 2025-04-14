@@ -233,7 +233,7 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    minWidth: 1020,
+    minWidth: 630,
     icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -591,8 +591,6 @@ const startDownload = async (event, options) => {
         ? join(app.getPath('desktop'), 'pnutdownloader')
         : join(app.getPath('downloads'), 'pnutdownloader');
 
-    
-
       // Create base directories
       try {
         if (!existsSync(baseDir)) {
@@ -621,22 +619,18 @@ const startDownload = async (event, options) => {
       const now = new Date();
       const downloadTimestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDD_HHMMSS
 
-      // Original upload date format from video metadata
-      const timestampFormat = '%(upload_date)s_';
-
-      // Download path with download start time
+      // Download path with only download timestamp (removed upload_date)
       let downloadPath;
       if (isPlaylist) {
         const playlistDir = join(baseDir, '%(playlist_title)s');
-        downloadPath = join(playlistDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
-        // Note: We don't need to create the directory here as yt-dlp will handle it with the %(playlist_title)s template
+        downloadPath = join(playlistDir, `%(title)s.%(ext)s`);
       } else {
         const formatDir = isAudioOnly ? 'audio' : 'video';
         const downloadDir = join(baseDir, formatDir);
         if (!existsSync(downloadDir)) {
           mkdirSync(downloadDir, { recursive: true });
         }
-        downloadPath = join(downloadDir, `${timestampFormat}${downloadTimestamp}_%(title)s.%(ext)s`);
+        downloadPath = join(downloadDir, `%(title)s.%(ext)s`);
       }
 
       // yt-dlp arguments

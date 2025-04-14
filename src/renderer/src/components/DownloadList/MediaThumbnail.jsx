@@ -1,65 +1,62 @@
-import React from 'react'
+import React from 'react';
 import {
   FaInstagram,
   FaFacebook,
   FaTwitter,
-  FaYoutube,
   FaLinkedin,
   FaTiktok,
   FaPinterest,
   FaSnapchat,
   FaReddit,
   FaWhatsapp,
-  FaPlay,
-  FaVimeo // Add Vimeo icon
-} from 'react-icons/fa'
+  FaVimeo
+} from 'react-icons/fa';
 
-const MediaThumbnail = ({ thumbnail, title, url,onClick }) => {
+const MediaThumbnail = ({ thumbnail, title, url, onClick }) => {
   const socialIcons = {
     instagram: <FaInstagram className="iconstyle" style={{ color: '#E1306C' }} />,
     facebook: <FaFacebook className="iconstyle" style={{ color: '#1877F2' }} />,
     twitter: <FaTwitter className="iconstyle" style={{ color: '#1DA1F2' }} />,
-    // youtube: <FaYoutube className='iconstyle' style={{ color: '#FF0000' }} />,
     linkedin: <FaLinkedin className="iconstyle" style={{ color: '#0077B5' }} />,
     tiktok: <FaTiktok className="iconstyle" style={{ color: '#000000' }} />,
     pinterest: <FaPinterest className="iconstyle" style={{ color: '#BD081C' }} />,
     snapchat: <FaSnapchat className="iconstyle" style={{ color: '#FFFC00' }} />,
     reddit: <FaReddit className="iconstyle" style={{ color: '#FF4500' }} />,
     whatsapp: <FaWhatsapp className="iconstyle" style={{ color: '#25D366' }} />,
-    vimeo: <FaVimeo className="iconstyle" style={{ color: '#1AB7EA' }} /> // Vimeo icon with its brand color
-  }
+    vimeo: <FaVimeo className="iconstyle" style={{ color: '#1AB7EA' }} />
+  };
 
-  const platform = Object.keys(socialIcons).find((key) => url?.includes(key))
-  const icon = platform ? socialIcons[platform] : null
+  const platform = Object.keys(socialIcons).find((key) => url?.includes(key));
+  const icon = platform ? socialIcons[platform] : null;
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      <div style={{}}>
+    <div className="d-flex align-items-center text-nowrap overflow-hidden " >
+      <span className="me-2 flex-shrink-0">
         {icon || (
           <img
-          onClick={onClick}
+            onClick={onClick}
             crossOrigin="anonymous"
             src={thumbnail}
-            style={{ width: 50, height: 50, borderRadius: 10,cursor:"pointer" }}
             alt="Thumbnail"
             onError={(e) => (e.target.style.display = 'none')}
+            className="img-fluid rounded"
+            style={{
+              height: '40px',
+              width: '60px',
+              objectFit: 'cover',
+              cursor: 'pointer'
+            }}
           />
         )}
-       
-      </div>
-
+      </span>
       <span
-        style={{
-          width: 200,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
-        }}
+        className="text-truncate d-block"
+        style={{ maxWidth: 'calc(100% - 100px)' }}
       >
         {`${title.slice(0, 30)}${title.length > 30 ? '...' : ''}`}
       </span>
     </div>
-  )
-}
+  );
+};
 
-export default MediaThumbnail
+export default MediaThumbnail;

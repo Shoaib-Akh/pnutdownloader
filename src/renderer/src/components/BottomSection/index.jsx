@@ -68,7 +68,7 @@ function BottomSection({
           setDownloadListOpen(true)
           setShowWebView(false)
           setIsSidebarOpen(true)
-          setSelectedItem('Recent Download')
+          setSelectedItem('All File')
           setDownload(true)
         }
       }
@@ -172,7 +172,7 @@ function BottomSection({
     setDownloadListOpen(true)
     setShowWebView(false)
     setIsSidebarOpen(true)
-    setSelectedItem('Recent Download')
+    setSelectedItem('All File')
     setDownload(true)
     addToQueue(urlToDownload)
   }
@@ -332,7 +332,7 @@ function BottomSection({
         status: 'Downloading',
         isPlaylist: info?.isPlaylist || false
       }
-      setVideoInfo(info)
+      setVideoInfo(info ||[])
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
@@ -523,7 +523,7 @@ function BottomSection({
   }, [])
 
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ width:  !showWebView?'90%':"100%" }}>
       {!showWebView ? (
         <>
           {downloadListOpen && selectedItem ? (
