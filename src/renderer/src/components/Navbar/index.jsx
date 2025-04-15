@@ -3,7 +3,7 @@ import { FaPaste, FaCog, FaUser } from 'react-icons/fa'
 import Logo from '../../assets/Images/logo.png'
 import '../common.css'
 import CustomDropdown from '../CustomDropdown'
-import { extractVideoId } from '../commonFunction'
+import { extractYotubePastLink } from '../commonFunction'
 
 function Navbar({
   saveTo,
@@ -54,7 +54,7 @@ function Navbar({
   console.log("downloadListData", downloadListData);
   
   return (
-    <nav className=" p-2 ">
+    <nav className=" p-3 ">
       <div className="d-flex align-items-center justify-content-between flex-grow-1 " >
         {/* Left Side - Logo */}
         <div href="#" style={{ cursor: "default",width:"17%", }} className= "logo-div">
@@ -63,8 +63,12 @@ function Navbar({
   
         {/* Center Section - Options */}
         <div
-          className="d-flex align-items-center justify-content-between flex-grow-1 shadow-sm bg-body"
-          style={{ padding: 10,borderRadius:5 }}
+          className="d-flex align-items-center justify-content-between flex-grow-1  bg-body"
+          style={{ padding: 10,borderRadius:5 ,
+
+            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.2)"
+
+          }}
         >
           <div className="d-flex" style={{ gap: 2 }}>
             {/* Paste Link Button */}
@@ -75,9 +79,9 @@ function Navbar({
                 try {
                   const clipboardText = await navigator.clipboard.readText();
                   if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
-                    const videoId = extractVideoId(clipboardText);
+                    const videoId = extractYotubePastLink(clipboardText);
                     if (!videoId) {
-                      alert('The URL does not contain a valid video ID.');
+                      alert('The URL does not contain a valid video or playlist ');
                       return;
                     }
                     let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];

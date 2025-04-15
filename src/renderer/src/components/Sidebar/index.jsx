@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars } from 'react-icons/fa';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars ,FaHome} from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
 import squirrel from '../../assets/Images/squirrel.png';
@@ -16,7 +16,10 @@ function Sidebar({
   setDownloadListOpen,
 }) {
   const menuItems = [
+    { icon: FaHome, label: 'Home' },
+
     { icon: IoMdDownload, label: 'All File' },
+
     { icon: FaMusic, label: 'Audio' },
     { icon: FaVideo, label: 'Video' },
     { icon: FaList, label: 'Playlist' },
@@ -48,7 +51,7 @@ function Sidebar({
               setSelectedItem(item.label);
               setDownload(false);
               setShowWebView(false);
-              setDownloadListOpen(true);
+              setDownloadListOpen(item.label === 'Home' ? false : true);
             }}
           >
             <div
@@ -62,7 +65,7 @@ function Sidebar({
       </div>
 
       {/* Buy Me Nuts Button */}
-      <div className="sidebar__footer">
+      <div className="sidebar__footer  mb-2 ">
         {isOpen && (
           <>
             <img src={squirrel} alt="PNUT Logo" className="sidebar__logo " />

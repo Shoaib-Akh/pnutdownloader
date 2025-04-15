@@ -233,7 +233,7 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    minWidth: 700,
+    minWidth: 750,
    minHeight:600,
     icon: iconPath,
     webPreferences: {

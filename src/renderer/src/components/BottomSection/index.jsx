@@ -548,8 +548,8 @@ function BottomSection({
                 }
               >
                 <button
-                  className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
-                  style={{ width: '150px', height: '40px' }}
+                  className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
+                   
                   onClick={() =>
                     lastUrl
                       ? handleResumeBrowser()
@@ -568,7 +568,7 @@ function BottomSection({
               <h1
                 style={{
                   color: '#333',
-                  fontSize: '24px',
+                  fontSize: '20px',
                   fontWeight: 'bold',
                   marginBottom: '20px',
                   textAlign: 'center'
@@ -583,11 +583,11 @@ function BottomSection({
                   overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
                 >
                   <button
-                    className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
-                    style={{ width: '150px', height: '40px' }}
+                    className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
+                    //  
                     onClick={handleResumeBrowser}
                   >
-                    <FaGlobe size={50} />
+                    <FaGlobe size={20} />
                     <span className="ms-2 fw-medium" style={{ whiteSpace: 'nowrap' }}>
                       Resume Browser
                     </span>
@@ -598,7 +598,7 @@ function BottomSection({
           )}
         </>
       ) : (
-        <div className="webview-container" style={{ margin: '10px 20px 10px 30px' }}>
+        <div className="webview-container" >
           <div className="browser-header">
             <div className="navigation-controls">
               <button
@@ -663,8 +663,8 @@ function BottomSection({
               overlay={<Tooltip id="close-tooltip">Close Browser</Tooltip>}
             >
               <button
-                className="btn btn-danger rounded-pill d-flex align-items-center justify-content-center shadow close-webview-btn"
-                style={{ width: '100px', height: '40px', padding: '0 15px' }}
+                className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
+                // style={{ width: '100px', height: '40px', padding: '0 15px' }}
                 onClick={handleCloseWebView}
               >
                 <FaTimes size={16} />
