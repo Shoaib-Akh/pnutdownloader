@@ -16,6 +16,7 @@ import DownloadList from '../DownloadList'
 import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../../../../public/all.json'
+import { extractVideoId } from '../commonFunction'
 
 function BottomSection({
   downloadType,
@@ -76,19 +77,19 @@ function BottomSection({
     }
   }, [pastLinkUrl])
 
-  const extractVideoId = (url) => {
-    const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
-    if (fullUrlMatch) return fullUrlMatch[1]
-    const shortUrlMatch = url.match(/youtu\.be\/([^?]+)/)
-    if (shortUrlMatch) return shortUrlMatch[1]
-    const embedUrlMatch = url.match(/youtube\.com\/embed\/([^?]+)/)
-    if (embedUrlMatch) return embedUrlMatch[1]
-    const shortsUrlMatch = url.match(/youtube\.com\/shorts\/([^?]+)/)
-    if (shortsUrlMatch) return shortsUrlMatch[1]
-    const musicUrlMatch = url.match(/music\.youtube\.com\/watch\?.*v=([^&]+)/)
-    if (musicUrlMatch) return musicUrlMatch[1]
-    return null
-  }
+  // const extractVideoId = (url) => {
+  //   const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
+  //   if (fullUrlMatch) return fullUrlMatch[1]
+  //   const shortUrlMatch = url.match(/youtu\.be\/([^?]+)/)
+  //   if (shortUrlMatch) return shortUrlMatch[1]
+  //   const embedUrlMatch = url.match(/youtube\.com\/embed\/([^?]+)/)
+  //   if (embedUrlMatch) return embedUrlMatch[1]
+  //   const shortsUrlMatch = url.match(/youtube\.com\/shorts\/([^?]+)/)
+  //   if (shortsUrlMatch) return shortsUrlMatch[1]
+  //   const musicUrlMatch = url.match(/music\.youtube\.com\/watch\?.*v=([^&]+)/)
+  //   if (musicUrlMatch) return musicUrlMatch[1]
+  //   return null
+  // }
 
   const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
   const extractPlaylistId = (url) => {

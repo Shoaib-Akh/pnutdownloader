@@ -16,7 +16,7 @@ import youtubeMusic from '../../assets/Images/youtubeMusic.png';
 
 const PlatformIcons = ({ handlePlatformClick }) => {
   const platforms = [
-    { Component: FaYoutube, url: "https://www.youtube.com", color: "red" },
+    { Component: FaYoutube, url: "https://www.youtube.com", color: "red" ,  alt: "YouTube" },
     { 
       Image: youtubeMusic, 
       url: "https://music.youtube.com", 
@@ -38,25 +38,49 @@ const PlatformIcons = ({ handlePlatformClick }) => {
 
   return (
     <div className="icon-container">
+     
       {platforms.map(({ Component, Image, url, color, alt }, index) => (
-        Image ? (
+         <div 
+         key={index}
+         style={{border:"1px solid red",padding:30,borderRadius:10}}
+         onClick={() => handlePlatformClick(url)}
+         >
+        
+      {  Image ? (
+         <>
           <img
             key={index}
             src={Image}
             alt={alt}
-            onClick={() => handlePlatformClick(url)}
-            style={{ cursor: "pointer", width: "30px", height: "30px" }}
+           
+            style={{ cursor: "pointer", width: "50px", height: "50px" }}
             className="platform-icon"
           />
+       <h3 
+          className="platform-icon"
+       style={{marginTop:10}}>
+       {  alt}
+             </h3>
+      
+         </>
         ) : (
+          <div className="px-3" >
           <Component
             key={index}
             className="platform-icon"
             onClick={() => handlePlatformClick(url)}
-            style={{ cursor: "pointer", color, fontSize: "30px" }}
+            style={{ cursor: "pointer", color, fontSize: "60px",}}
           />
-        )
+           <h3   className="platform-icon" style={{color:"black",marginTop:5}}>
+       {  alt}
+             </h3>
+          </div>
+
+        )}
+      </div>
+
       ))}
+
     </div>
   );
 };

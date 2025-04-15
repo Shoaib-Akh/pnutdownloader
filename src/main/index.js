@@ -233,7 +233,8 @@ function createWindow() {
   if (mainWindow) return // Prevent duplicate windows
 
   mainWindow = new BrowserWindow({
-    minWidth: 630,
+    minWidth: 700,
+   minHeight:600,
     icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

@@ -42,9 +42,11 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick }) => {
             className="img-fluid rounded"
             style={{
               height: '40px',
-              width: '60px',
               objectFit: 'cover',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              maxWidth:"200px",
+   
+    aspectRatio: "16 / 9"
             }}
           />
         )}
@@ -53,7 +55,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick }) => {
         className="text-truncate d-block"
         style={{ maxWidth: 'calc(100% - 100px)' }}
       >
-        {`${title.slice(0, 30)}${title.length > 30 ? '...' : ''}`}
+        {`${title.slice(0, 20)}${title.length > 20 ? '...' : ''}`}
       </span>
     </div>
   );

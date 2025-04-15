@@ -103,6 +103,7 @@ h1 {
 }
 .download-btn {
     position: absolute;
+   
     bottom: 10px;
     left: 50%;
     background: #28A745;
@@ -247,12 +248,17 @@ h1 {
     .btn.show, 
     .btn:first-child:active, 
     :not(.btn-check) {
-      font-size: 10px;
+      font-size: 12px;
     }
     #custom-dropdown{
-      font-size: 10px;
+      font-size: 14px;
+      width: 120px;
+   
     }
    
+  }
+  .dropdown-menu show{
+    width: -webkit-fill-available;
   }
  
     .logo{
@@ -260,7 +266,7 @@ h1 {
     }
  
     .logo-div{
-      margin-right: 5px;
+      margin-right: 10px;
             }
     @media (max-width: 900px)  {
    
@@ -270,10 +276,11 @@ h1 {
     }
     @media (max-width: 800px)  {
       .logo {
-        width: 80px;
+        width: 100px;
+        
       }
       .logo-div{
-        margin-right: -5px;
+        margin-right: 20px;
               }
     }
   /* FileTable.css */
@@ -299,8 +306,8 @@ width: 100%;
   padding: 16px 24px;
   text-align: left;
   font-weight: 600;
-  color: #A0AEC0;
-  text-transform: uppercase;
+  color:black;
+  /* text-transform: uppercase; */
   font-size: 0.85rem;
   border-bottom: 1px solid #dee2e6;
   text-align: center;  /* This overrides the text-align: left above */
@@ -318,7 +325,7 @@ width: 100%;
   
 }
 .data-row {
-border-bottom:  0.5px solid #BB4F28;
+border-bottom:  0.5px solid #faaa8d;
 }
 .data-row:hover {
   background-color: #f8f9fa;
@@ -363,11 +370,12 @@ border-bottom:  0.5px solid #BB4F28;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   z-index: 10;
-  min-width: 120px;
+  /* width: "-webkit-fill-available"; */
 }
 
 .dropdown-item {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
   width: 100%;
@@ -380,7 +388,7 @@ border-bottom:  0.5px solid #BB4F28;
 }
 
 .dropdown-item:hover {
-  background: #f8f9fa;
+  background: #c6c7c8;
 }
 
 .webview-container {

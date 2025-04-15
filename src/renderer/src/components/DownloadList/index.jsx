@@ -163,7 +163,7 @@ console.log("selectedItem",selectedItem);
               <th className="header-cell" style={{ textAlign: 'start' }}>
                 Files
               </th>
-              <th className="header-cell">DURATION</th>
+              <th className="header-cell">Duration</th>
               <th className="header-cell">Format</th>
               <th className="header-cell">Status</th>
               <th className="header-cell" style={{ textAlign: 'start' }}>
@@ -243,7 +243,7 @@ console.log("selectedItem",selectedItem);
                             <span className="align-middle d-inline-block">Failed</span>
                           </div>
                         ) : item.isCompleted ? (
-                          <div className="text-success d-flex align-items-center">
+                          <div className="text-success d-flex align-items-center justify-content-center">
                             <FaCheckCircle className="me-1 align-middle" />
                             <span className="align-middle d-inline-block">{item.status}</span>
                           </div>
@@ -273,12 +273,12 @@ console.log("selectedItem",selectedItem);
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
                         <Dropdown
-                          style={{ marginLeft: '17px' }}
+                          style={{ marginLeft: '6px' }}
                           show={openDropdown === item.id}
                           onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
                         >
                           <Dropdown.Toggle as="button" className="three-dots-btn">
-                            <FaEllipsisV />
+                            <FaEllipsisV color='white' />
                           </Dropdown.Toggle>
                           <Dropdown.Menu className="dropdown-menu">
                             <Dropdown.Item
@@ -287,7 +287,7 @@ console.log("selectedItem",selectedItem);
                                 setOpenDropdown(null)
                               }}
                             >
-                              <FaTrash className="me-2" /> Delete
+                           Delete    <FaTrash className="me-2" />
                             </Dropdown.Item>
                             <Dropdown.Item
                               onClick={() => {
@@ -295,7 +295,7 @@ console.log("selectedItem",selectedItem);
                                 setOpenDropdown(null)
                               }}
                             >
-                              <FaTrash className="me-2" /> Delete All
+                         Delete All     <FaTrash className="me-2" /> 
                             </Dropdown.Item>
                           </Dropdown.Menu>
                         </Dropdown>

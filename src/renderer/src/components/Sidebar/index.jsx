@@ -28,6 +28,7 @@ function Sidebar({
 
   return (
     <div className="sidebar">
+      
       {/* Menu Button for Collapsed Mode */}
       {!isOpen && (
         <button className="sidebar__toggle-button" onClick={() => setIsOpen(true)}>
@@ -64,7 +65,7 @@ function Sidebar({
       <div className="sidebar__footer">
         {isOpen && (
           <>
-            <img src={squirrel} alt="PNUT Logo" className="sidebar__logo" />
+            <img src={squirrel} alt="PNUT Logo" className="sidebar__logo " />
             <button
               className="sidebar__buy-nuts-button"
               onClick={handleClick}

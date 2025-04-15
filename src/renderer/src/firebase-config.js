@@ -1,9 +1,9 @@
-export const firebaseConfig = {
-    apiKey: "AIzaSyCpdiLJN6IqX3q9GgQQG3RKHgQtvwFfXpA",
-    authDomain: "pnutdownloader-1d591.firebaseapp.com",
-    projectId: "pnutdownloader-1d591",
-    storageBucket: "pnutdownloader-1d591.appspot.com",
-    messagingSenderId: "225758304071",
-    appId: "1:225758304071:web:3b895feb48c8ccdfa9de62",
-    measurementId: "G-660QF4DPJK"
+  export const firebaseConfig = {
+    apiKey: "AIzaSyDCYjdizAEF-orEmVl7uZkyeq2RzPAfbTE",
+    authDomain: "pnut-windows.firebaseapp.com",
+    projectId: "pnut-windows",
+    storageBucket: "pnut-windows.firebasestorage.app",
+    messagingSenderId: "862257784794",
+    appId: "1:862257784794:web:444043c555a6ef8a5742e3",
+    measurementId: "G-XT6115569S"
   };

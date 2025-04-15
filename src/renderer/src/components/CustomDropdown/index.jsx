@@ -11,7 +11,7 @@ function CustomDropdown({ label, options, selected, onSelect }) {
 
       title={
         <>
-          <span style={{ color: "#A1A1A1" }}>{label}</span> {selected}
+          <span style={{ color: isOpen?"black": "#A1A1A1" }}>{label}</span> {selected}
           <FaAngleDown
             className={`ms-1 transition ${isOpen ? "rotate-180" : ""}`}
           />

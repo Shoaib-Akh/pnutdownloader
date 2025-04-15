@@ -49,13 +49,13 @@
   }
   
   .sidebar__icon-container {
-    background-color: #fff;
+    background-color: #feeaea;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 30px;
-    width: 36px;
+    width: 30px;
     margin-right: 7px;
     color: #BB4F28;
   }
@@ -91,10 +91,11 @@
     background-color: #BB4F28;
     border: none;
     color: white;
-    font-size: 10px;
+    font-size: 14px;
+    font-weight: 500;
     white-space: nowrap;
-    padding: 2px 4px;
-    border-radius: 2px;
+    /* padding: 15px 20px; */
+    border-radius: 5px;
     width: 100%;
     display: flex;
     align-items: center;
@@ -103,13 +104,14 @@
   
   @media (min-width: 576px) {
     .sidebar__buy-nuts-button {
-      padding: 2px 3px;
+      padding: 15px 10px;
     }
   }
   
   @media (min-width: 768px) {
     .sidebar__buy-nuts-button {
-      padding: 2px 4px;
-      width: auto;
+      padding: 15px 10px;
+      font-weight: 600;
+      /* width: auto; */
     }
   }

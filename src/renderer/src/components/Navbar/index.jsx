@@ -3,6 +3,7 @@ import { FaPaste, FaCog, FaUser } from 'react-icons/fa'
 import Logo from '../../assets/Images/logo.png'
 import '../common.css'
 import CustomDropdown from '../CustomDropdown'
+import { extractVideoId } from '../commonFunction'
 
 function Navbar({
   saveTo,
@@ -25,7 +26,7 @@ function Navbar({
   }
 
   // Bitrate options for audio
-  const bitrateOptions = ['320K','256K','192k','128k', '96k', ,'64k', ]
+  const bitrateOptions = ['320K','256K','192K','128K', '96K', ,'64K', ]
 
   // Ensure format is always in sync with the selected download type
   React.useEffect(() => {
@@ -43,22 +44,7 @@ function Navbar({
     }
   }, [downloadType, setBitrate, bitrate, bitrateOptions])
 
-  const extractVideoId = (url) => {
-    // Handle full YouTube URL (https://www.youtube.com/watch?v=VIDEO_ID)
-    const fullUrlMatch = url.match(/[?&]v=([^&]+)/);
-    if (fullUrlMatch) return fullUrlMatch[1];
-  
-    // Handle shortened YouTube URL (https://youtu.be/VIDEO_ID)
-    const shortUrlMatch = url.match(/youtu\.be\/([^?]+)/);
-    if (shortUrlMatch) return shortUrlMatch[1];
-  
-    // Handle embedded YouTube URL (https://www.youtube.com/embed/VIDEO_ID)
-    const embedUrlMatch = url.match(/youtube\.com\/embed\/([^?]+)/);
-    if (embedUrlMatch) return embedUrlMatch[1];
-  
-    // If no match, return null
-    return null;
-  };
+ 
   let downloadListData = [];
   try {
     downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
@@ -68,10 +54,10 @@ function Navbar({
   console.log("downloadListData", downloadListData);
   
   return (
-    <nav className="navbar navbar-expand-lg navbar-light p-3">
-      <div className="d-flex align-items-center w-100">
+    <nav className=" p-2 ">
+      <div className="d-flex align-items-center justify-content-between flex-grow-1 " >
         {/* Left Side - Logo */}
-        <div href="#" style={{ cursor: "default",width:"17% ", }} className= "logo-div">
+        <div href="#" style={{ cursor: "default",width:"17%", }} className= "logo-div">
           <img src={Logo} alt="PNUT Logo" className='logo' />
         </div>
   
@@ -83,8 +69,8 @@ function Navbar({
           <div className="d-flex" style={{ gap: 2 }}>
             {/* Paste Link Button */}
             <button
-              className="btn btn-danger d-flex align-items-center me-2"
-              style={{ background: '#BB4F28', fontSize: 16 }}
+              className="btn btn-danger d-flex align-items-center  px-3"
+              style={{ background: '#BB4F28', fontSize: 15 }}
               onClick={async () => {
                 try {
                   const clipboardText = await navigator.clipboard.readText();
@@ -141,7 +127,7 @@ function Navbar({
             {/* Bitrate Dropdown for Audio */}
             {downloadType === 'Audio' && (
               <CustomDropdown
-                label="Audio Quailty"
+                label="Quailty"
                 options={bitrateOptions}
                 selected={bitrate}
                 onSelect={setBitrate}
