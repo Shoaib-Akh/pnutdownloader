@@ -672,7 +672,7 @@ function BottomSection({
               </button>
             </OverlayTrigger>
           </div>
-          <div style={{ height: '88%', marginBottom: 30 }}>
+          <div className='webview-height'>
             <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
           </div>
           {isDownloadable && (

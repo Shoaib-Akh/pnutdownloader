@@ -54,7 +54,7 @@ function Navbar({
   console.log("downloadListData", downloadListData);
   
   return (
-    <nav className=" p-3 ">
+    <nav className=" p-3 " style={{backgroundColor:"white"}}>
       <div className="d-flex align-items-center justify-content-between flex-grow-1 " >
         {/* Left Side - Logo */}
         <div href="#" style={{ cursor: "default",width:"17%", }} className= "logo-div">

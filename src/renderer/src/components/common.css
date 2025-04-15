@@ -70,22 +70,12 @@ h1 {
     cursor: pointer;
 }
 
-.webview-container {
-    /* position: relative; */
-    /* width: 100%; */
-    height:84vh;
-    /* padding: 10px; */
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    margin: 10px;
-    overflow: hidden;
-}
 
 /* Close button positioning */
 .close-webview-btn {
     position: absolute;
-    bottom: 25px;
-    right: 10px;
+    bottom: 6%;
+    right: 50px;
     background: #BB4F28;
     color: white;
     padding: 10px 31px;
@@ -96,7 +86,57 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
+    
 }
+.webview-height{
+  height: 92% !important;
+}
+@media screen and (min-width: 1920px) {
+  .webview-container{
+    height: 89vh !important;
+  }
+  .webview-height{
+    height: 90% !important;
+  }
+  .close-webview-btn {
+      bottom: 80px !important;
+  }
+}
+
+@media screen and (min-width: 1366px) {
+  .close-webview-btn {
+      bottom: 5%;
+    
+  }
+}
+@media screen and (min-width: 2560px) {
+  .close-webview-btn {
+      bottom: 2%;
+      background: darkred;
+  }
+}
+@media screen and (min-width: 1280px) {
+  .webview-container{
+    height: 84vh !important;
+  }
+  .webview-height{
+    height: 88% !important;
+  }
+  .close-webview-btn {
+      bottom: 4%;
+    
+  }
+}
+@media screen and (min-width: 1440px) {
+  .webview-height{
+    height: 92% !important;
+  }
+  .close-webview-btn {
+      bottom: 6%;
+      /* background: darkred; */
+  }
+}
+
 
 .close-webview-btn:hover {
     background: darkred;
@@ -104,8 +144,8 @@ h1 {
 .download-btn {
     position: absolute;
    
-    bottom: 70px;
-    right: 10px;
+    bottom: 85px;
+    right: 50px;
    
     background: #28A745;
     color: white;
@@ -398,8 +438,10 @@ border-bottom:  0.5px solid #faaa8d;
   height: 84vh;
   background: #f5f5f5;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
   overflow: hidden;
+  margin: 0px 10px 0px 10px;
+  padding: 5px
 }
 
 /* Browser Header */
