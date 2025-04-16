@@ -144,7 +144,7 @@ h1 {
 .download-btn {
     position: absolute;
    
-    bottom: 85px;
+    bottom: 15%;
     right: 50px;
    
     background: #28A745;
@@ -321,7 +321,7 @@ h1 {
         
       }
       .logo-div{
-        margin-right: 19px;
+        margin-right: 5px;
               }
     }
    

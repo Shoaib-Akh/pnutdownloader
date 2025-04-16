@@ -44,7 +44,7 @@ function Sidebar({
         {menuItems.map((item, index) => (
           <div
             key={index}
-            className={`sidebar__menu-item ${
+            className={`sidebar__menu-item bg-white ${
               selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
             }`}
             onClick={() => {

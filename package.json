@@ -1,6 +1,6 @@
 {
   "name": "pnutdownloader",
-  "version": "1.0.22",
+  "version": "1.0.24",
   "description": "best video downloader",
   "main": "./out/main/index.js",
   "author": "video downloader",

@@ -4,7 +4,7 @@ import BottomSection from './components/BottomSection';
 import Sidebar from './components/Sidebar';
 import UpdateNotification from './components/UpdateNotification'; 
 import { initializeApp } from "firebase/app";
-import { getAnalytics, logEvent } from "firebase/analytics";
+import { getAnalytics, logEvent, setUserId, setAnalyticsCollectionEnabled, isSupported } from 'firebase/analytics';
 import { firebaseConfig } from './firebase-config';
 
 function App() {
@@ -38,24 +38,32 @@ function App() {
   // Modified event tracking function
   const sendGAEvent = async (eventName, params = {}) => {
     try {
-      const clientId = await window.api?.getMachineId();
-      console.log("clientId", clientId);
-      
-      const appVersion = await window.api?.getAppVersion();
-      console.log("appVersion", appVersion);
-
-      // Using Firebase Analytics SDK
+      if (!window.api) {
+        console.error('window.api is undefined');
+        logEvent(analytics, eventName, { client_id: 'unknown', ...params });
+        return;
+      }
+      let clientId = localStorage.getItem('client_id');
+      if (!clientId) {
+        clientId = await window.api.getMachineId();
+        localStorage.setItem('client_id', clientId);
+        console.log('Stored new clientId:', clientId);
+      }
+      const appVersion = await window.api.getAppVersion();
+      console.log('clientId:', clientId, 'appVersion:', appVersion);
+      setUserId(analytics, clientId);
       logEvent(analytics, eventName, {
         client_id: clientId,
         app_version: appVersion,
         ...params
       });
-      
       console.log('Event logged:', eventName);
     } catch (error) {
       console.error('Firebase Analytics Error:', error);
+      logEvent(analytics, eventName, { client_id: 'error', ...params });
     }
   };
+  console.log('Analytics initialized:', analytics);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -102,6 +110,27 @@ function App() {
       sendGAEvent('app_start');
     };
 
+    initializeApp();
+  }, []);
+  useEffect(() => {
+    const initializeApp = async () => {
+      if (await isSupported()) {
+        setAnalyticsCollectionEnabled(analytics, true);
+        console.log('Analytics collection enabled');
+      } else {
+        console.error('Firebase Analytics not supported');
+      }
+  
+      if (window.api) {
+        const clientId = await window.api.getMachineId();
+        setUserId(analytics, clientId);
+        console.log('Set user ID:', clientId);
+        // ... dependency checks and update logic ...
+      }
+  
+      sendGAEvent('app_start');
+    };
+  
     initializeApp();
   }, []);
 
