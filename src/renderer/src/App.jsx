@@ -8,10 +8,8 @@ import { getAnalytics, logEvent, setUserId, setAnalyticsCollectionEnabled, isSup
 import { firebaseConfig } from './firebase-config';
 
 function App() {
- 
   const [downloadType, setDownloadType] = useState('Video');
   const [bitrate, setBitrate] = useState("64k");
-
   const [quality, setQuality] = useState('1080p');
   const [format, setFormat] = useState('');
   const [saveTo, setSaveTo] = useState('Downloads');
@@ -21,48 +19,76 @@ function App() {
   const [showWebView, setShowWebView] = useState(false);
   const [downloadListOpen, setDownloadListOpen] = useState(false);
   const [pastLinkUrl, setPastLinkUrl] = useState('');
-  
-  // State for update notification
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-
-  // State for dependency loading
   const [isLoading, setIsLoading] = useState(true);
 
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const analytics = getAnalytics(app);
 
-  // Modified event tracking function
-  const sendGAEvent = async (eventName, params = {}) => {
+  // Google Analytics Measurement ID
+  const GA_MEASUREMENT_ID = 'G-HKMV37FXQ3';
+
+  // Initialize Google Analytics gtag
+  useEffect(() => {
+    // Add gtag.js script dynamically
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+    document.head.appendChild(script);
+
+    // Initialize gtag
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){window.dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', GA_MEASUREMENT_ID);
+
+    return () => {
+      // Cleanup script to prevent memory leaks
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  // Modified event tracking function for both Firebase and Google Analytics
+  const sendAnalyticsEvent = async (eventName, params = {}) => {
     try {
+      // Firebase Analytics
       if (!window.api) {
         console.error('window.api is undefined');
         logEvent(analytics, eventName, { client_id: 'unknown', ...params });
-        return;
+      } else {
+        let clientId = localStorage.getItem('client_id');
+        if (!clientId) {
+          clientId = await window.api.getMachineId();
+          localStorage.setItem('client_id', clientId);
+          console.log('Stored new clientId:', clientId);
+        }
+        const appVersion = await window.api.getAppVersion();
+        console.log('clientId:', clientId, 'appVersion:', appVersion);
+        setUserId(analytics, clientId);
+        logEvent(analytics, eventName, {
+          client_id: clientId,
+          app_version: appVersion,
+          ...params
+        });
+        console.log('Firebase Event logged:', eventName);
       }
-      let clientId = localStorage.getItem('client_id');
-      if (!clientId) {
-        clientId = await window.api.getMachineId();
-        localStorage.setItem('client_id', clientId);
-        console.log('Stored new clientId:', clientId);
-      }
-      const appVersion = await window.api.getAppVersion();
-      console.log('clientId:', clientId, 'appVersion:', appVersion);
-      setUserId(analytics, clientId);
-      logEvent(analytics, eventName, {
-        client_id: clientId,
-        app_version: appVersion,
+
+      // Google Analytics
+      window.gtag('event', eventName, {
+        client_id: localStorage.getItem('client_id') || 'unknown',
         ...params
       });
-      console.log('Event logged:', eventName);
+      console.log('Google Analytics Event logged:', eventName);
     } catch (error) {
-      console.error('Firebase Analytics Error:', error);
+      console.error('Analytics Error:', error);
       logEvent(analytics, eventName, { client_id: 'error', ...params });
     }
   };
+
   console.log('Analytics initialized:', analytics);
 
   useEffect(() => {
@@ -74,7 +100,6 @@ function App() {
           if (status.ready) {
             setIsLoading(false);
           } else {
-            // Poll every second until dependencies are ready
             setTimeout(checkDependencies, 20000);
           }
         };
@@ -106,32 +131,41 @@ function App() {
         });
       }
 
-      // Send initial GA event
-      sendGAEvent('app_start');
+      // Send initial analytics event
+      sendAnalyticsEvent('app_start');
     };
 
     initializeApp();
   }, []);
   useEffect(() => {
-    const initializeApp = async () => {
+    const activeInterval = setInterval(() => {
+      sendAnalyticsEvent('app_active', {
+        timestamp: new Date().toISOString(),
+      });
+      console.log('Logged app_active event');
+    }, 900000 ); // 5 minutes in milliseconds
+
+    return () => clearInterval(activeInterval);
+  }, []);
+  useEffect(() => {
+    const initializeAnalytics = async () => {
       if (await isSupported()) {
         setAnalyticsCollectionEnabled(analytics, true);
-        console.log('Analytics collection enabled');
+        console.log('Firebase Analytics collection enabled');
       } else {
         console.error('Firebase Analytics not supported');
       }
-  
+
       if (window.api) {
         const clientId = await window.api.getMachineId();
         setUserId(analytics, clientId);
         console.log('Set user ID:', clientId);
-        // ... dependency checks and update logic ...
       }
-  
-      sendGAEvent('app_start');
+
+      sendAnalyticsEvent('app_start');
     };
-  
-    initializeApp();
+
+    initializeAnalytics();
   }, []);
 
   const handleInstallUpdate = () => {
@@ -140,6 +174,7 @@ function App() {
       setUpdateAvailable(false);
       setUpdateDownloaded(false);
       setUpdateInfo(null);
+      sendAnalyticsEvent('update_installed');
     }
   };
 
@@ -192,8 +227,8 @@ function App() {
       )}
 
       <Navbar
-      bitrate={bitrate} 
-      setBitrate={setBitrate}
+        bitrate={bitrate} 
+        setBitrate={setBitrate}
         downloadType={downloadType}
         setDownloadType={setDownloadType}
         quality={quality}
@@ -214,26 +249,24 @@ function App() {
         }}
       >
         <div style={{width: showWebView?"0%":"20%"}}>
-
-        {!showWebView && (
-          <Sidebar
-            isOpen={isSidebarOpen}
-            setIsOpen={setIsSidebarOpen}
-            setSelectedItem={setSelectedItem}
-            selectedItem={selectedItem}
-            setDownload={setDownload}
-            download={download}
-            setShowWebView={setShowWebView}
-            showWebView={showWebView}
-            setDownloadListOpen={setDownloadListOpen}
-          />
-        )}
+          {!showWebView && (
+            <Sidebar
+              isOpen={isSidebarOpen}
+              setIsOpen={setIsSidebarOpen}
+              setSelectedItem={setSelectedItem}
+              selectedItem={selectedItem}
+              setDownload={setDownload}
+              download={download}
+              setShowWebView={setShowWebView}
+              showWebView={showWebView}
+              setDownloadListOpen={setDownloadListOpen}
+            />
+          )}
         </div>
 
-
         <BottomSection
-        bitrate={bitrate} 
-        setBitrate={setBitrate}
+          bitrate={bitrate} 
+          setBitrate={setBitrate}
           downloadType={downloadType}
           quality={quality}
           format={format}
@@ -249,10 +282,10 @@ function App() {
           downloadListOpen={downloadListOpen}
           setDownloadListOpen={setDownloadListOpen}
           pastLinkUrl={pastLinkUrl}
+          sendAnalyticsEvent={sendAnalyticsEvent}
         />
-        </div>
       </div>
- 
+    </div>
   );
 }
 
