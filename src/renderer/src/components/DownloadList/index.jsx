@@ -51,7 +51,6 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
     window.api.pauseDownload(items.id)
   }
-console.log("selectedItem",selectedItem);
 
   // const filteredList =
   //   JSON.parse(localStorage.getItem('downloadList')) ||
@@ -116,15 +115,12 @@ console.log("selectedItem",selectedItem);
 
       for (const dir of directories) {
         const files = await window.api.readDirectory(dir);
-        console.log(`Files in ${dir}:`, files);
-        console.log('Searching for normalized title:', normalizedTitle);
 
         filePath = files
           .filter((file) => {
             const fileName = file.toLowerCase();
             // Use the full filename (minus extension) for comparison
             const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
-            console.log(`Comparing titlePart: ${titlePart} with normalizedTitle: ${normalizedTitle}`);
             return (
               possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`)) &&
               titlePart.includes(normalizedTitle)
@@ -136,7 +132,6 @@ console.log("selectedItem",selectedItem);
       }
 
       if (filePath) {
-        console.log('Found and opening file:', filePath);
         window.api.openFile(filePath);
       } else {
         console.error('File not found for title:', item.title, 'Normalized:', normalizedTitle);

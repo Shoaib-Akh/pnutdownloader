@@ -24,148 +24,182 @@ function App() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsError, setAnalyticsError] = useState(null);
 
   // Initialize Firebase
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-
-  // Google Analytics Measurement ID
-  const GA_MEASUREMENT_ID = 'G-HKMV37FXQ3';
-
-  // Initialize Google Analytics gtag
   useEffect(() => {
-    // Add gtag.js script dynamically
-    const script = document.createElement('script');
-    script.async = true;
-    script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
-    document.head.appendChild(script);
-
-    // Initialize gtag
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){window.dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', GA_MEASUREMENT_ID);
-
-    return () => {
-      // Cleanup script to prevent memory leaks
-      document.head.removeChild(script);
+    const initFirebase = async () => {
+      try {
+        const app = initializeApp(firebaseConfig);
+        const analyticsSupported = await isSupported();
+        
+        if (analyticsSupported) {
+          const analyticsInstance = getAnalytics(app);
+          setAnalytics(analyticsInstance);
+          setAnalyticsCollectionEnabled(analyticsInstance, true);
+          console.log('Firebase Analytics initialized successfully');
+        } else {
+          throw new Error('Firebase Analytics not supported in this environment');
+        }
+      } catch (error) {
+        console.error('Firebase initialization error:', error);
+        setAnalyticsError(`Firebase Error: ${error.message}`);
+      }
     };
+
+    initFirebase();
   }, []);
 
-  // Modified event tracking function for both Firebase and Google Analytics
-  const sendAnalyticsEvent = async (eventName, params = {}) => {
+  // Initialize Google Analytics
+  useEffect(() => {
+    const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+    
+    if (!GA_MEASUREMENT_ID) {
+      console.error('Google Analytics Measurement ID not found');
+      setAnalyticsError(prev => `${prev ? prev + ' | ' : ''}GA Error: Missing Measurement ID`);
+      return;
+    }
+
     try {
-      // Firebase Analytics
-      if (!window.api) {
-        console.error('window.api is undefined');
-        logEvent(analytics, eventName, { client_id: 'unknown', ...params });
+      const script = document.createElement('script');
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`;
+      document.head.appendChild(script);
+
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ window.dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', GA_MEASUREMENT_ID);
+
+      console.log('Google Analytics initialized successfully');
+    } catch (error) {
+      console.error('Google Analytics initialization error:', error);
+      setAnalyticsError(prev => `${prev ? prev + ' | ' : ''}GA Error: ${error.message}`);
+    }
+  }, []);
+
+  // Get client ID with fallback
+  const getClientId = async () => {
+    try {
+      if (window.api) {
+        return await window.api.getMachineId();
       } else {
+        // Fallback for non-Electron environments
         let clientId = localStorage.getItem('client_id');
         if (!clientId) {
-          clientId = await window.api.getMachineId();
+          clientId = crypto.randomUUID?.() || Math.random().toString(36).substring(2);
           localStorage.setItem('client_id', clientId);
-          console.log('Stored new clientId:', clientId);
         }
-        const appVersion = await window.api.getAppVersion();
-        console.log('clientId:', clientId, 'appVersion:', appVersion);
+        return clientId;
+      }
+    } catch (error) {
+      console.error('Error getting client ID:', error);
+      return 'unknown-client-id';
+    }
+  };
+
+  // Unified analytics event tracking
+  const sendAnalyticsEvent = async (eventName, params = {}) => {
+    try {
+      const clientId = await getClientId();
+      const appVersion = window.api ? await window.api.getAppVersion() : 'web';
+
+      // Firebase Analytics
+      if (analytics) {
         setUserId(analytics, clientId);
         logEvent(analytics, eventName, {
           client_id: clientId,
           app_version: appVersion,
           ...params
         });
-        console.log('Firebase Event logged:', eventName);
+        console.log('Firebase event logged:', eventName);
       }
 
       // Google Analytics
-      window.gtag('event', eventName, {
-        client_id: localStorage.getItem('client_id') || 'unknown',
-        ...params
-      });
-      console.log('Google Analytics Event logged:', eventName);
+      if (window.gtag) {
+        window.gtag('event', eventName, {
+          client_id: clientId,
+          app_version: appVersion,
+          ...params
+        });
+        console.log('GA event logged:', eventName);
+      }
     } catch (error) {
-      console.error('Analytics Error:', error);
-      logEvent(analytics, eventName, { client_id: 'error', ...params });
+      console.error('Error sending analytics event:', error);
     }
   };
 
-  console.log('Analytics initialized:', analytics);
-
+  // App initialization
   useEffect(() => {
     const initializeApp = async () => {
-      // Check dependencies
-      if (window.api) {
-        const checkDependencies = async () => {
-          const status = await window.api.checkDependencies();
-          if (status.ready) {
-            setIsLoading(false);
-          } else {
-            setTimeout(checkDependencies, 20000);
-          }
-        };
-        checkDependencies();
+      try {
+        // Check dependencies
+        if (window.api) {
+          const checkDependencies = async () => {
+            try {
+              const status = await window.api.checkDependencies();
+              if (status.ready) {
+                setIsLoading(false);
+              } else {
+                setTimeout(checkDependencies, 20000);
+              }
+            } catch (error) {
+              console.error('Dependency check error:', error);
+              setIsLoading(false); // Continue even if dependencies fail
+            }
+          };
+          checkDependencies();
 
-        // Check for updates
-        console.log("Checking for updates...");
-        window.api.checkForUpdates();
+          // Check for updates
+          window.api.checkForUpdates();
 
-        window.api.onUpdateAvailable((info) => {
-          console.log('Update available:', info);
-          setUpdateAvailable(true);
-          setUpdateInfo(info);
-        });
+          window.api.onUpdateAvailable((info) => {
+            console.log('Update available:', info);
+            setUpdateAvailable(true);
+            setUpdateInfo(info);
+            sendAnalyticsEvent('update_available');
+          });
 
-        window.api.onUpdateDownloaded((info) => {
-          console.log('Update downloaded:', info);
-          setUpdateDownloaded(true);
-          setUpdateInfo(info);
-        });
+          window.api.onUpdateDownloaded((info) => {
+            console.log('Update downloaded:', info);
+            setUpdateDownloaded(true);
+            setUpdateInfo(info);
+            sendAnalyticsEvent('update_downloaded');
+          });
 
-        window.api.onUpdateDownloadedProgress((progress) => {
-          console.log("Progress:", progress);
-          setDownloadProgress(progress.percent);
-        });
+          window.api.onUpdateDownloadedProgress((progress) => {
+            setDownloadProgress(progress.percent);
+          });
 
-        window.api.onUpdateError((err) => {
-          console.error('Update error:', err);
-        });
+          window.api.onUpdateError((err) => {
+            console.error('Update error:', err);
+            sendAnalyticsEvent('update_error', { error: err.message });
+          });
+        } else {
+          setIsLoading(false); // No window.api, continue loading
+        }
+
+        // Send initial analytics event
+        await sendAnalyticsEvent('app_start');
+      } catch (error) {
+        console.error('App initialization error:', error);
+        setIsLoading(false);
       }
-
-      // Send initial analytics event
-      sendAnalyticsEvent('app_start');
     };
 
     initializeApp();
   }, []);
+
+  // Periodic activity tracking
   useEffect(() => {
-    const activeInterval = setInterval(() => {
-      sendAnalyticsEvent('app_active', {
+    const activeInterval = setInterval(async () => {
+      await sendAnalyticsEvent('app_active', {
         timestamp: new Date().toISOString(),
       });
-      console.log('Logged app_active event');
-    }, 900000 ); // 5 minutes in milliseconds
+    }, 900000); // 15 minutes
 
     return () => clearInterval(activeInterval);
-  }, []);
-  useEffect(() => {
-    const initializeAnalytics = async () => {
-      if (await isSupported()) {
-        setAnalyticsCollectionEnabled(analytics, true);
-        console.log('Firebase Analytics collection enabled');
-      } else {
-        console.error('Firebase Analytics not supported');
-      }
-
-      if (window.api) {
-        const clientId = await window.api.getMachineId();
-        setUserId(analytics, clientId);
-        console.log('Set user ID:', clientId);
-      }
-
-      sendAnalyticsEvent('app_start');
-    };
-
-    initializeAnalytics();
   }, []);
 
   const handleInstallUpdate = () => {
@@ -178,7 +212,6 @@ function App() {
     }
   };
 
-  // Render loading state
   if (isLoading) {
     return (
       <div style={{
@@ -204,6 +237,16 @@ function App() {
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }}></div>
+        {analyticsError && (
+          <div style={{
+            marginTop: '20px',
+            color: '#d9534f',
+            maxWidth: '80%',
+            textAlign: 'center'
+          }}>
+            Analytics Warning: {analyticsError}
+          </div>
+        )}
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -216,7 +259,6 @@ function App() {
 
   return (
     <div className="vh-100">
-      {/* Update Notification */}
       {updateAvailable && (
         <UpdateNotification
           updateInfo={updateInfo}
@@ -224,6 +266,22 @@ function App() {
           isDownloaded={updateDownloaded}
           downloadProgress={downloadProgress}
         />
+      )}
+
+      {analyticsError && (
+        <div style={{
+          position: 'fixed',
+          bottom: '10px',
+          right: '10px',
+          backgroundColor: '#f8d7da',
+          color: '#721c24',
+          padding: '10px',
+          borderRadius: '5px',
+          zIndex: 1000,
+          fontSize: '12px'
+        }}>
+          Analytics Error: {analyticsError}
+        </div>
       )}
 
       <Navbar
@@ -242,13 +300,8 @@ function App() {
         setPastLinkUrl={setPastLinkUrl}
       />
 
-      <div
-        className="d-flex"
-        style={{
-          transition: 'margin-left 0.3s ease-in-out',
-        }}
-      >
-        <div style={{width: showWebView?"0%":"20%"}}>
+      <div className="d-flex" style={{ transition: 'margin-left 0.3s ease-in-out' }}>
+        <div style={{ width: showWebView ? "0%" : "20%" }}>
           {!showWebView && (
             <Sidebar
               isOpen={isSidebarOpen}

@@ -1,6 +1,7 @@
 {
   "name": "pnutdownloader",
-  "version": "1.0.24",
+  "version": "1.0.26",
+  
   "description": "best video downloader",
   "main": "./out/main/index.js",
   "author": "video downloader",
@@ -54,6 +55,12 @@
     "vite": "^6.1.0"
   },
   "build": {
+    "appId": "com.shoaibakh.pnutdownloader",
+    "files": [
+    "out/**/*",
+    "public/**/*",
+    "src/firebase-config.js"
+  ],
     "win": {
       "icon": "public/icon.ico"
     },
@@ -71,14 +78,6 @@
       {
         "from": "public/ffmpeg.exe",
         "to": "ffmpeg.exe"
-      },
-      {
-        "from": "public/ffplay.exe",
-        "to": "ffplay.exe"
-      },
-      {
-        "from": "public/ffprobe.exe",
-        "to": "ffprobe.exe"
       },
       {
         "from": "public/cookies.txt",

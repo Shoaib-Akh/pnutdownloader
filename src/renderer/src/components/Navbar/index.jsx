@@ -51,7 +51,6 @@ function Navbar({
   } catch (e) {
     console.error("Failed to parse downloadList from localStorage:", e);
   }
-  console.log("downloadListData", downloadListData);
   
   return (
     <nav className=" p-3 " style={{backgroundColor:"white"}}>

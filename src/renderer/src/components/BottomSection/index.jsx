@@ -346,7 +346,6 @@ function BottomSection({
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
-        console.log('progressData', progressData);
       
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
         const itemIdx = stored.findIndex((i) => i.id === currentId);
