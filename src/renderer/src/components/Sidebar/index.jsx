@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars ,FaHome} from 'react-icons/fa';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars ,FaHome, FaHandHoldingHeart} from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
 import squirrel from '../../assets/Images/squirrel.png';
@@ -73,7 +73,8 @@ function Sidebar({
               className="sidebar__buy-nuts-button"
               onClick={handleClick}
             >
-              Buy Me Nuts
+            <FaHandHoldingHeart style={{marginRight:10}} /> 
+              Support us!
             </button>
           </>
         )}

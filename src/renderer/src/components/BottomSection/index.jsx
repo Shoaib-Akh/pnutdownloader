@@ -36,7 +36,6 @@ function BottomSection({
   setDownloadListOpen,
   downloadListOpen,
   pastLinkUrl,
-  sendAnalyticsEvent
 }) {
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
@@ -290,14 +289,7 @@ function BottomSection({
     }
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
 
-    sendAnalyticsEvent('download_initiated', {
-      download_id: newId,
-      url: url,
-      download_type: downloadType,
-      quality: quality,
-      format: format,
-      total_downloads: storedDownloads.length + 1 // Include the new download
-    });
+   
     localStorage.setItem('downloadList', JSON.stringify([newDownload, ...storedDownloads]))
     downloadQueue.current.push(newId)
 

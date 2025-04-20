@@ -10,8 +10,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    height: 85vh;
-    margin-bottom: 10px;
+    height: 83vh;
+    /* margin-bottom: 10px; */
   }
  
   .sidebar__toggle-button {
@@ -40,12 +40,12 @@
     font-size: 14px;
     font-weight: 600;
     border: 1px solid #fff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    box-shadow:rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px;
   }
   
   .sidebar__menu-item--selected {
     color: black;
-    border: 1px solid #BB4F28;
+    border: 2px solid rgb(250, 170, 141);
     background-color: white;
   }
   
@@ -106,10 +106,15 @@
   @media (min-width: 576px) {
     .sidebar__buy-nuts-button {
       padding: 10px 10px;
+
+    }
+    .sidebar__footer{
+      margin-bottom: 10px;
     }
   }
   
   @media (min-width: 768px) {
+    
     .sidebar__buy-nuts-button {
       padding: 10px 10px;
       font-weight: 600;

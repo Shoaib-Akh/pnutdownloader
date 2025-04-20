@@ -51,7 +51,7 @@ function Navbar({
   } catch (e) {
     console.error("Failed to parse downloadList from localStorage:", e);
   }
-  
+
   return (
     <nav className=" p-3 " style={{backgroundColor:"white"}}>
       <div className="d-flex align-items-center justify-content-between flex-grow-1 " >
@@ -64,8 +64,7 @@ function Navbar({
         <div
           className="d-flex align-items-center justify-content-between flex-grow-1  bg-body"
           style={{ padding: 10,borderRadius:5 ,
-
-            boxShadow: "0 5px 15px rgba(0, 0, 0, 0.2)"
+               boxShadow: "rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px"
 
           }}
         >

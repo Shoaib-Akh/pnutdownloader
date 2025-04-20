@@ -550,3 +550,30 @@ border-bottom:  0.5px solid #faaa8d;
   border-radius: 10px;
   margin-right: 10px;
 }
+.feedback-button {
+  position: fixed;
+  right: 10px; /* Positions button 20px from the right edge */
+  top: 50%; /* Vertically centers the button */
+
+  background-color: #28a745;
+  color: white;
+  padding: 15px 10px; /* More vertical padding than horizontal */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transform: rotate(-90deg);
+  -ms-transform: rotate(-90deg);
+  -moz-transform: rotate(-90deg);
+  -webkit-transform: rotate(-90deg);
+
+  z-index: 9000;
+  transition: background-color 0.3s;
+/* Makes text vertical */
+  text-orientation: mixed; /* Keeps text upright */
+  letter-spacing: 1px; /* Improves vertical text readability */
+}
+
+.feedback-button:hover {
+  background-color: #218838;
+}

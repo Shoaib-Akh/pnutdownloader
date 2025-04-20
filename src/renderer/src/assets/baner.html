@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"
+
+style=" 
+    width: fit-content;
+">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HKMV37FXQ3"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-HKMV37FXQ3'); // Replace with your Google Analytics Measurement ID
+  </script>
+  <link rel="stylesheet" href="banner.css">
+</head>
+<style>
+   
+   .feedback-button {
+  position: fixed;
+  right: 20px; /* Positions button 20px from the right edge */
+  top: 50%; /* Vertically centers the button */
+  transform: translateY(-50%); /* Offsets vertically to stay centered */
+  background-color: #28a745;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  writing-mode: vertical-lr;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.feedback-button:hover {
+  background-color: #218838;
+}
+
+@media (max-width: 600px) {
+  .feedback-button {
+    right: 10px; /* Slightly closer to the edge on smaller screens */
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+}
+</style>
+<body>
+
+
+  <button class="feedback-button" onclick="handleFeedbackClick()">Feedback</button>
+
+  <script>
+   
+    function handleFeedbackClick() {
+      const feedbackUrl = 'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true'; // Replace with actual feedback URL
+
+      // Track feedback button click in Google Analytics
+      gtag('event', 'feedback_button_click', {
+        event_category: 'Feedback',
+        event_label: 'Feedback Button Click'
+      });
+
+      // Open in web view or new tab
+      if (window.api && window.api.openExternalLink) {
+        window.api.openExternalLink(feedbackUrl);
+      } else {
+        window.open(feedbackUrl, '_blank');
+      }
+    }
+  </script>
+</body>
+</html>
