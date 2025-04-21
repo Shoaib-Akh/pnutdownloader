@@ -484,6 +484,22 @@ border-bottom:  0.5px solid #faaa8d;
 }
 
 /* URL Bar */
+.url-btn {
+  background: transparent;
+  border: none;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.url-btn:hover {
+  color: #333;
+}
+
 .url-bar {
   flex: 1;
   display: flex;
@@ -506,6 +522,7 @@ border-bottom:  0.5px solid #faaa8d;
   outline: none;
   font-size: 14px;
   color: #333;
+  margin-right: 8px; /* Add margin to separate input from buttons */
 }
 
 .url-bar input::placeholder {

@@ -8,7 +8,9 @@ import {
   FaSync,
   FaUndo,
   FaPlus,
-  FaMinus
+  FaMinus,
+  FaCopy, // Add FaCopy for copy icon
+  FaArrowCircleRight
 } from 'react-icons/fa'
 import '../common.css'
 import PlatformIcons from '../PlatformIcons'
@@ -17,11 +19,12 @@ import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../../../../public/all.json'
 import { extractVideoId } from '../commonFunction'
+import AboutUs from '../AboutUs'
 
 function BottomSection({
   downloadType,
-  bitrate ,
-  
+  bitrate,
+
   quality,
   format,
   saveTo,
@@ -36,6 +39,8 @@ function BottomSection({
   setDownloadListOpen,
   downloadListOpen,
   pastLinkUrl,
+  aboutUs,
+  setAboutUs
 }) {
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
@@ -49,7 +54,24 @@ function BottomSection({
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
+  const handleCopyUrl = () => {
+    navigator.clipboard
+      .writeText(currentWebViewUrl)
+      .then(() => {
+        // Optional: Show a tooltip or notification for feedback
+        alert('URL copied to clipboard!')
+      })
+      .catch((err) => {
+        console.error('Failed to copy URL:', err)
+      })
+  }
 
+  // Function to handle "Go" button click
+  const handleGo = () => {
+    if (currentWebViewUrl && webviewRef.current) {
+      webviewRef.current.src = currentWebViewUrl
+    }
+  }
   useEffect(() => {
     if (webviewRef.current) {
       webviewRef.current.setZoomFactor(zoomLevel)
@@ -152,6 +174,7 @@ function BottomSection({
   }
 
   const handleDownloadClick = () => {
+    setAboutUs(false)
     const urlToDownload = pastLinkUrl || currentWebViewUrl
     if (!urlToDownload) return
 
@@ -204,7 +227,7 @@ function BottomSection({
       }
     }
 
-    if ( !url.includes('watch') && playlistId) {
+    if (!url.includes('watch') && playlistId) {
       const playlistResponse = await fetch(
         `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
       )
@@ -247,7 +270,6 @@ function BottomSection({
       }
     }
   }
-  
 
   const isAnyDownloadInProgress = () => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
@@ -255,7 +277,7 @@ function BottomSection({
       (item) =>
         !item.isCompleted &&
         item.status !== 'Queued' &&
-        item.status !== "Waiting" &&
+        item.status !== 'Waiting' &&
         item.status !== 'Failed' &&
         item.status !== 'Fetching Info...'
     )
@@ -265,7 +287,7 @@ function BottomSection({
     if (!url) return
     const newId = uuidv4()
     const videoInfo = await getVideoInfo(url)
-    
+
     const newDownload = {
       id: newId,
       url,
@@ -289,7 +311,6 @@ function BottomSection({
     }
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
 
-   
     localStorage.setItem('downloadList', JSON.stringify([newDownload, ...storedDownloads]))
     downloadQueue.current.push(newId)
 
@@ -334,15 +355,14 @@ function BottomSection({
         status: 'Downloading',
         isPlaylist: info?.isPlaylist || false
       }
-      setVideoInfo(info ||[])
+      setVideoInfo(info || [])
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
 
       const handleProgress = (progressData) => {
-      
-        const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
-        const itemIdx = stored.findIndex((i) => i.id === currentId);
-        if (itemIdx === -1) return;
-      
+        const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        const itemIdx = stored.findIndex((i) => i.id === currentId)
+        if (itemIdx === -1) return
+
         // Only process message if it exists and is a string
         if (typeof progressData.message === 'string') {
           if (
@@ -352,102 +372,102 @@ function BottomSection({
           ) {
             const match = progressData.message.match(
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-            );
-            const youtubeUrl = match[0];
-            const videoId = match[2];
-      
+            )
+            const youtubeUrl = match[0]
+            const videoId = match[2]
+
             getVideoInfo(youtubeUrl).then((ytInfo) => {
               stored[itemIdx] = {
                 ...stored[itemIdx],
                 title: ytInfo?.title || 'Unknown',
                 thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
                 duration: ytInfo?.duration || 'Unknown',
-                status: 'Downloading',
-              };
-              localStorage.setItem('downloadList', JSON.stringify(stored));
-            });
+                status: 'Downloading'
+              }
+              localStorage.setItem('downloadList', JSON.stringify(stored))
+            })
           }
-      
+
           if (progressData.message.includes('Destination:')) {
             if (progressData.message.includes('.mp4')) {
-              currentFileTypes.current.set(currentId, 'video');
+              currentFileTypes.current.set(currentId, 'video')
             } else if (progressData.message.includes('.m4a')) {
-              currentFileTypes.current.set(currentId, 'audio');
+              currentFileTypes.current.set(currentId, 'audio')
             } else if (progressData.message.includes('.webm')) {
-              currentFileTypes.current.set(currentId, 'justAudio');
+              currentFileTypes.current.set(currentId, 'justAudio')
             } else {
-              console.log(`No .mp4, .m4a, or .webm found in Destination message`);
+              console.log(`No .mp4, .m4a, or .webm found in Destination message`)
             }
-            return;
+            return
           }
-      
+
           const progressMatch = progressData.message.match(
             /(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/
-          );
+          )
           if (progressMatch) {
-            const [, progress, fileSize, speed, eta] = progressMatch;
-            const rawProgress = parseFloat(progress);
-            let totalProgress = 0;
-            const currentFileType = currentFileTypes.current.get(currentId);
-      
+            const [, progress, fileSize, speed, eta] = progressMatch
+            const rawProgress = parseFloat(progress)
+            let totalProgress = 0
+            const currentFileType = currentFileTypes.current.get(currentId)
+
             if (currentFileType === 'video') {
-              totalProgress = rawProgress * 0.9;
+              totalProgress = rawProgress * 0.9
             } else if (currentFileType === 'audio') {
-              totalProgress = 90 + rawProgress * 0.1;
+              totalProgress = 90 + rawProgress * 0.1
             } else if (currentFileType === 'justAudio') {
-              totalProgress = rawProgress;
+              totalProgress = rawProgress
             } else {
               console.log(
                 `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
-              );
+              )
             }
-      
+
             setProgressMap((prev) => {
-              const newMap = new Map(prev);
-              newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
-              return newMap;
-            });
+              const newMap = new Map(prev)
+              newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta })
+              return newMap
+            })
           }
-      
+
           const itemCountMatch = progressData.message.match(
             /\[download\] Downloading item (\d+) of (\d+)/
-          );
+          )
           if (itemCountMatch) {
-            const [, currentItem, totalItems] = itemCountMatch;
-            stored[itemIdx].currentItem = parseInt(currentItem);
-            stored[itemIdx].totalItems = parseInt(totalItems);
-            localStorage.setItem('downloadList', JSON.stringify(stored));
+            const [, currentItem, totalItems] = itemCountMatch
+            stored[itemIdx].currentItem = parseInt(currentItem)
+            stored[itemIdx].totalItems = parseInt(totalItems)
+            localStorage.setItem('downloadList', JSON.stringify(stored))
           }
-      
+
           if (progressData.message.includes('has already been downloaded')) {
-            stored[itemIdx].status = 'Completed';
-            stored[itemIdx].isCompleted = true;
+            stored[itemIdx].status = 'Completed'
+            stored[itemIdx].isCompleted = true
             setProgressMap((prev) => {
-              const newMap = new Map(prev);
-              newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
-              return newMap;
-            });
-            localStorage.setItem('downloadList', JSON.stringify(stored));
+              const newMap = new Map(prev)
+              newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+              return newMap
+            })
+            localStorage.setItem('downloadList', JSON.stringify(stored))
           }
-      
+
           if (progressData.message.includes('Finished downloading playlist:')) {
-            stored[itemIdx].isPlaylistCompleted = true;
-            localStorage.setItem('downloadList', JSON.stringify(stored));
+            stored[itemIdx].isPlaylistCompleted = true
+            localStorage.setItem('downloadList', JSON.stringify(stored))
           }
         }
-      
+
         // Handle status updates (e.g., completion) even if message is missing
         if (progressData?.status?.includes('Download complete!')) {
-          stored[itemIdx].status = 'Completed';
-          stored[itemIdx].isCompleted = true;
+          stored[itemIdx].status = 'Completed'
+          stored[itemIdx].isCompleted = true
           setProgressMap((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
-            return newMap;
-          });
-          localStorage.setItem('downloadList', JSON.stringify(stored));
+            const newMap = new Map(prev)
+            newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+            return newMap
+          })
+          localStorage.setItem('downloadList', JSON.stringify(stored))
         }
-      };
+      }
 
       window.api.onDownloadProgress(handleProgress)
 
@@ -457,7 +477,7 @@ function BottomSection({
         isAudioOnly: downloadType === 'Audio',
         selectedFormat: format,
         selectedQuality: quality,
-        selectBitrate:  downloadType === 'Audio'?bitrate:null,
+        selectBitrate: downloadType === 'Audio' ? bitrate : null,
         saveTo
       })
 
@@ -506,13 +526,16 @@ function BottomSection({
         processQueue()
       }
     }
-  }, [downloadType, format, quality, saveTo,bitrate])
+  }, [downloadType, format, quality, saveTo, bitrate])
 
   useEffect(() => {
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
     const queuedDownloads = storedDownloads.filter(
       (item) =>
-        item.status === 'Queued' || item.status === 'Downloading' || item.status === 'Fetching Info'|| item.status === 'Waiting'
+        item.status === 'Queued' ||
+        item.status === 'Downloading' ||
+        item.status === 'Fetching Info' ||
+        item.status === 'Waiting'
     )
 
     if (queuedDownloads.length > 0) {
@@ -524,8 +547,12 @@ function BottomSection({
   }, [])
 
   return (
-    <div style={{ width:  !showWebView?'90%':"100%" }}>
-      {!showWebView ? (
+    <div style={{ width: !showWebView ? '90%' : '100%' }}>
+      {aboutUs ? (
+        <div style={{ height: '70vh' }}>
+          <AboutUs />
+        </div>
+      ) : !showWebView ? (
         <>
           {downloadListOpen && selectedItem ? (
             <div className="video-preview" style={{ marginRight: 10 }}>
@@ -549,7 +576,6 @@ function BottomSection({
               >
                 <button
                   className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
-                   
                   onClick={() =>
                     lastUrl
                       ? handleResumeBrowser()
@@ -584,7 +610,7 @@ function BottomSection({
                 >
                   <button
                     className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
-                    //  
+                    //
                     onClick={handleResumeBrowser}
                   >
                     <FaGlobe size={20} />
@@ -598,7 +624,7 @@ function BottomSection({
           )}
         </>
       ) : (
-        <div className="webview-container" >
+        <div className="webview-container">
           <div className="browser-header">
             <div className="navigation-controls">
               <button
@@ -657,14 +683,26 @@ function BottomSection({
                 }
                 placeholder="Enter URL or search..."
               />
+              <OverlayTrigger
+                placement="top"
+                overlay={<Tooltip id="copy-tooltip">Copy URL</Tooltip>}
+              >
+                <button className="url-btn" onClick={handleCopyUrl}>
+                  <FaCopy size={16} />
+                </button>
+              </OverlayTrigger>
+              <OverlayTrigger placement="top" overlay={<Tooltip id="go-tooltip">Go</Tooltip>}>
+                <button className="url-btn" onClick={handleGo}>
+                  <FaArrowCircleRight size={16} />
+                </button>
+              </OverlayTrigger>
             </div>
             <OverlayTrigger
               placement="top"
               overlay={<Tooltip id="close-tooltip">Close Browser</Tooltip>}
             >
               <button
-                className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
-                // style={{ width: '100px', height: '40px', padding: '0 15px' }}
+                className="btn btn-danger d-flex align-items-center justify-content-center shadow close-webview-btn"
                 onClick={handleCloseWebView}
               >
                 <FaTimes size={16} />
@@ -672,7 +710,7 @@ function BottomSection({
               </button>
             </OverlayTrigger>
           </div>
-          <div className='webview-height'>
+          <div className="webview-height">
             <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
           </div>
           {isDownloadable && (

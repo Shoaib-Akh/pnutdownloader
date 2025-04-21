@@ -103,18 +103,21 @@
     justify-content: center;
   }
   
-  @media (min-width: 576px) {
+  @media (max-width: 1700px) {
     .sidebar__buy-nuts-button {
-      padding: 10px 10px;
+      padding: 5px 5px;
 
     }
-    .sidebar__footer{
-      margin-bottom: 10px;
+   
+    .sidebar__logo{
+      height: 50px;
+      width: fit-content;
     }
+   
   }
   
-  @media (min-width: 768px) {
-    
+  @media (min-width: 1000px) {
+   
     .sidebar__buy-nuts-button {
       padding: 10px 10px;
       font-weight: 600;

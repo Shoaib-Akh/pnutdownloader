@@ -23,7 +23,7 @@ function App() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
-
+const [aboutUs,setAboutUs]=useState(false)
   // App initialization
   useEffect(() => {
     const initializeApp = async () => {
@@ -164,6 +164,7 @@ function App() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         setPastLinkUrl={setPastLinkUrl}
+        
       />
 
       <div className="d-flex" style={{ paddingTop: "10px",borderTop:"1px solid #faaa8d" }}>
@@ -179,6 +180,7 @@ function App() {
               setShowWebView={setShowWebView}
               showWebView={showWebView}
               setDownloadListOpen={setDownloadListOpen}
+              setAboutUs={setAboutUs}
             />
           )}
         </div>
@@ -224,6 +226,8 @@ function App() {
           downloadListOpen={downloadListOpen}
           setDownloadListOpen={setDownloadListOpen}
           pastLinkUrl={pastLinkUrl}
+          aboutUs={aboutUs}
+          setAboutUs={setAboutUs}
         />
       </div>
 
