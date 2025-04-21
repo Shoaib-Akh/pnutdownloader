@@ -24,7 +24,6 @@ import AboutUs from '../AboutUs'
 function BottomSection({
   downloadType,
   bitrate,
-
   quality,
   format,
   saveTo,
@@ -40,7 +39,8 @@ function BottomSection({
   downloadListOpen,
   pastLinkUrl,
   aboutUs,
-  setAboutUs
+  setAboutUs,
+  updateInfo
 }) {
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
@@ -550,7 +550,7 @@ function BottomSection({
     <div style={{ width: !showWebView ? '90%' : '100%' }}>
       {aboutUs ? (
         <div style={{ height: '70vh' }}>
-          <AboutUs />
+          <AboutUs updateInfo={updateInfo} />
         </div>
       ) : !showWebView ? (
         <>

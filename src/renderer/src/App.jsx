@@ -24,7 +24,7 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 const [aboutUs,setAboutUs]=useState(false)
-  // App initialization
+ 
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -227,6 +227,7 @@ const [aboutUs,setAboutUs]=useState(false)
           setDownloadListOpen={setDownloadListOpen}
           pastLinkUrl={pastLinkUrl}
           aboutUs={aboutUs}
+          updateInfo={updateInfo}
           setAboutUs={setAboutUs}
         />
       </div>
