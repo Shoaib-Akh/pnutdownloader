@@ -234,7 +234,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                       ) : (
                         <div className="">
                         {item.status === 'Failed' ? (
-                          <div className="text-danger d-flex align-items-center">
+                          <div className="text-danger d-flex align-items-center justify-content-center">
                             <FaTimesCircle className="me-1 align-middle" />
                             <span className="align-middle d-inline-block">Failed</span>
                           </div>

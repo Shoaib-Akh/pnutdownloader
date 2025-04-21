@@ -9,7 +9,7 @@ import {
   FaUndo,
   FaPlus,
   FaMinus,
-  FaCopy, // Add FaCopy for copy icon
+  FaCopy, 
   FaArrowCircleRight
 } from 'react-icons/fa'
 import '../common.css'
@@ -42,6 +42,8 @@ function BottomSection({
   setAboutUs,
   updateInfo
 }) {
+  let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
@@ -107,19 +109,6 @@ function BottomSection({
     }
   }, [pastLinkUrl])
 
-  // const extractVideoId = (url) => {
-  //   const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
-  //   if (fullUrlMatch) return fullUrlMatch[1]
-  //   const shortUrlMatch = url.match(/youtu\.be\/([^?]+)/)
-  //   if (shortUrlMatch) return shortUrlMatch[1]
-  //   const embedUrlMatch = url.match(/youtube\.com\/embed\/([^?]+)/)
-  //   if (embedUrlMatch) return embedUrlMatch[1]
-  //   const shortsUrlMatch = url.match(/youtube\.com\/shorts\/([^?]+)/)
-  //   if (shortsUrlMatch) return shortsUrlMatch[1]
-  //   const musicUrlMatch = url.match(/music\.youtube\.com\/watch\?.*v=([^&]+)/)
-  //   if (musicUrlMatch) return musicUrlMatch[1]
-  //   return null
-  // }
 
   const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
   const extractPlaylistId = (url) => {
@@ -186,7 +175,7 @@ function BottomSection({
     const urlToDownload = pastLinkUrl || currentWebViewUrl
     if (!urlToDownload) return
 
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+     
     if (storedDownloads.some((item) => item.url === urlToDownload)) {
       if (!window.alertShown) {
         window.api.showMessageBox({
@@ -280,7 +269,7 @@ function BottomSection({
   }
 
   const isAnyDownloadInProgress = () => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+     
     return storedDownloads.some(
       (item) =>
         !item.isCompleted &&
@@ -317,7 +306,7 @@ function BottomSection({
       isPlaylist: videoInfo?.isPlaylist || false,
       currentItem: 0
     }
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+     
 
     localStorage.setItem('downloadList', JSON.stringify([newDownload, ...storedDownloads]))
     downloadQueue.current.push(newId)
@@ -497,33 +486,37 @@ function BottomSection({
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
       }
     } catch (error) {
-      const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+      storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+
       const failedIndex = storedDownloads.findIndex((i) => i.id === currentId)
+      console.log("error",error);
+      
       if (failedIndex !== -1) {
-        const getError = error.message.match(/Download failed with code 1/)
-        if (getError) {
+       
+        
           storedDownloads[failedIndex].status = 'Failed'
           storedDownloads[failedIndex].isFailed = true
           localStorage.setItem('downloadList', JSON.stringify(storedDownloads))
-          setVideoInfo((prev) => ({
-            ...prev,
-            status: 'Failed',
-            isFailed: true,
-            error: 'Download failed with code 1'
-          }))
+         
+         
           setProgressMap((prev) => {
-            const newMap = new Map(prev)
-            newMap.set(currentId, { progress: 0, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
-            return newMap
-          })
-        }
+            const newMap = new Map(prev);
+            newMap.set(currentId, {
+              progress: 0,
+              fileSize: 'N/A',
+              speed: 'N/A',
+              eta: 'N/A',
+              status: 'Failed', // Add status to progressMap
+            });
+            return newMap;
+          });
       }
     } finally {
       downloadQueue.current.shift()
       isProcessing.current = false
       if (downloadQueue.current.length > 0) {
         // Move the next "Waiting" item to "Queued" if no downloads are in progress
-        const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+         
         const nextItemIndex = storedDownloads.findIndex(
           (item) => item.id === downloadQueue.current[0]
         )
@@ -537,7 +530,6 @@ function BottomSection({
   }, [downloadType, format, quality, saveTo, bitrate])
 
   useEffect(() => {
-    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
     const queuedDownloads = storedDownloads.filter(
       (item) =>
         item.status === 'Queued' ||
