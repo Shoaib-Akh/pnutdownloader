@@ -54,6 +54,14 @@ function BottomSection({
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
+  const customSanitize = (str) => {
+    if (!str) return 'Unknown';
+    return str
+      .replace(/[<>:"/\\|?*]+/g, ' ') // Remove invalid characters
+      .replace(/\s+/g, ' ') // Replace spaces with underscores
+      .replace(/[^a-zA-Z0-9._-]/g, ' ') // Keep only alphanumeric, dots, underscores, hyphens
+      .substring(0, 200); // Limit length
+  };
   const handleCopyUrl = () => {
     navigator.clipboard
       .writeText(currentWebViewUrl)
@@ -217,7 +225,7 @@ function BottomSection({
 
       return {
         videoUrl: url,
-        title: snippet.title,
+        title: customSanitize (snippet.title),
         thumbnail:
           snippet?.thumbnails?.standard?.url ||
           snippet?.thumbnails.default.url ||
@@ -257,7 +265,7 @@ function BottomSection({
 
       return {
         playlistUrl: url,
-        playlistTitle: snippet.title,
+        playlistTitle: customSanitize(snippet.title),
         thumbnail: isYouTubeMusic
           ? snippet.thumbnails.standard.url ||
             snippet.thumbnails.default.url ||

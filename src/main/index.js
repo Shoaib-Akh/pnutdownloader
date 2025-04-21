@@ -616,73 +616,154 @@ const startDownload = async (event, options) => {
         formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
       }
 
-      // Get current timestamp for download start time (e.g., 20250409_143022)
-      const now = new Date();
-      const downloadTimestamp = now.toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDD_HHMMSS
+      // Custom sanitization function (use if sanitize-filename is not installed)
+      const customSanitize = (str) => {
+        if (!str) return 'Unknown';
+        return str
+          .replace(/[<>:"/\\|?*]+/g, ' ') // Remove Windows-invalid characters
+          .replace(/\s+/g, ' ') // Replace spaces with underscores
+          .replace(/[^a-zA-Z0-9._-]/g, ' ') // Keep only alphanumeric, dots, underscores, hyphens
+          .replace(/^[.-]+|[.-]+$/g, ' ') // Remove leading/trailing dots or hyphens
+          .substring(0, 200); // Limit length to avoid Windows path issues
+      };
 
-      // Download path with only download timestamp (removed upload_date)
-      let downloadPath;
-      if (isPlaylist) {
-        const playlistDir = join(baseDir, '%(playlist_title)s');
-        downloadPath = join(playlistDir, `%(title)s.%(ext)s`);
-      } else {
-        const formatDir = isAudioOnly ? 'audio' : 'video';
-        const downloadDir = join(baseDir, formatDir);
-        if (!existsSync(downloadDir)) {
-          mkdirSync(downloadDir, { recursive: true });
+      // Choose sanitization method
+      const sanitize =  customSanitize;
+
+      // Fetch title or playlist title using yt-dlp
+      const getTitle = () => {
+        return new Promise((titleResolve, titleReject) => {
+          const titleArgs = [
+            isPlaylist ? '--get-filename' : '--get-title',
+            '-o', isPlaylist ? '%(playlist_title)s' : '%(title)s',
+            isPlaylist ? '--yes-playlist' : '--no-playlist',
+            url,
+          ];
+          const titleProcess = spawn(ytdlpPath, titleArgs, { windowsHide: true });
+          let titleData = '';
+
+          titleProcess.stdout.on('data', (data) => {
+            titleData += data.toString().trim();
+          });
+
+          titleProcess.stderr.on('data', (data) => {
+            titleReject(new Error(`Failed to fetch title: ${data.toString().trim()}`));
+          });
+
+          titleProcess.on('close', (code) => {
+            if (code === 0 && titleData) {
+              const titles = titleData.split('\n').filter(Boolean);
+              titleResolve(titles[0] || 'Unknown'); // Use first title or fallback
+            } else {
+              titleReject(new Error('Failed to fetch title'));
+            }
+          });
+        });
+      };
+
+      // Get and sanitize title
+      const fetchAndSanitizeTitle = async () => {
+        try {
+          const rawTitle = await getTitle();
+          const sanitizedTitle = sanitize(rawTitle);
+          return sanitizedTitle || 'Unknown';
+        } catch (error) {
+          console.error('Error fetching title:', error.message);
+          return 'Unknown';
         }
-        downloadPath = join(downloadDir, `%(title)s.%(ext)s`);
-      }
+      };
 
-      // yt-dlp arguments
-      const args = [
-        '--continue',
-        '--ffmpeg-location', ffmpegPath,
-        '-o', downloadPath,
-        '--cookies', cookiesPath,
-        '--newline',
-        '--ignore-errors',
-        '--progress',
-        ...formatSpecifier.split(' '),
-        url,
-        isPlaylist ? '--yes-playlist' : '--no-playlist'
-      ];
+      // Set up download path with sanitized title
+      const setupDownloadPath = async () => {
+        const sanitizedTitle = await fetchAndSanitizeTitle();
+        
+        // Send sanitized title to frontend for consistency
+        event.sender.send('download-progress', { 
+          downloadId,
+          sanitizedTitle,
+          message: `Using sanitized title: ${sanitizedTitle}`
+        });
 
-      console.log('Downloading with args:', args);
-
-      // Start download process
-      downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
-      activeDownloads[downloadId] = true;
-
-      downloadProcess.stdout.on('data', (data) => {
-        const line = data.toString().trim();
-        event.sender.send('download-progress', { message: line });
-      });
-
-      downloadProcess.stderr.on('data', (data) => {
-        const errorMessage = data.toString().trim();
-        event.sender.send('download-progress', { error: errorMessage });
-      });
-
-      downloadProcess.on('close', (code) => {
-        delete activeDownloads[downloadId];  // Remove from active downloads
-        downloadProcess = null;
-
-        if (code === 0) {
-          event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
-          resolve();
+        let downloadPath;
+        if (isPlaylist) {
+          const playlistDir = join(baseDir, sanitizedTitle);
+          try {
+            if (!existsSync(playlistDir)) {
+              mkdirSync(playlistDir, { recursive: true });
+            }
+          } catch (dirError) {
+            throw new Error(`Failed to create playlist directory: ${dirError.message}`);
+          }
+          downloadPath = join(playlistDir, `%(title)s.%(ext)s`); // Still use %(title)s for individual videos
         } else {
-          event.sender.send('download-progress', { error: `Download failed with code ${code}` });
-          reject(new Error(`Download failed with code ${code}`));
+          const formatDir = isAudioOnly ? 'audio' : 'video';
+          const downloadDir = join(baseDir, formatDir);
+          try {
+            if (!existsSync(downloadDir)) {
+              mkdirSync(downloadDir, { recursive: true });
+            }
+          } catch (dirError) {
+            throw new Error(`Failed to create format directory: ${dirError.message}`);
+          }
+          downloadPath = join(downloadDir, `${sanitizedTitle}.%(ext)s`);
         }
-      });
+        return downloadPath;
+      };
 
-      downloadProcess.on('error', (err) => {
-        delete activeDownloads[downloadId];
-        downloadProcess = null;
+      // Execute download with sanitized path
+      setupDownloadPath().then((downloadPath) => {
+        // yt-dlp arguments
+        const args = [
+          '--continue',
+          '--ffmpeg-location', ffmpegPath,
+          '-o', downloadPath,
+          '--cookies', cookiesPath,
+          '--newline',
+          '--ignore-errors',
+          '--progress',
+          ...formatSpecifier.split(' '),
+          url,
+          isPlaylist ? '--yes-playlist' : '--no-playlist',
+        ];
+
+        console.log('Downloading with args:', args);
+
+        // Start download process
+        downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
+        activeDownloads[downloadId] = true;
+
+        downloadProcess.stdout.on('data', (data) => {
+          const line = data.toString().trim();
+          event.sender.send('download-progress', { message: line });
+        });
+
+        downloadProcess.stderr.on('data', (data) => {
+          const errorMessage = data.toString().trim();
+          event.sender.send('download-progress', { error: errorMessage });
+        });
+
+        downloadProcess.on('close', (code) => {
+          delete activeDownloads[downloadId];
+          downloadProcess = null;
+
+          if (code === 0) {
+            event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
+            resolve();
+          } else {
+            event.sender.send('download-progress', { error: `Download failed with code ${code}` });
+            reject(new Error(`Download failed with code ${code}`));
+          }
+        });
+
+        downloadProcess.on('error', (err) => {
+          delete activeDownloads[downloadId];
+          downloadProcess = null;
+          reject(err);
+        });
+      }).catch((err) => {
+        event.sender.send('download-progress', { error: err.message });
         reject(err);
       });
-
     } catch (err) {
       event.sender.send('download-progress', { error: err.message });
       reject(err);

@@ -9,6 +9,7 @@ import MediaThumbnail from './MediaThumbnail'
 
 function DownloadList({ selectedItem, progressMap, videoInfo }) {
   const [openDropdown, setOpenDropdown] = useState(null)
+  
   // useEffect(() => {
   //   async function fetchDownloadedFiles() {
   //     try {
@@ -212,7 +213,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                         item.format
                       )}
                     </td>
-                    <td className="data-cell">
+                    <td className="data-cell " style={{ fontWeight: '600', }}>
                       {['Fetching Info...', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isPlaylist ? (
@@ -223,7 +224,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                           </div>
                           <div>
                             {item.isPlaylistCompleted && (
-                              <FaCheckCircle className="text-success" style={{ marginRight: 5 }} />
+                              <FaCheckCircle className="text-success" style={{ marginRight: 5,color:"#28a745" }} />
                             )}
                             {item.currentItem > 0 && item.totalItems > 0
                               ? `${item.currentItem}/${item.totalItems} ${item.isPlaylistCompleted ? 'Playlist download Complete' : 'videos downloaded'} `
@@ -238,22 +239,39 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                             <span className="align-middle d-inline-block">Failed</span>
                           </div>
                         ) : item.isCompleted ? (
-                          <div className="text-success d-flex align-items-center justify-content-center">
+                          <div className=" d-flex align-items-center justify-content-center" style={{color:"#28a745"}}>
                             <FaCheckCircle className="me-1 align-middle" />
                             <span className="align-middle d-inline-block">{item.status}</span>
                           </div>
+                          
                         ) : (
                           <>
+                         
                             <div className="">
-                              <FaRegClock className="me-1 align-middle text-warning" />
-                              <span className="align-middle d-inline-block">{item.status}</span>
-                            </div>
+  {item.status === "Downloading" ? (
+    <span className="align-middle d-inline-block">
+      Downloading
+      <span className="dot-animate">.</span>
+      <span className="dot-animate">.</span>
+      <span className="dot-animate">.</span>
+    </span>
+  ) : (
+    <span className="align-middle d-inline-block">{item.status}</span>
+  )}
+</div>
                             {!item.isCompleted && (
-                              <ProgressBar
-                                now={progressMap.get(item.id)?.progress || 0}
-                                style={{ height: 4, width: '100%', marginTop: 4 }}
-                                key={item.id}
-                              />
+                              
+                              <div style={{ width: '100%' }}>
+                              {progress === undefined || progress === 0 ? (
+                                <Skeleton height={10} width="100%" style={{ marginTop: 4 }} />
+                              ) : (
+                                <ProgressBar
+                                  now={progress || 0}
+                                  style={{ height: 10, width: '100%', marginTop: 4 }}
+                                  key={item.id}
+                                />
+                              )}
+                            </div>
                             )}
                           </>
                         )}

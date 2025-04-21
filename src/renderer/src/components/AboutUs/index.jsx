@@ -105,7 +105,7 @@ function AboutUs() {
       </div>
 
       <div className="mt-lg-4 mt-1 row text-center justify-content-between">
-        <div className="col-md-6">
+        <div className="col-md-6 d-flex flex-column justify-content-center ">
           <h2 className="h4 fw-semibold text-dark mt-lg-4 mt-2" style={{ fontSize: 20 }}>
             Get in Touch
           </h2>
@@ -124,7 +124,7 @@ function AboutUs() {
           </div>
         </div>
 
-        <div className="col-md-6" style={{ cursor: 'default' }}>
+        <div className="col-md-6  d-flex flex-column justify-content-center" style={{ cursor: 'default' }}>
           <div>
             <button
               onClick={() => {
@@ -160,7 +160,7 @@ function AboutUs() {
       </div>
 
       {/* Copyright notice pushed to the bottom */}
-      <div className="text-center mt-auto">
+      <div className="text-center mt-2">
         <p>Copyright 2025 PNUT Downloader. All Rights Reserved.</p>
       </div>
     </section>

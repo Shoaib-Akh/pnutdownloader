@@ -36,6 +36,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick }) => {
           <img
             onClick={onClick}
             crossOrigin="anonymous"
+            title="Play video" 
             src={thumbnail}
             alt="Thumbnail"
             onError={(e) => (e.target.style.display = 'none')}

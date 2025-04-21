@@ -209,7 +209,7 @@ h1 {
   }
   
   .progress-bar {
-    height: 4px;
+    height: 10px;
     background: #BB4F28;
     transition: width 0.5s ease-in-out;
   }
@@ -569,12 +569,12 @@ border-bottom:  0.5px solid #faaa8d;
 }
 .feedback-button {
   position: fixed;
-  right: 10px; /* Positions button 20px from the right edge */
+  right: 0px; /* Positions button 20px from the right edge */
   top: 50%; /* Vertically centers the button */
 
   background-color: #28a745;
   color: white;
-  padding: 15px 10px; /* More vertical padding than horizontal */
+  padding: 10px 10px; /* More vertical padding than horizontal */
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -611,4 +611,25 @@ border-bottom:  0.5px solid #faaa8d;
   background-position: center;
   opacity:0.1; /* Only the background image is affected */
   z-index: -1; /* Ensure it stays behind the content */
+}
+.dot-animate {
+  animation: blink 1.4s infinite both;
+  display: inline-block;
+  width: 6px;
+  font-size: 20px !important;
+
+}
+
+.dot-animate:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dot-animate:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
