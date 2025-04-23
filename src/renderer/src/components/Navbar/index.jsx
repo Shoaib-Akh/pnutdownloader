@@ -83,7 +83,7 @@ function Navbar({
                       return;
                     }
                     let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-                    const existingDownload = storedDownloads.some((item) => extractVideoId(item.url) === videoId);
+                    const existingDownload = storedDownloads.some((item) => extractYotubePastLink(item.url) === videoId);
                     if (existingDownload) {
                       if (!window.alertShown) {
                         window.api.showMessageBox({

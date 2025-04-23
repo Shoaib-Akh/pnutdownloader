@@ -96,53 +96,96 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
     return remainingSeconds
   }
   const handleThumbnailClick = async (item) => {
-  if (item.isCompleted && item.status === 'Completed') {
+    if (!item.isCompleted || item.status !== 'Completed') {
+      console.log('Thumbnail click ignored: Item not completed or status not Completed', {
+        id: item.id,
+        title: item.title,
+        isCompleted: item.isCompleted,
+        status: item.status,
+      });
+      return;
+    }
+  
     try {
       const desktopPath = await window.api.getPath('downloads');
       const audioDownloadDir = `${desktopPath}/pnutdownloader/audio`;
       const videoDownloadDir = `${desktopPath}/pnutdownloader/video`;
-
-      // Normalize the title
+  
+      // Normalize the title for matching
       const normalizedTitle = item.title
         .replace(/\|/g, '｜')
         .replace(/：/g, ':')
         .replace(/’/g, "'")
+        .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+        .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
         .trim()
         .toLowerCase();
+  
       const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi', 'mp3', 'flac', 'wav', 'aac'];
-
       const directories = [videoDownloadDir, audioDownloadDir];
       let filePath = null;
-
+  
+      console.log('Searching for file with normalized title:', normalizedTitle);
+  
       for (const dir of directories) {
-        const files = await window.api.readDirectory(dir);
-
-        filePath = files
-          .filter((file) => {
+        try {
+          const files = await window.api.readDirectory(dir);
+          console.log(`Files in ${dir}:`, files);
+  
+          filePath = files.find((file) => {
             const fileName = file.toLowerCase();
-            // Use the full filename (minus extension) for comparison
             const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
-            return (
-              possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`)) &&
-              titlePart.includes(normalizedTitle)
+            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
+            const normalizedFileTitle = titlePart
+              .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+              .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+              .trim()
+              .toLowerCase();
+  
+            // Exact match or partial match (if the title is long)
+            const isExactMatch = normalizedFileTitle === normalizedTitle;
+            const isPartialMatch =
+              normalizedTitle.length > 20 &&
+              normalizedFileTitle.includes(normalizedTitle.slice(0, 20));
+  
+            console.log(
+              `Checking file: ${fileName}, Title part: ${titlePart}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
             );
-          })
-          .map((file) => `${dir}/${file}`)[0];
-
-        if (filePath) break;
+  
+            return hasValidExtension && (isExactMatch || isPartialMatch);
+          });
+  
+          if (filePath) {
+            filePath = `${dir}\\${filePath}`;
+            console.log('Found file with full path:', filePath);
+            break;
+          }
+        } catch (dirError) {
+          console.error(`Error reading directory ${dir}:`, dirError);
+        }
       }
-
+  
       if (filePath) {
-        window.api.openFile(filePath);
+        console.log('Attempting to open file:', filePath);
+        try {
+          const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+          await window.api.openExternal(fileUrl);
+          console.log('File opened successfully via openExternal');
+        } catch (openError) {
+          console.error('Failed to open file:', openError);
+          alert('Failed to open file: ' + openError.message);
+        }
       } else {
         console.error('File not found for title:', item.title, 'Normalized:', normalizedTitle);
-        console.error('Checked directories:', directories);
+        alert(
+          'File not found. It may have been moved, deleted, or saved with a different name.'
+        );
       }
     } catch (error) {
-      console.error('Error opening file:', error);
+      console.error('Error in handleThumbnailClick:', error);
+      alert('Failed to process file. Please check the console for details.');
     }
-  }
-};
+  };
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
