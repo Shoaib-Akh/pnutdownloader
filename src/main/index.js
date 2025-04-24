@@ -535,17 +535,27 @@ const startDownload = async (event, options) => {
       };
 
       const setupDownloadPath = async () => {
-        const sanitizedTitle = await fetchAndSanitizeTitle();
-        
+        const sanitizedTitle = await fetchAndSanitizeTitle(); // Single sanitized title
+        const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
+        const sanitizedBitrate = customSanitize(selectBitrate) || 'Unknown'; // Sanitize bitrate
+      
+        // Create title with quality for display and filenames
+        const titleWithQuality = isAudioOnly 
+          ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
+          : `${sanitizedTitle}_${sanitizedQuality}`;
+      
+        console.log('Title with quality:', titleWithQuality); // Debug log
+      
+        // Send progress update with title including quality
         event.sender.send('download-progress', { 
           downloadId,
-          sanitizedTitle,
-          message: `Using sanitized title: ${sanitizedTitle}`
+          sanitizedTitle: titleWithQuality,
+          message: `Using sanitized title: ${titleWithQuality}`
         });
-
+      
         let downloadPath;
         if (isPlaylist) {
-          const playlistDir = join(baseDir, sanitizedTitle);
+          const playlistDir = join(baseDir, sanitizedTitle); // Use only sanitizedTitle for directory
           try {
             if (!existsSync(playlistDir)) {
               mkdirSync(playlistDir, { recursive: true });
@@ -553,7 +563,7 @@ const startDownload = async (event, options) => {
           } catch (dirError) {
             throw new Error(`Failed to create playlist directory: ${dirError.message}`);
           }
-          downloadPath = join(playlistDir, `%(title)s.%(ext)s`);
+          downloadPath = join(playlistDir, `%(title)s.%(ext)s`); // Let yt-dlp handle individual titles
         } else {
           const formatDir = isAudioOnly ? 'audio' : 'video';
           const downloadDir = join(baseDir, formatDir);
@@ -564,8 +574,9 @@ const startDownload = async (event, options) => {
           } catch (dirError) {
             throw new Error(`Failed to create format directory: ${dirError.message}`);
           }
-          downloadPath = join(downloadDir, `${sanitizedTitle}.%(ext)s`);
+          downloadPath = join(downloadDir, `${titleWithQuality}.%(ext)s`); // Use titleWithQuality for single file
         }
+        console.log('Download path:', downloadPath); // Debug log
         return downloadPath;
       };
 

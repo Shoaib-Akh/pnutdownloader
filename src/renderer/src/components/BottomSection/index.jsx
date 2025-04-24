@@ -171,32 +171,42 @@ function BottomSection({
   }
 
   const handleDownloadClick = () => {
-    setAboutUs(false)
-    const urlToDownload = pastLinkUrl || currentWebViewUrl
-    if (!urlToDownload) return
-
-     
-    if (storedDownloads.some((item) => item.url === urlToDownload)) {
+    setAboutUs(false);
+    const urlToDownload = pastLinkUrl || currentWebViewUrl;
+    if (!urlToDownload) return;
+  
+    // Check if the URL with the same format, quality, and saveTo exists in storedDownloads
+    const isDuplicate = storedDownloads.some(
+      (item) =>
+        item.url === urlToDownload &&
+        item.format.toLowerCase() === format.toLowerCase() &&
+        item.quality.toLowerCase() === quality.toLowerCase() &&
+        item.saveTo.toLowerCase() === saveTo.toLowerCase() &&
+        item.downloadType.toLowerCase() === downloadType.toLowerCase() &&
+item.bitrate.toLowerCase()===bitrate.toLowerCase()
+    );
+  
+    if (isDuplicate) {
       if (!window.alertShown) {
         window.api.showMessageBox({
           type: 'warning',
           title: 'Duplicate Download',
-          message: 'This URL is already in the download list.'
-        })
-        window.alertShown = true
-        setTimeout(() => (window.alertShown = false), 1000)
+          message: 'This URL with the same format, quality, and save location is already in the download list.',
+        });
+        window.alertShown = true;
+        setTimeout(() => (window.alertShown = false), 1000);
       }
-      return
+      return;
     }
-
-    setUrl(urlToDownload)
-    setDownloadListOpen(true)
-    setShowWebView(false)
-    setIsSidebarOpen(true)
-    setSelectedItem('All File')
-    setDownload(true)
-    addToQueue(urlToDownload)
-  }
+  
+    setUrl(urlToDownload);
+    setDownloadListOpen(true);
+    setShowWebView(false);
+    setIsSidebarOpen(true);
+    setSelectedItem('All File');
+    setDownload(true);
+    addToQueue(urlToDownload);
+  };
 
   const getVideoInfo = async (url) => {
     const videoId = extractVideoId(url)
@@ -292,9 +302,12 @@ function BottomSection({
       playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null,
       thumbnail: videoInfo?.thumbnail || '',
       filename: '',
-      quality,
-      format,
+      quality :quality.toLowerCase(),
+      saveTo:saveTo.toLowerCase(),
+      downloadType:downloadType.toLowerCase(),
+      format:format.toLowerCase(),
       duration: videoInfo?.duration || 'Unknown',
+      bitrate:bitrate,
       progress: 0,
       fileSize: 'Unknown',
       speed: 'Unknown',
@@ -471,10 +484,10 @@ function BottomSection({
       await window.api.downloadVideo({
         id: currentId,
         url: item.url,
-        isAudioOnly: downloadType === 'Audio',
-        selectedFormat: format,
-        selectedQuality: quality,
-        selectBitrate: downloadType === 'Audio' ? bitrate : null,
+        isAudioOnly: item.downloadType === 'Audio',
+        selectedFormat: item.format,
+        selectedQuality:item.quality,
+        selectBitrate: item.downloadType === 'Audio' ? item.bitrate : null,
         saveTo
       })
 
@@ -567,6 +580,8 @@ function BottomSection({
                 setDownload={setDownload}
                 progressMap={progressMap}
                 videoInfo={videoInfo}
+                bitrate={bitrate}
+
               />
               <OverlayTrigger
                 placement="top"

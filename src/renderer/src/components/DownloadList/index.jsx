@@ -7,7 +7,7 @@ import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
 
-function DownloadList({ selectedItem, progressMap, videoInfo }) {
+function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType}) {
   const [openDropdown, setOpenDropdown] = useState(null)
   
   // useEffect(() => {
@@ -89,7 +89,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
       if (selectedItem === 'Playlist') return a.url.localeCompare(b.url);
       return 0; // No sorting for other cases
     })
-    .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
+    // .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
@@ -237,8 +237,12 @@ function DownloadList({ selectedItem, progressMap, videoInfo }) {
                         <MediaThumbnail
                           thumbnail={item.thumbnail}
                           title={item.title}
+                          format={item.quality}
                           url={item.url}
                           onClick={()=>handleThumbnailClick(item)}
+                          downloadType={item.downloadType}
+                          bitrate={item.bitrate}
+                          id={item.id}
                         />
                       )}
                     </td>
