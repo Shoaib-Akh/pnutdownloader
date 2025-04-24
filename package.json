@@ -1,9 +1,9 @@
 {
-  "name": "pnutdownloader",
-  "version": "1.0.32",
-  "description": "best video downloader",
+  "name": "PNUT Downloader",
+  "version": "1.0.35",
+  "description": "Your favorite video downloader",
   "main": "./out/main/index.js",
-  "author": "video downloader",
+  "author": "PNUT Downloader",
   "homepage": "https://github.com/Shoaib-Akh/pnutdownloader",
   "scripts": {
     "format": "prettier --write .",

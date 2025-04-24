@@ -22,7 +22,7 @@ function Sidebar({
     { icon: FaMusic, label: 'Audio' },
     { icon: FaVideo, label: 'Video' },
     { icon: FaList, label: 'Playlist' },
-    { icon: FaInfoCircle, label: 'About Us' },
+    { icon: FaInfoCircle, label: 'About us' },
   ];
 
  
@@ -54,7 +54,7 @@ function Sidebar({
               setShowWebView(false);
               setDownloadListOpen(item.label === 'Home' ? false : true);
               setAboutUs(false);
-              if (item.label === 'About Us') {
+              if (item.label === 'About us') {
                 setAboutUs(true);
        
               }
@@ -75,7 +75,7 @@ function Sidebar({
             <img src={squirrel} alt="PNUT Logo" className="sidebar__logo" />
             <button className="sidebar__buy-nuts-button" onClick={handleClick}>
               <FaHandHoldingHeart style={{ marginRight: 10 }} />
-              Support us!
+              Support us
             </button>
           </>
         )}

@@ -134,7 +134,7 @@ const [aboutUs,setAboutUs]=useState(false)
     )
   }
   const feedbackUrl =
-    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true' // Replace with actual feedback URL
+    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform' // Replace with actual feedback URL
 
   return (
     <div className="vh-100" >
@@ -203,7 +203,7 @@ const [aboutUs,setAboutUs]=useState(false)
           }}
         >
           <webview
-            src="https://680241a42964182e1b3c5b01--ornate-twilight-e26d6b.netlify.app/"
+            src="https://pnutdownloader.com/app/index.html"
             title="Bottom Banner"
           />
         </div>

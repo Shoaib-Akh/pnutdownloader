@@ -108,8 +108,8 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   
     try {
       const desktopPath = await window.api.getPath('downloads');
-      const audioDownloadDir = `${desktopPath}/pnutdownloader/audio`;
-      const videoDownloadDir = `${desktopPath}/pnutdownloader/video`;
+      const audioDownloadDir = `${desktopPath}/PNUT Downloader/Audio`;
+      const videoDownloadDir = `${desktopPath}/PNUT Downloader/Video`;
   
       // Normalize the title for matching
       const normalizedTitle = item.title
@@ -253,14 +253,14 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
                         formatTime(convertISODurationToSeconds(item.duration))
                       )}
                     </td>
-                    <td className="data-cell">
+                    <td className="data-cell text-uppercase">
                       {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
                         <Skeleton width={50} />
                       ) : (
                         item.format
                       )}
                     </td>
-                    <td className="data-cell " style={{ fontWeight: '600', }}>
+                    <td className="data-cell" style={{ fontWeight: '600', }}>
                       {['Fetching Info...', 'Queued'].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isPlaylist ? (

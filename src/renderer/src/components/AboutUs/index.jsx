@@ -144,6 +144,13 @@ function AboutUs() {
             <button
               className="btn btn-danger px-3 mt-lg-2 mt-2"
               style={{ background: '#BB4F28', fontSize: 15, width: 180 }}
+              onClick={() => {
+                if (window.api) {
+                  window.api.openExternal(
+                    'https://pnutdownloader.com/privacy-policy/'
+                  )
+                }
+              }}
             >
               Privacy Policy
             </button>
@@ -152,6 +159,13 @@ function AboutUs() {
             <button
               className="btn btn-danger px-3 mt-lg-2 mt-2"
               style={{ background: '#BB4F28', fontSize: 15, width: 180 }}
+              onClick={() => {
+                if (window.api) {
+                  window.api.openExternal(
+                    'https://pnutdownloader.com/terms-of-services/'
+                  )
+                }
+              }}
             >
               Terms and Conditions
             </button>

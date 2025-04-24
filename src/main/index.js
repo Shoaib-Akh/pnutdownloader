@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, session, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session, dialog ,globalShortcut} from 'electron'
 import { join } from 'path'
 const tar = require('tar'); // You'll need to install this: npm install tar
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -217,12 +217,16 @@ function createWindow() {
     mainWindow.focus();
     return;
   }
+  globalShortcut.register('Ctrl+Shift+3', () => {
+      mainWindow.webContents.openDevTools();
+  });
 
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
     minWidth: 800,
     minHeight: 650,
     icon: iconPath,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -301,15 +305,16 @@ app.whenReady().then(() => {
       console.error('Failed to initialize all dependencies');
     }
   });
-
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
   electronApp.setAppUserModelId('com.electron');
   autoUpdater.setFeedURL({
     provider: "github",
     owner: "Shoaib-Akh",
-    repo: "pnutdownloader"
+    repo: "pnutdownloader",
+    token: import.meta.env.GH_TOKEN,
   });
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = false;
+
   autoUpdater.checkForUpdates();
 
   app.on('browser-window-created', (_, window) => {
@@ -458,8 +463,8 @@ console.log("options",options);
       }
 
       const baseDir = saveTo === 'Desktop'
-        ? join(app.getPath('desktop'), 'pnutdownloader')
-        : join(app.getPath('downloads'), 'pnutdownloader');
+        ? join(app.getPath('desktop'), 'PNUT Downloader')
+        : join(app.getPath('downloads'), 'PNUT Downloader');
 
       try {
         if (!existsSync(baseDir)) {
@@ -559,7 +564,7 @@ console.log("options",options);
           const playlistDir = join(baseDir, '%(playlist_title)s');
           downloadPath = join(playlistDir, `%(title)s.%(ext)s`);         
         } else {
-          const formatDir = isAudioOnly ? 'audio' : 'video';
+          const formatDir = isAudioOnly ? 'Audio' : 'Video';
           const downloadDir = join(baseDir, formatDir);
           try {
             if (!existsSync(downloadDir)) {
@@ -734,6 +739,8 @@ autoUpdater.on('update-downloaded', (info) => {
 });
 
 autoUpdater.on('update-download-progress', (progress) => {
+  console.log("progress",progress);
+  
   console.log(`Download speed: ${progress.bytesPerSecond}`);
   console.log(`Downloaded ${progress.percent.toFixed(2)}%`);
   console.log(`${progress.transferred} / ${progress.total}`);
