@@ -480,14 +480,15 @@ item.bitrate.toLowerCase()===bitrate.toLowerCase()
       }
 
       window.api.onDownloadProgress(handleProgress)
+console.log("bitrate",item.bitrate);
 
       await window.api.downloadVideo({
         id: currentId,
         url: item.url,
-        isAudioOnly: item.downloadType === 'Audio',
+        isAudioOnly: item.downloadType === 'audio',
         selectedFormat: item.format,
         selectedQuality:item.quality,
-        selectBitrate: item.downloadType === 'Audio' ? item.bitrate : null,
+        selectBitrate: item.downloadType === 'audio' ? item.bitrate : null,
         saveTo
       })
 

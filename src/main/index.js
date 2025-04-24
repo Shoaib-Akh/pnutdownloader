@@ -447,6 +447,7 @@ const startDownload = async (event, options) => {
       }
 
       const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate } = options;
+console.log("options",options);
 
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
@@ -555,15 +556,8 @@ const startDownload = async (event, options) => {
       
         let downloadPath;
         if (isPlaylist) {
-          const playlistDir = join(baseDir, sanitizedTitle); // Use only sanitizedTitle for directory
-          try {
-            if (!existsSync(playlistDir)) {
-              mkdirSync(playlistDir, { recursive: true });
-            }
-          } catch (dirError) {
-            throw new Error(`Failed to create playlist directory: ${dirError.message}`);
-          }
-          downloadPath = join(playlistDir, `%(title)s.%(ext)s`); // Let yt-dlp handle individual titles
+          const playlistDir = join(baseDir, '%(playlist_title)s');
+          downloadPath = join(playlistDir, `%(title)s.%(ext)s`);         
         } else {
           const formatDir = isAudioOnly ? 'audio' : 'video';
           const downloadDir = join(baseDir, formatDir);
