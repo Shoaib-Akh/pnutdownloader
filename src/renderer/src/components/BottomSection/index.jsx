@@ -183,7 +183,7 @@ function BottomSection({
         item.quality.toLowerCase() === quality.toLowerCase() &&
         item.saveTo.toLowerCase() === saveTo.toLowerCase() &&
         item.downloadType.toLowerCase() === downloadType.toLowerCase() &&
-item.bitrate.toLowerCase()===bitrate.toLowerCase()
+item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
     );
   
     if (isDuplicate) {
