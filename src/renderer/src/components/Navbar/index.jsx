@@ -1,77 +1,177 @@
-import React from 'react'
-import { FaPaste, FaCog, FaUser } from 'react-icons/fa'
-import Logo from '../../assets/Images/logo.png'
-import '../common.css'
-import CustomDropdown from '../CustomDropdown'
-import { extractYotubePastLink } from '../commonFunction'
+import React from 'react';
+import { FaPaste } from 'react-icons/fa';
+import Logo from '../../assets/Images/logo.png';
+import '../common.css';
+import CustomDropdown from '../CustomDropdown';
+import { extractYotubePastLink } from '../commonFunction';
 
-function Navbar({
-  saveTo,
-  setSaveTo,
-  setQuality,
-  setFormat,
-  quality,
-  format,
-  setDownloadType,
-  downloadType,
-  setPastLinkUrl,
-  setBitrate, // New prop for setting bitrate
-  bitrate // New prop for current bitrate
-}) {
-  // Format options based on download type
+function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType }) {
   const formatOptions = {
     Video: ['MP4', 'AVI', 'MKV'],
-    Audio: ['MP3', 'FLAC', 'WAV', 'AAC', ],
-    // Subtitles: ['SRT']
-  }
+    Audio: ['MP3', 'FLAC', 'WAV', 'AAC'],
+  };
 
-  // Bitrate options for audio
-  const bitrateOptions = ['320K','256K','192K','128K', '96K', ,'64K', ]
+  const bitrateOptions = ['320K', '256K', '192K', '128K', '96K', '64K'];
+  const saveToOptions = ['Downloads', 'Desktop', 'Custom'];
 
-  // Ensure format is always in sync with the selected download type
+  // Map quality state to dropdown option (e.g., "1080p" -> "1080p (HD)")
+  const getQualityDisplay = (qualityValue) => {
+    const qualityMap = {
+      '2160p': '2160p (4K)',
+      '1440p': '1440p (HD)',
+      '1080p': '1080p (HD)',
+      '720p': '720p',
+      '480p': '480p',
+      '360p': '360p',
+      '240p': '240p',
+      '144p': '144p',
+    };
+    return qualityMap[qualityValue] || qualityValue; // Fallback to qualityValue if not found
+  };
+
+  // Get value from localStorage or return default
+  const getLocalStorageValue = (key, defaultValue) => {
+    try {
+      const savedState = JSON.parse(localStorage.getItem('navbarState')) || {};
+      return savedState[key] !== undefined ? savedState[key] : defaultValue;
+    } catch (e) {
+      console.error('Failed to read from localStorage:', e);
+      return defaultValue;
+    }
+  };
+
+  // Save value to localStorage without triggering re-render
+  const saveToLocalStorage = (key, value) => {
+    try {
+      const currentState = JSON.parse(localStorage.getItem('navbarState')) || {};
+      const newState = { ...currentState, [key]: value };
+      localStorage.setItem('navbarState', JSON.stringify(newState));
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+    }
+  };
+
+  // Initialize localStorage with default values on first render
+  React.useEffect(() => {
+    const navbarState = JSON.parse(localStorage.getItem('navbarState'));
+    if (!navbarState) {
+      const defaultState = {
+        downloadType: 'Video',
+        format: formatOptions['Video'][0],
+        quality: '1080p',
+        bitrate: '128K',
+        saveTo: 'Downloads',
+      };
+      localStorage.setItem('navbarState', JSON.stringify(defaultState));
+      setDownloadType(defaultState.downloadType);
+      setFormat(defaultState.format);
+      setQuality(defaultState.quality);
+      setBitrate(defaultState.bitrate);
+      setSaveTo(defaultState.saveTo);
+    } else {
+      setDownloadType(getLocalStorageValue('downloadType', 'Video'));
+      setFormat(getLocalStorageValue('format', formatOptions['Video'][0]));
+      setQuality(getLocalStorageValue('quality', '1080p'));
+      setBitrate(getLocalStorageValue('bitrate', '128K'));
+      setSaveTo(getLocalStorageValue('saveTo', 'Downloads'));
+    }
+  }, []); // Empty dependency array to run only once on mount
+
+  // Ensure format is valid when downloadType changes
   React.useEffect(() => {
     if (downloadType && formatOptions[downloadType]) {
-      setFormat(formatOptions[downloadType][0]) // Set the first format option as default
+      const currentFormat = getLocalStorageValue('format', formatOptions[downloadType][0]);
+      if (!formatOptions[downloadType].includes(currentFormat)) {
+        setFormat(formatOptions[downloadType][0]);
+        saveToLocalStorage('format', formatOptions[downloadType][0]);
+      }
     }
-  }, [downloadType, setFormat])
+  }, [downloadType, formatOptions]);
 
   // Ensure bitrate is reset when switching away from Audio
   React.useEffect(() => {
     if (downloadType !== 'Audio') {
-      setBitrate(null) // Reset bitrate when not downloading audio
+      if (bitrate !== null) {
+        setBitrate(null);
+        saveToLocalStorage('bitrate', null);
+      }
     } else if (!bitrate) {
-      setBitrate(bitrateOptions[3]) // Set default bitrate (64k) for audio
+      setBitrate(bitrateOptions[3]);
+      saveToLocalStorage('bitrate', bitrateOptions[3]);
     }
-  }, [downloadType, setBitrate, bitrate, bitrateOptions])
+  }, [downloadType, bitrate, bitrateOptions]);
 
- 
-  let downloadListData = [];
-  try {
-    downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
-  } catch (e) {
-    console.error("Failed to parse downloadList from localStorage:", e);
-  }
+  // Handle dropdown changes
+  const handleDownloadTypeChange = (value) => {
+    setDownloadType(value);
+    saveToLocalStorage('downloadType', value);
+  };
+
+  const handleFormatChange = (value) => {
+    setFormat(value);
+    saveToLocalStorage('format', value);
+  };
+
+  const handleQualityChange = (value) => {
+    const pureQuality = value.split(' ')[0]; // Extract resolution (e.g., "1440p")
+    setQuality(pureQuality);
+    saveToLocalStorage('quality', pureQuality);
+  };
+
+  const handleBitrateChange = (value) => {
+    setBitrate(value);
+    saveToLocalStorage('bitrate', value);
+  };
+
+  const handleSaveToSelect = async (value) => {
+    if (value === 'Custom') {
+      try {
+        const folderPath = await window.api.selectFolder();
+        if (folderPath) {
+          setSaveTo(folderPath);
+          saveToLocalStorage('saveTo', folderPath);
+        } else {
+          setSaveTo('Downloads');
+          saveToLocalStorage('saveTo', 'Downloads');
+        }
+      } catch (error) {
+        console.error('Failed to select folder:', error);
+        alert('Failed to select a folder. Defaulting to Downloads.');
+        setSaveTo('Downloads');
+        saveToLocalStorage('saveTo', 'Downloads');
+      }
+    } else {
+      setSaveTo(value);
+      saveToLocalStorage('saveTo', value);
+    }
+  };
+
+  const getSaveToDisplay = () => {
+    if (saveToOptions.includes(saveTo)) {
+      return saveTo;
+    }
+    const folderName = saveTo.split(/[\\/]/).pop() || 'Custom';
+    return folderName;
+  };
 
   return (
-    <nav className=" p-3 " style={{backgroundColor:"white"}}>
-      <div className="d-flex align-items-center justify-content-between flex-grow-1 " >
-        {/* Left Side - Logo */}
-        <div href="#" style={{ cursor: "default",width:"17%", }} className= "logo-div">
-          <img src={Logo} alt="PNUT Logo" className='logo' />
+    <nav className="p-3" style={{ backgroundColor: 'white' }}>
+      <div className="d-flex align-items-center justify-content-between flex-grow-1">
+        <div href="#" style={{ cursor: 'default', width: '17%' }} className="logo-div">
+          <img src={Logo} alt="PNUT Logo" className="logo" />
         </div>
-  
-        {/* Center Section - Options */}
-        <div
-          className="d-flex align-items-center justify-content-between flex-grow-1  bg-body"
-          style={{ padding: 10,borderRadius:5 ,
-               boxShadow: "rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px"
 
+        <div
+          className="d-flex align-items-center justify-content-between flex-grow-1 bg-body"
+          style={{
+            padding: 10,
+            borderRadius: 5,
+            boxShadow: 'rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px',
           }}
         >
           <div className="d-flex" style={{ gap: 2 }}>
-            {/* Paste Link Button */}
             <button
-              className="btn btn-danger d-flex align-items-center  px-3"
+              className="btn btn-danger d-flex align-items-center px-3"
               style={{ background: '#BB4F28', fontSize: 15 }}
               onClick={async () => {
                 try {
@@ -79,11 +179,13 @@ function Navbar({
                   if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
                     const videoId = extractYotubePastLink(clipboardText);
                     if (!videoId) {
-                      alert('The URL does not contain a valid video or playlist ');
+                      alert('The URL does not contain a valid video or playlist');
                       return;
                     }
                     let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-                    const existingDownload = storedDownloads.some((item) => extractYotubePastLink(item.url) === videoId);
+                    const existingDownload = storedDownloads.some(
+                      (item) => extractYotubePastLink(item.url) === videoId
+                    );
                     if (existingDownload) {
                       if (!window.alertShown) {
                         window.api.showMessageBox({
@@ -107,63 +209,52 @@ function Navbar({
             >
               <FaPaste className="me-2" /> Paste
             </button>
-  
-            {/* Dropdown for Download Type */}
+
             <CustomDropdown
               label="Download"
               options={Object.keys(formatOptions)}
               selected={downloadType}
-              onSelect={(value) => setDownloadType(value)}
+              onSelect={handleDownloadTypeChange}
             />
-  
-            {/* Quality Dropdown for Video */}
+
             {downloadType === 'Video' && (
               <CustomDropdown
                 label="Quality"
-                options={['1080p', '720p', '480p', '360p', '240p']}
-                selected={quality}
-                onSelect={setQuality}
+                options={['2160p (4K)', '1440p (HD)', '1080p (HD)', '720p', '480p', '360p', '240p', '144p']}
+                selected={getQualityDisplay(quality)} // Use display value for dropdown
+                onSelect={handleQualityChange}
               />
             )}
-  
-            {/* Bitrate Dropdown for Audio */}
+
             {downloadType === 'Audio' && (
               <CustomDropdown
-                label="Quailty"
+                label="Quality"
                 options={bitrateOptions}
                 selected={bitrate}
-                onSelect={setBitrate}
+                onSelect={handleBitrateChange}
               />
             )}
-  
-            {/* Format Dropdown */}
+
             {formatOptions[downloadType] && (
               <CustomDropdown
                 label="Format"
                 options={formatOptions[downloadType]}
                 selected={format}
-                onSelect={setFormat}
+                onSelect={handleFormatChange}
               />
             )}
-  
-            {/* Dropdown for Save Location */}
+
             <CustomDropdown
               label="Save To"
-              options={['Downloads', 'Desktop']}
-              selected={saveTo}
-              onSelect={setSaveTo}
+              options={saveToOptions}
+              selected={getSaveToDisplay()}
+              onSelect={handleSaveToSelect}
             />
           </div>
-  
-          {/* Right Side - Settings & Profile Icons */}
-          {/* <div className="d-flex align-items-center">
-            <FaCog className="fs-5 me-3 cursor-pointer" title="Settings" />
-            <FaUser className="fs-5 cursor-pointer" title="Profile" />
-          </div> */}
         </div>
       </div>
     </nav>
-  )
+  );
 }
 
-export default Navbar
+export default Navbar;

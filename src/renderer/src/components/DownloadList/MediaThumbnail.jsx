@@ -9,7 +9,8 @@ import {
   FaSnapchat,
   FaReddit,
   FaWhatsapp,
-  FaVimeo
+  FaVimeo,
+  FaPlayCircle, // Import play button icon
 } from 'react-icons/fa';
 
 const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downloadType, id }) => {
@@ -23,7 +24,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
     snapchat: <FaSnapchat className="iconstyle" style={{ color: '#FFFC00' }} />,
     reddit: <FaReddit className="iconstyle" style={{ color: '#FF4500' }} />,
     whatsapp: <FaWhatsapp className="iconstyle" style={{ color: '#25D366' }} />,
-    vimeo: <FaVimeo className="iconstyle" style={{ color: '#1AB7EA' }} />
+    vimeo: <FaVimeo className="iconstyle" style={{ color: '#1AB7EA' }} />,
   };
 
   const platform = Object.keys(socialIcons).find((key) => url?.includes(key));
@@ -32,26 +33,33 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
   return (
     <div
       className="d-flex align-items-center text-nowrap overflow-hidden"
-      key={id} // Use id as a unique key for rendering in lists
+      key={id}
     >
-      <span className="me-2 flex-shrink-0">
+      <span className="me-2 flex-shrink-0 position-relative">
         {icon || (
-          <img
-            onClick={onClick}
-            crossOrigin="anonymous"
-            title="Play video"
-            src={thumbnail}
-            alt="Thumbnail"
-            onError={(e) => (e.target.style.display = 'none')}
-            className="img-fluid rounded"
-            style={{
-              height: '40px',
-              objectFit: 'cover',
-              cursor: 'pointer',
-              maxWidth: '200px',
-              aspectRatio: '16 / 9'
-            }}
-          />
+          <div className="thumbnail-wrapper" 
+          onClick={onClick}
+          style={{ display: 'inline-block' }}>
+            <img
+              onClick={onClick}
+              crossOrigin="anonymous"
+              title="Play video"
+              src={thumbnail}
+              alt="Thumbnail"
+              onError={(e) => (e.target.style.display = 'none')}
+              className="img-fluid rounded"
+              style={{
+                height: '40px',
+                objectFit: 'cover',
+                cursor: 'pointer',
+                maxWidth: '200px',
+                aspectRatio: '16 / 9',
+              }}
+            />
+            <div className="play-overlay">
+              <FaPlayCircle className="play-icon" style={{ fontSize: '24px', color: 'white' }} />
+            </div>
+          </div>
         )}
       </span>
       <span

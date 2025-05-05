@@ -7,7 +7,7 @@ import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
 
-function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType}) {
+function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen}) {
   const [openDropdown, setOpenDropdown] = useState(null)
   
   // useEffect(() => {
@@ -52,6 +52,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
     window.api.pauseDownload(items.id)
   }
+console.log("videoInfo",videoInfo);
 
   // const filteredList =
   //   JSON.parse(localStorage.getItem('downloadList')) ||
@@ -70,20 +71,20 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   let downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
-  const filteredList = (downloadListData || videoInfo)
+  const filteredList = (downloadListData )
     .filter((item) => {
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=');
       if (selectedItem === 'Playlist') return isPlaylist;
-      if (selectedItem === 'Video') return item.format === 'MP4' && !isPlaylist;
-      if (selectedItem === 'Audio') return ['MP3', 'FLAC', 'WAV', 'AAC'].includes(item.format);
+      if (selectedItem === 'Video') return item.format === 'mp4' && !isPlaylist;
+      if (selectedItem === 'Audio') return ['mp3', 'flac', 'wav', 'aac'].includes(item.format);
       if (selectedItem === 'All File') return true;
       return false;
     })
     .sort((a, b) => {
       // If filtering by Audio, sort by format; otherwise, sort by URL for Playlists or keep original order
       if (selectedItem === 'Audio') {
-        const audioFormats = ['MP3', 'FLAC', 'WAV', 'AAC']; // Define order of formats
+        const audioFormats = ['mp3', 'flac', 'wav', 'aac']; // Define order of formats
         return audioFormats.indexOf(a.format) - audioFormats.indexOf(b.format);
       }
       if (selectedItem === 'Playlist') return a.url.localeCompare(b.url);
@@ -106,50 +107,84 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       return;
     }
   
+    console.log(`Starting handleThumbnailClick: title=${item.title}, fileType=${item.downloadType}, saveTo=${item.saveTo}`);
+  
     try {
-      const desktopPath = await window.api.getPath('downloads');
-      const audioDownloadDir = `${desktopPath}/PNUT Downloader/Audio`;
-      const videoDownloadDir = `${desktopPath}/PNUT Downloader/Video`;
+      // Define extensions based on fileType
+      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi'];
+      const audioExtensions = ['mp3', 'flac', 'wav', 'aac'];
+      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
+      console.log(`Possible extensions: ${possibleExtensions}`);
   
-      // Normalize the title for matching
+      // Build search directories
+      let allPathsToSearch = [];
+  
+      // Check item.saveTo
+      if (item.saveTo && typeof item.saveTo === 'string') {
+        try {
+          await window.api.readDirectory(item.saveTo);
+          allPathsToSearch.push(item.saveTo);
+          console.log(`Valid saveTo path added: ${item.saveTo}`);
+        } catch (err) {
+          console.warn(`saveTo path not accessible: ${item.saveTo}`, err);
+        }
+      }
+  
+      // Add fallback folders
+      const fallbackFolders = [
+        await window.api.getPath('downloads'),
+        await window.api.getPath('desktop'),
+      ];
+      console.log(`Fallback folders: ${fallbackFolders}`);
+  
+      // Avoid duplicates
+      fallbackFolders.forEach((path) => {
+        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path);
+      });
+      console.log(`All paths to search: ${allPathsToSearch}`);
+  
+      // Create subdirectories based on fileType
+      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
+      const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`);
+      console.log(`Search directories: ${directories}`);
+  
+      // Normalize title (flexible for long titles)
       const normalizedTitle = item.title
-        .replace(/\|/g, '｜')
-        .replace(/：/g, ':')
+        .toLowerCase()
+        .replace(/[\|\:]/g, '_')
         .replace(/’/g, "'")
-        .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
-        .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+        .replace(/[^a-zA-Z0-9\s\.\-]/g, '')
+        .replace(/\s+/g, ' ')
         .trim()
-        .toLowerCase();
+        .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, ''); // Remove extension if present
+      console.log(`Normalized title: ${normalizedTitle}`);
   
-      const possibleExtensions = ['mp4', 'webm', 'mkv', 'avi', 'mp3', 'flac', 'wav', 'aac'];
-      const directories = [videoDownloadDir, audioDownloadDir];
       let filePath = null;
   
-      console.log('Searching for file with normalized title:', normalizedTitle);
-  
+      // Search directories
       for (const dir of directories) {
         try {
+          console.log(`Reading directory: ${dir}`);
           const files = await window.api.readDirectory(dir);
-          console.log(`Files in ${dir}:`, files);
+          console.log(`Files found in ${dir}: ${files.join(', ')}`);
   
           filePath = files.find((file) => {
             const fileName = file.toLowerCase();
             const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
             const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
             const normalizedFileTitle = titlePart
-              .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
-              .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
-              .trim()
-              .toLowerCase();
+              .replace(/[\|\:]/g, '_')
+              .replace(/[^a-zA-Z0-9\s\.\-]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
   
-            // Exact match or partial match (if the title is long)
             const isExactMatch = normalizedFileTitle === normalizedTitle;
-            const isPartialMatch =
-              normalizedTitle.length > 20 &&
-              normalizedFileTitle.includes(normalizedTitle.slice(0, 20));
+            const isPartialMatch = normalizedFileTitle.includes(
+              normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
+            );
   
             console.log(
-              `Checking file: ${fileName}, Title part: ${titlePart}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
+              `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
             );
   
             return hasValidExtension && (isExactMatch || isPartialMatch);
@@ -157,8 +192,10 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   
           if (filePath) {
             filePath = `${dir}\\${filePath}`;
-            console.log('Found file with full path:', filePath);
+            console.log(`File found: ${filePath}`);
             break;
+          } else {
+            console.log(`No matching file found in ${dir}`);
           }
         } catch (dirError) {
           console.error(`Error reading directory ${dir}:`, dirError);
@@ -166,26 +203,26 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       }
   
       if (filePath) {
-        console.log('Attempting to open file:', filePath);
+        console.log(`Attempting to open file: ${filePath}`);
         try {
           const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
           await window.api.openExternal(fileUrl);
-          console.log('File opened successfully via openExternal');
+          console.log('File opened successfully');
         } catch (openError) {
-          console.error('Failed to open file:', openError);
+          console.error(`Failed to open file ${filePath}:`, openError);
           alert('Failed to open file: ' + openError.message);
         }
       } else {
-        console.error('File not found for title:', item.title, 'Normalized:', normalizedTitle);
-        alert(
-          'File not found. It may have been moved, deleted, or saved with a different name.'
-        );
+        console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${fileType}`);
+        alert('File not found. It may have been moved, deleted, or saved with a different name.');
       }
     } catch (error) {
       console.error('Error in handleThumbnailClick:', error);
       alert('Failed to process file. Please check the console for details.');
     }
   };
+  
+
   return (
     <div className="container-fluid p-0">
       <div className="table-container">
@@ -231,7 +268,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
                 return (
                   <tr key={item.id} className="data-row">
                     <td className="data-cell" style={{ textAlign: 'start' }}>
-                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' ||item.status === 'Waiting'? (
                         <Skeleton width={100} height={50} />
                       ) : (
                         <MediaThumbnail
@@ -247,21 +284,21 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
                       )}
                     </td>
                     <td className="data-cell">
-                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' ||  item.status === 'Queued' ||item.status === 'Waiting' ? (
                         <Skeleton width={50} />
                       ) : (
                         formatTime(convertISODurationToSeconds(item.duration))
                       )}
                     </td>
                     <td className="data-cell text-uppercase">
-                      {item.status === 'Fetching Info...' || item.status === 'Queued' ? (
+                      {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting'? (
                         <Skeleton width={50} />
                       ) : (
                         item.format
                       )}
                     </td>
                     <td className="data-cell" style={{ fontWeight: '600', }}>
-                      {['Fetching Info...', 'Queued'].includes(item.status) ? (
+                      {['Fetching Info...', 'Queued',"Waiting"].includes(item.status) ? (
                         <Skeleton width={100} />
                       ) : item.isPlaylist ? (
                         <>

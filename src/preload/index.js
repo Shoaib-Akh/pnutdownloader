@@ -63,7 +63,8 @@ const api = {
   downloadUpdate: () => ipcRenderer.send('download-update'),
   installUpdate: () => ipcRenderer.send('install-update'),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
-  
+  selectFolder: () => ipcRenderer.invoke('select-folder'),
+
 }
 
 // Expose API to renderer process

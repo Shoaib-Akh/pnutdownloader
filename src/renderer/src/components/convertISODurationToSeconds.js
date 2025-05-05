@@ -1,3 +1,4 @@
+// Existing functions (unchanged)
 export const convertISODurationToSeconds = (duration) => {
     // Handle "h:m:s.sssss" format (e.g., "1:2:7.219999999999999")
     if (typeof duration === 'string' && /^\d+:\d+:\d+\.\d+$/.test(duration)) {
@@ -52,3 +53,35 @@ export const formatTime = (seconds) => {
     }
     return `${minutes}:${secs.toString().padStart(2, '0')}`; // Maintain original format for < 1 hour
 };
+
+// New function to add duration to item.duration
+export const addDuration = (item, newDuration) => {
+    // If item.duration is not set, assign newDuration directly
+    if (!item.duration) {
+        item.duration = newDuration;
+        return;
+    }
+
+    // Convert both durations to seconds
+    const currentSeconds = convertISODurationToSeconds(item.duration);
+    const newSeconds = convertISODurationToSeconds(newDuration);
+
+    // If either duration is invalid, keep the original
+    if (typeof currentSeconds !== 'number' || typeof newSeconds !== 'number') {
+        return;
+    }
+
+    // Add the durations and format back to time
+    const totalSeconds = currentSeconds + newSeconds;
+    item.duration = formatTime(totalSeconds);
+};
+
+// Example usage
+const item = { duration: "5:30" }; // Existing duration (5 minutes, 30 seconds)
+addDuration(item, "17:00"); // Add 17 minutes
+console.log(item.duration); // Output: "22:30" (5:30 + 17:00 = 22 minutes, 30 seconds)
+
+// If item.duration is not set
+const newItem = {};
+addDuration(newItem, "17:00");
+console.log(newItem.duration); // Output: "17:00"

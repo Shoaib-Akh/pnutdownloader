@@ -233,6 +233,7 @@ function createWindow() {
       webviewTag: true,
       nodeIntegration: false,
       contextIsolation: true,
+      webSecurity: false,
     },
   });
 
@@ -395,6 +396,8 @@ ipcMain.handle('getYoutubeCookies', async () => {
 });
 
 ipcMain.handle('fetch-video-info', async (event, url) => {
+  console.log("url",url);
+  
   return new Promise((resolve, reject) => {
     const args = ['-J', url];
     const proc = spawn(ytdlpPath, args);
@@ -461,10 +464,15 @@ console.log("options",options);
       if (activeDownloads[downloadId]) {
         return reject(new Error('Download already in progress.'));
       }
-
-      const baseDir = saveTo === 'Desktop'
-        ? join(app.getPath('desktop'), 'PNUT Downloader')
-        : join(app.getPath('downloads'), 'PNUT Downloader');
+      let baseDir;
+      if (saveTo === 'desktop') {
+        baseDir = join(app.getPath('desktop'), 'PNUT Downloader');
+      } else if (saveTo === 'downloads') {
+        baseDir = join(app.getPath('downloads'), 'PNUT Downloader');
+      } else {
+        // Assume saveTo is a custom folder path
+        baseDir = join(saveTo, 'PNUT Downloader');
+      }
 
       try {
         if (!existsSync(baseDir)) {
@@ -636,7 +644,12 @@ console.log("options",options);
     }
   });
 };
-
+ipcMain.handle('select-folder', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openDirectory'],
+  });
+  return result.canceled ? null : result.filePaths[0]; // Return null if canceled, else folder path
+})
 ipcMain.handle('downloadVideo', async (event, options) => {
   console.log('Starting download...');
   try {
