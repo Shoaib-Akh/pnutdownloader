@@ -15,19 +15,22 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   const saveToOptions = ['Downloads', 'Desktop', 'Custom'];
 
   // Map quality state to dropdown option (e.g., "1080p" -> "1080p (HD)")
+  const qualityOptions = [
+    { value: '2160p', label: '2160p', badge: '4K' },
+    { value: '1440p', label: '1440p', badge: 'HD' },
+    { value: '1080p', label: '1080p', badge: 'HD' },
+    { value: '720p', label: '720p' },
+    { value: '480p', label: '480p' },
+    { value: '360p', label: '360p' },
+    { value: '240p', label: '240p' },
+    { value: '144p', label: '144p' },
+  ];
+
+  // Get display label for selected quality
   const getQualityDisplay = (qualityValue) => {
-    const qualityMap = {
-      '2160p': '2160p (4K)',
-      '1440p': '1440p (HD)',
-      '1080p': '1080p (HD)',
-      '720p': '720p',
-      '480p': '480p',
-      '360p': '360p',
-      '240p': '240p',
-      '144p': '144p',
-    };
-    return qualityMap[qualityValue] || qualityValue; // Fallback to qualityValue if not found
-  };
+    const option = qualityOptions.find(opt => opt.value === qualityValue);
+    return option ? option.label : qualityValue;
+  } 
 
   // Get value from localStorage or return default
   const getLocalStorageValue = (key, defaultValue) => {
@@ -154,6 +157,27 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     return folderName;
   };
 
+  const renderQualityOption = (option) => (
+    <div className="d-flex align-items-center">
+      <span>{option.label}</span>
+      {option.badge && (
+        <span 
+          className="badge rounded-pill ms-2" 
+          style={{
+            backgroundColor:  '#007bff',
+            color: 'white',
+            fontSize: '0.65rem',
+            padding: '2px 6px',
+            fontWeight: 'normal'
+          }}
+        >
+          {option.badge}
+        </span>
+      )}
+    </div>
+  );
+
+
   return (
     <nav className="p-3" style={{ backgroundColor: 'white' }}>
       <div className="d-flex align-items-center justify-content-between flex-grow-1">
@@ -218,12 +242,17 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             />
 
             {downloadType === 'Video' && (
-              <CustomDropdown
-                label="Quality"
-                options={['2160p (4K)', '1440p (HD)', '1080p (HD)', '720p', '480p', '360p', '240p', '144p']}
-                selected={getQualityDisplay(quality)} // Use display value for dropdown
-                onSelect={handleQualityChange}
-              />
+               <CustomDropdown
+               label="Quality"
+               options={qualityOptions}
+               selected={quality}
+               onSelect={handleQualityChange}
+               renderOption={renderQualityOption}
+               renderSelected={(value) => {
+                 const option = qualityOptions.find(opt => opt.value === value);
+                 return renderQualityOption(option || { value, label: value });
+               }}
+             />
             )}
 
             {downloadType === 'Audio' && (

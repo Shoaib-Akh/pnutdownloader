@@ -654,3 +654,28 @@ border-bottom:  0.5px solid #faaa8d;
 .play-icon {
   cursor: pointer;
 }
+/* Existing styles in common.css (assumed) */
+.logo {
+  width: 100%;
+  height: auto;
+}
+
+.logo-div {
+  display: flex;
+  align-items: center;
+}
+
+/* New styles for circular (HD) and (4K) labels */
+.quality-label-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e0e0e0; /* Light gray background */
+  color: #333; /* Dark text color */
+  font-size: 12px;
+  font-weight: bold;
+}

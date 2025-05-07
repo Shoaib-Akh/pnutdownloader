@@ -1,37 +1,66 @@
-import React, { useState, useEffect } from "react";
-import { Dropdown, DropdownButton } from "react-bootstrap";
+import React, { useState } from "react";
+import { Dropdown } from "react-bootstrap";
 import { FaCheck, FaAngleDown } from "react-icons/fa";
 
-function CustomDropdown({ label, options, selected, onSelect }) {
+function CustomDropdown({ label, options, selected, onSelect, renderOption, renderSelected }) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Helper to handle both string and object options
+  const getDisplayValue = (option) => {
+    if (typeof option === 'object') return option?.label || option?.value;
+    return option;
+  };
+
   return (
-    <DropdownButton
-      id="custom-dropdown"
+    <Dropdown onToggle={(isOpen) => setIsOpen(isOpen)}>
+      <Dropdown.Toggle
+        variant="light"
+        id="custom-dropdown"
+        style={{
+          fontSize: "12px",
+          lineHeight: "30px",
+          color: isOpen ? "black" : "#A1A1A1",
+          backgroundColor: "transparent",
+          padding: "0 10px",
+          border: "none",
+          display:"flex",
+          justifyContent:"center",
+          alignItems:"center"
+        }}
+      >
+        <span style={{ color: isOpen ? "black" : "#A1A1A1" }}>{label}:</span>{" "}
+        <span style={{ color: "black" }}>
+          {renderSelected ? renderSelected(selected) : getDisplayValue(options.find(opt => 
+            (typeof opt === 'object' ? opt.value : opt) === selected) || selected
+          )}
+        </span>
+        <FaAngleDown
+          className={`ms-1 transition ${isOpen ? "rotate-180" : ""}`}
+        />
+      </Dropdown.Toggle>
 
-      title={
-        <>
-          <span style={{ color: isOpen?"black": "#A1A1A1" }}>{label}</span> {selected}
-          <FaAngleDown
-            className={`ms-1 transition ${isOpen ? "rotate-180" : ""}`}
-          />
-        </>
-      }
-      variant="light"
-      className="border-0"
-      style={{fontSize:"12px",
-
-    lineHeight: "30px"
-
-      }}
-      onToggle={(isOpen) => setIsOpen(isOpen)}
-    >
-      {options.map((option, index) => (
-        <Dropdown.Item key={index} onClick={() => onSelect(option)}>
-          {option} {selected === option && <FaCheck className="float-end" />}
-        </Dropdown.Item>
-      ))}
-    </DropdownButton>
+      <Dropdown.Menu>
+        {options.map((option, index) => {
+          const value = typeof option === 'object' ? option.value : option;
+          const displayValue = getDisplayValue(option);
+          
+          return (
+            <Dropdown.Item 
+              key={index} 
+              onClick={() => onSelect(value)}
+              style={{ fontSize: "12px" }}
+            >
+              <div className="d-flex justify-content-between align-items-center w-100">
+                <span>
+                  {renderOption ? renderOption(option) : displayValue}
+                </span>
+                {selected === value && <FaCheck className="float-end" />}
+              </div>
+            </Dropdown.Item>
+          );
+        })}
+      </Dropdown.Menu>
+    </Dropdown>
   );
 }
 

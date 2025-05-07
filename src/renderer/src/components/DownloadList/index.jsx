@@ -52,7 +52,6 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
     window.api.pauseDownload(items.id)
   }
-console.log("videoInfo",videoInfo);
 
   // const filteredList =
   //   JSON.parse(localStorage.getItem('downloadList')) ||

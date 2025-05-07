@@ -8,6 +8,7 @@ import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
 import { machineId, machineIdSync } from 'node-machine-id'
+import { extractVideoId } from '../renderer/src/components/commonFunction';
 const https = require('https');
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
@@ -233,7 +234,7 @@ function createWindow() {
       webviewTag: true,
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: false,
+     
     },
   });
 
@@ -464,10 +465,11 @@ console.log("options",options);
       if (activeDownloads[downloadId]) {
         return reject(new Error('Download already in progress.'));
       }
+      
       let baseDir;
-      if (saveTo === 'desktop') {
+      if (saveTo === 'Desktop') {
         baseDir = join(app.getPath('desktop'), 'PNUT Downloader');
-      } else if (saveTo === 'downloads') {
+      } else if (saveTo === 'Downloads') {
         baseDir = join(app.getPath('downloads'), 'PNUT Downloader');
       } else {
         // Assume saveTo is a custom folder path
@@ -818,4 +820,97 @@ ipcMain.handle('fileExists', (event, filePath) => {
 
 ipcMain.handle('openFile', (event, filePath) => {
   shell.openPath(filePath);
+});
+const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
+const extractPlaylistId = (url) => {
+  const playlistMatch = url.match(
+    /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i
+  )
+  return playlistMatch ? playlistMatch[1] : null
+}
+const getVideoInfo = async (url) => {
+  const videoId = extractVideoId(url);
+  const playlistId = extractPlaylistId(url);
+  const customSanitize = (str) => {
+    if (!str) return 'Unknown';
+    return str
+      .replace(/[<>:"/\\|?*]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/[^a-zA-Z0-9._-]/g, ' ')
+      .replace(/^[.-]+|[.-]+$/g, ' ')
+      .substring(0, 200);
+  };
+  if (!videoId && !playlistId) return null;
+
+  if (url.includes('watch') || videoId) {
+    const response = await fetch(
+      `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
+    );
+    const data = await response.json();
+    if (data.items.length === 0) return null;
+    const { snippet, contentDetails } = data.items[0];
+
+    return {
+      videoUrl: url,
+      title: customSanitize(snippet.title),
+      thumbnail:
+        snippet?.thumbnails?.standard?.url ||
+        snippet?.thumbnails.default.url ||
+        snippet.thumbnails.high.url,
+      duration: contentDetails.duration,
+      isPlaylist: false
+    };
+  }
+
+  if (!url.includes('watch') && playlistId) {
+    const playlistResponse = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
+    );
+    const playlistData = await playlistResponse.json();
+
+    if (playlistData.items.length === 0) return null;
+    const { snippet } = playlistData.items[0];
+
+    const itemsResponse = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=2&key=${API_KEY}`
+    );
+    const itemsData = await itemsResponse.json();
+
+    const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com';
+    const videos = itemsData.items.map((item) => ({
+      videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
+      videoId: item.snippet.resourceId.videoId,
+      title: item.snippet.title,
+      thumbnail: isYouTubeMusic
+        ? snippet.thumbnails.standard.url ||
+          snippet.thumbnails.default.url ||
+          snippet.thumbnails.high.url
+        : snippet.thumbnails.standard.url ||
+          snippet.thumbnails.default.url ||
+          snippet.thumbnails.high.url
+    }));
+
+    return {
+      playlistUrl: url,
+      playlistTitle: customSanitize(snippet.title),
+      thumbnail: isYouTubeMusic
+        ? snippet.thumbnails.standard.url ||
+          snippet.thumbnails.default.url ||
+          snippet.thumbnails.high.url
+        : snippet.thumbnails.standard.url ||
+          snippet.thumbnails.default.url ||
+          snippet.thumbnails.high.url,
+      videos,
+      isPlaylist: true
+    };
+  }
+};
+
+ipcMain.handle('get-youtube-info', async (event, url) => {
+  try {
+    return await getVideoInfo(url);
+  } catch (error) {
+    console.error('Error getting video info:', error);
+    return null;
+  }
 });
