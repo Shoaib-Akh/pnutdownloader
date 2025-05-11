@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   FaInstagram,
   FaFacebook,
@@ -10,10 +10,14 @@ import {
   FaReddit,
   FaWhatsapp,
   FaVimeo,
-  FaPlayCircle, // Import play button icon
+  FaPlayCircle,
+  FaVideo, 
+  FaMusic, 
 } from 'react-icons/fa';
 
 const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downloadType, id }) => {
+  const [imageError, setImageError] = useState(false); 
+
   const socialIcons = {
     instagram: <FaInstagram className="iconstyle" style={{ color: '#E1306C' }} />,
     facebook: <FaFacebook className="iconstyle" style={{ color: '#1877F2' }} />,
@@ -29,7 +33,11 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
 
   const platform = Object.keys(socialIcons).find((key) => url?.includes(key));
   const icon = platform ? socialIcons[platform] : null;
-
+  const fallbackIcon = downloadType === 'audio' ? (
+    <FaMusic className="iconstyle" style={{ fontSize: '24px', color: '#666' }} />
+  ) : (
+    <FaVideo className="iconstyle" style={{ fontSize: '24px', color: '#666' }} />
+  );
   return (
     <div
       className="d-flex align-items-center text-nowrap overflow-hidden"
@@ -37,28 +45,35 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
     >
       <span className="me-2 flex-shrink-0 position-relative">
         {icon || (
-          <div className="thumbnail-wrapper" 
-          onClick={onClick}
-          style={{ display: 'inline-block' }}>
-            <img
-              onClick={onClick}
-              crossOrigin="anonymous"
-              title="Play video"
-              src={thumbnail}
-              alt="Thumbnail"
-              onError={(e) => (e.target.style.display = 'none')}
-              className="img-fluid rounded"
-              style={{
-                height: '40px',
-                objectFit: 'cover',
-                cursor: 'pointer',
-                maxWidth: '200px',
-                aspectRatio: '16 / 9',
-              }}
-            />
-            <div className="play-overlay">
-              <FaPlayCircle className="play-icon" style={{ fontSize: '24px', color: 'white' }} />
-            </div>
+          <div
+            className="thumbnail-wrapper"
+            onClick={onClick}
+            style={{ display: 'inline-block', cursor: 'pointer' }}
+          >
+            {thumbnail && !imageError ? (
+              <>
+                <img
+                  crossOrigin="anonymous"
+                  title="Play video"
+                  src={thumbnail}
+                  alt={icon}
+                  onError={() => setImageError(true)} // Set error state on failure
+                  className="img-fluid rounded"
+                  style={{
+                    height: '40px',
+                    objectFit: 'cover',
+                    cursor: 'pointer',
+                    maxWidth: '200px',
+                    aspectRatio: '16 / 9',
+                  }}
+                />
+                <div className="play-overlay">
+                  <FaPlayCircle className="play-icon" style={{ fontSize: '24px', color: 'white' }} />
+                </div>
+              </>
+            ) : (
+              fallbackIcon // Show fallback icon if thumbnail fails or is unavailable
+            )}
           </div>
         )}
       </span>

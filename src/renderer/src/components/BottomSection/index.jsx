@@ -20,6 +20,7 @@ import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../../../../public/all.json'
 import { extractVideoId } from '../commonFunction'
 import AboutUs from '../AboutUs'
+import LoginModal from '../LoginModal'
 
 function BottomSection({
   downloadType,
@@ -43,7 +44,12 @@ function BottomSection({
   updateInfo
 }) {
   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
-
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [isWebViewReady, setIsWebViewReady] = useState(false);
+  console.log("isWebViewReadyisWebViewReady",isWebViewReady);
+  
+  const [canGoBack, setCanGoBack] = useState(false);
+const [canGoForward, setCanGoForward] = useState(false);
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
@@ -119,20 +125,39 @@ function BottomSection({
   }
 
   useEffect(() => {
-    if (webviewRef.current) {
-      const webview = webviewRef.current
+    if (webviewRef.current && showWebView) {
+      const webview = webviewRef.current;
+  
+      const onDomReady = () => {
+        setIsWebViewReady(true);
+        // Check navigation status after dom-ready
+        setCanGoBack(webview.canGoBack());
+        setCanGoForward(webview.canGoForward());
+      };
+  
+      webview.addEventListener('dom-ready', onDomReady);
+  
       const handleNavigation = (event) => {
-        setCurrentWebViewUrl(event.url)
-        checkIfDownloadable(event.url)
-      }
-      webview.addEventListener('did-navigate', handleNavigation)
-      webview.addEventListener('did-navigate-in-page', handleNavigation)
+        setCurrentWebViewUrl(event.url);
+        checkIfDownloadable(event.url);
+
+        // Update navigation status after navigation
+        setCanGoBack(webview.canGoBack());
+        setCanGoForward(webview.canGoForward());
+      };
+  
+      webview.addEventListener('did-navigate', handleNavigation);
+      webview.addEventListener('did-navigate-in-page', handleNavigation);
+  
       return () => {
-        webview.removeEventListener('did-navigate', handleNavigation)
-        webview.removeEventListener('did-navigate-in-page', handleNavigation)
-      }
+        webview.removeEventListener('dom-ready', onDomReady);
+        webview.removeEventListener('did-navigate', handleNavigation);
+        webview.removeEventListener('did-navigate-in-page', handleNavigation);
+      };
     }
-  }, [showWebView])
+    setIsWebViewReady(true);
+
+  }, [showWebView,isWebViewReady]);
 
   useEffect(() => {
     if (currentWebViewUrl) window.api.getYoutubeCookies()
@@ -145,6 +170,7 @@ function BottomSection({
     setShowWebView(true)
     setIsDownloadable(false)
     setIsSidebarOpen(false)
+    setIsWebViewReady(false);
   }
 
   const handleCloseWebView = () => {
@@ -153,6 +179,7 @@ function BottomSection({
     setShowWebView(false)
     setIsDownloadable(false)
     setIsSidebarOpen(true)
+    setIsWebViewReady(false);
   }
 
   const handleResumeBrowser = () => {
@@ -208,6 +235,28 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
     addToQueue(urlToDownload);
   };
 
+  const handleLogin = () => {
+    const youtubeLoginUrl = 'https://accounts.google.com/ServiceLogin?service=youtube';
+    setCurrentWebViewUrl(youtubeLoginUrl);
+    setUrl(youtubeLoginUrl);
+    setLastUrl(youtubeLoginUrl);
+    setShowWebView(true);
+    setIsSidebarOpen(false);
+    setShowLoginPopup(false);
+    setIsWebViewReady(false); // Reset readiness
+  
+    if (webviewRef.current) {
+      const onDomReady = () => {
+        webviewRef.current.src = youtubeLoginUrl;
+        setIsWebViewReady(true);
+        setCanGoBack(webviewRef.current.canGoBack());
+        setCanGoForward(webviewRef.current.canGoForward());
+        webviewRef.current.removeEventListener('dom-ready', onDomReady);
+      };
+  
+      webviewRef.current.addEventListener('dom-ready', onDomReady);
+    }
+  };
   const getVideoInfo = async (url) => {
     const videoId = extractVideoId(url)
     const playlistId = extractPlaylistId(url)
@@ -366,18 +415,18 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
   
       const handleProgress = (progressData) => {
-        console.log('progressDataprogressData',progressData);
-        
+        console.log('progressData', progressData);
+      
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
         const itemIdx = stored.findIndex((i) => i.id === currentId);
         if (itemIdx === -1) return;
-  
+      
         // Only process message if it exists and is a string
         if (typeof progressData.message === 'string') {
           if (
             progressData.message.match(
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-            )
+            )&& stored[itemIdx].isPlaylist
           ) {
             // Skip getVideoInfo call; use existing item data
             stored[itemIdx] = {
@@ -389,7 +438,10 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
             };
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
-  
+      
+          // Check for authentication error
+       
+      
           if (progressData.message.includes('Destination:')) {
             if (progressData.message.includes('.mp4')) {
               currentFileTypes.current.set(currentId, 'video');
@@ -411,7 +463,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
             const rawProgress = parseFloat(progress);
             let totalProgress = 0;
             const currentFileType = currentFileTypes.current.get(currentId);
-  
+      
             if (currentFileType === 'video') {
               totalProgress = rawProgress * 0.9;
             } else if (currentFileType === 'audio') {
@@ -423,14 +475,14 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
                 `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
               );
             }
-  
+      
             setProgressMap((prev) => {
               const newMap = new Map(prev);
               newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
               return newMap;
             });
           }
-  
+      
           const itemCountMatch = progressData.message.match(
             /\[download\] Downloading item (\d+) of (\d+)/
           );
@@ -440,7 +492,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
             stored[itemIdx].totalItems = parseInt(totalItems);
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
-  
+      
           if (progressData.message.includes('has already been downloaded')) {
             stored[itemIdx].status = 'Completed';
             stored[itemIdx].isCompleted = true;
@@ -451,13 +503,13 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
             });
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
-  
+      
           if (progressData.message.includes('Finished downloading playlist:')) {
             stored[itemIdx].isPlaylistCompleted = true;
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
         }
-  
+      
         // Handle status updates (e.g., completion) even if message is missing
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed';
@@ -469,10 +521,17 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
           });
           localStorage.setItem('downloadList', JSON.stringify(stored));
         }
+        if (
+          progressData?.error?.includes('Sign in to confirm') ||
+          progressData?.error?.includes('exporting YouTube cookies')
+        ) {
+          setShowLoginPopup(true); // Trigger the modal to open
+         
+          
+        }
       };
   
       window.api.onDownloadProgress(handleProgress);
-      console.log('bitrate', item.bitrate);
   
       await window.api.downloadVideo({
         id: currentId,
@@ -495,7 +554,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
       const failedIndex = storedDownloads.findIndex((i) => i.id === currentId);
       console.log('error', error);
-  
+
       if (failedIndex !== -1) {
         storedDownloads[failedIndex].status = 'Failed';
         storedDownloads[failedIndex].isFailed = true;
@@ -632,18 +691,20 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
               <button
                 className="nav-btn"
                 onClick={() => webviewRef.current?.goBack()}
-                disabled={!webviewRef.current?.canGoBack()}
+                disabled={!isWebViewReady || !canGoBack}
               >
                 <FaArrowLeft size={16} />
               </button>
               <button
                 className="nav-btn"
                 onClick={() => webviewRef.current?.goForward()}
-                disabled={!webviewRef.current?.canGoForward()}
+                disabled={!isWebViewReady || !canGoForward}
               >
                 <FaArrowRight size={16} />
               </button>
-              <button className="nav-btn" onClick={() => webviewRef.current?.reload()}>
+              <button className="nav-btn" onClick={() => webviewRef.current?.reload()}
+                disabled={!isWebViewReady}
+                >
                 <FaSync size={16} />
               </button>
             </div>
@@ -713,7 +774,12 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
             </OverlayTrigger>
           </div>
           <div className="webview-height">
+          {isWebViewReady?
             <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
+          :<p>sdfsdf</p>
+        }
+          
+          
           </div>
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
@@ -728,6 +794,11 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
           )}
         </div>
       )}
+      {showLoginPopup &&
+             <LoginModal isOpen={showLoginPopup} onClose={() => setShowLoginPopup(false)} handleLogin={handleLogin} />
+      
+      }
+
     </div>
   )
 }
