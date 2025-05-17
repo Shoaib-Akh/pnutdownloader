@@ -455,7 +455,7 @@ const startDownload = async (event, options) => {
         return reject(new Error('A download is already in progress.'));
       }
 
-      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate } = options;
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate,title } = options;
 console.log("options",options);
 
       if (!url || typeof url !== 'string') {
@@ -551,7 +551,7 @@ console.log("options",options);
       };
 
       const setupDownloadPath = async () => {
-        const sanitizedTitle = await fetchAndSanitizeTitle(); // Single sanitized title
+        const sanitizedTitle = await title; // Single sanitized title
         const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
         const sanitizedBitrate = customSanitize(selectBitrate) || 'Unknown'; // Sanitize bitrate
       

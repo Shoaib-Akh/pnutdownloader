@@ -9,7 +9,7 @@ const api = {
 
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id,selectBitrate }) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id,selectBitrate ,title}) =>
     ipcRenderer.invoke('downloadVideo', {
       url,
       isAudioOnly,
@@ -17,7 +17,8 @@ const api = {
       selectedQuality,
       saveTo,
       selectBitrate,
-      id
+      id,
+      title
     }),
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 

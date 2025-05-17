@@ -428,6 +428,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
             )&& stored[itemIdx].isPlaylist
           ) {
+            
             // Skip getVideoInfo call; use existing item data
             stored[itemIdx] = {
               ...stored[itemIdx],
@@ -540,7 +541,9 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
         selectedFormat: item.format,
         selectedQuality: item.quality,
         selectBitrate: item.downloadType === 'audio' ? item.bitrate : null,
+         title: customSanitize (item.title),
         saveTo,
+       
       });
   
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
