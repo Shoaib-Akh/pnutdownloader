@@ -7,7 +7,7 @@ import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
 
-function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen}) {
+function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen,onRetry}) {
   const [openDropdown, setOpenDropdown] = useState(null)
   
   // useEffect(() => {
@@ -274,11 +274,13 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
                           thumbnail={item.thumbnail}
                           title={item.title}
                           format={item.quality}
+                          status={item.status}
                           url={item.url}
                           onClick={()=>handleThumbnailClick(item)}
                           downloadType={item.downloadType}
                           bitrate={item.bitrate}
                           id={item.id}
+                          onRetry={onRetry}
                         />
                       )}
                     </td>

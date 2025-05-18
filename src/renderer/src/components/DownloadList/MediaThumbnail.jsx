@@ -12,11 +12,12 @@ import {
   FaVimeo,
   FaPlayCircle,
   FaVideo, 
-  FaMusic, 
+  FaMusic,
+  FaRedo 
 } from 'react-icons/fa';
 
-const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downloadType, id }) => {
-  const [imageError, setImageError] = useState(false); 
+const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downloadType, id, status, onRetry }) => {
+  const [imageError, setImageError] = useState(false);
 
   const socialIcons = {
     instagram: <FaInstagram className="iconstyle" style={{ color: '#E1306C' }} />,
@@ -38,6 +39,25 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
   ) : (
     <FaVideo className="iconstyle" style={{ fontSize: '24px', color: '#666' }} />
   );
+
+  const retryIcon = (
+    <FaRedo
+      className="retry-icon"
+      style={{
+        fontSize: '24px',
+        color: '#FF0000',
+        cursor: 'pointer',
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 2,
+      }}
+      onClick={() => onRetry(id)} 
+      title="Retry download"
+    />
+  );
+
   return (
     <div
       className="d-flex align-items-center text-nowrap overflow-hidden"
@@ -48,7 +68,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
           <div
             className="thumbnail-wrapper"
             onClick={onClick}
-            style={{ display: 'inline-block', cursor: 'pointer' }}
+            style={{ display: 'inline-block', cursor: 'pointer', position: 'relative' }}
           >
             {thumbnail && !imageError ? (
               <>
@@ -56,8 +76,8 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
                   crossOrigin="anonymous"
                   title="Play video"
                   src={thumbnail}
-                  alt={icon}
-                  onError={() => setImageError(true)} // Set error state on failure
+                  alt={title}
+                  onError={() => setImageError(true)}
                   className="img-fluid rounded"
                   style={{
                     height: '40px',
@@ -67,12 +87,48 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
                     aspectRatio: '16 / 9',
                   }}
                 />
-                <div className="play-overlay">
-                  <FaPlayCircle className="play-icon" style={{ fontSize: '24px', color: 'white' }} />
+                <div className={status === 'Failed' ? "" : "play-overlay"} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                  {status === 'Failed' ? retryIcon : (
+                    <FaPlayCircle
+                      className="play-icon"
+                      style={{
+                        fontSize: '24px',
+                        color: 'white',
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                      }}
+                    />
+                  )}
                 </div>
               </>
             ) : (
-              fallbackIcon // Show fallback icon if thumbnail fails or is unavailable
+              <div
+                style={{
+                  position: 'relative',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  maxWidth: '200px',
+                  height: '40px',
+                  background: '#f0f0f0',
+                }}
+              >
+                {status === 'Failed' ? retryIcon : (
+                  <FaPlayCircle
+                    className="play-icon"
+                    style={{
+                      fontSize: '24px',
+                      color: 'white',
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  />
+                )}
+              </div>
             )}
           </div>
         )}

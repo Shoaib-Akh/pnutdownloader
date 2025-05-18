@@ -732,7 +732,7 @@ border-bottom:  0.5px solid #faaa8d;
 }
 
 .custom-login-button {
-  background-color: #ff0000; /* YouTube red */
+  background-color: #28a745; /* YouTube red */
   border: none;
   color: #ffffff;
   font-weight: 500;
@@ -746,11 +746,15 @@ border-bottom:  0.5px solid #faaa8d;
 }
 
 .custom-login-button:hover {
-  background-color: #cc0000;
+  background-color: #28a745;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 0, 0, 0.3);
+  box-shadow: 0 4px 12px #28a745;
 }
-
+.modal-message{
+  color: black;
+  font-size: 15px;
+  font-weight: 500;
+}
 .custom-login-button:active {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(255, 0, 0, 0.2);

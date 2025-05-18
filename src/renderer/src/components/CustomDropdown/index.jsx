@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Dropdown } from "react-bootstrap";
 import { FaCheck, FaAngleDown } from "react-icons/fa";
 
-function CustomDropdown({ label, options, selected, onSelect, renderOption, renderSelected }) {
+function CustomDropdown({ label, options, selected, onSelect, renderOption, renderSelected ,width}) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Helper to handle both string and object options
@@ -17,19 +17,20 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
         variant="light"
         id="custom-dropdown"
         style={{
-          fontSize: "12px",
-          lineHeight: "30px",
+         backgroundColor:isOpen ?  "rgb(231 231 231)":"transparent" ,
+          lineHeight: "35px",
           color: isOpen ? "black" : "#A1A1A1",
-          backgroundColor: "transparent",
+        
           padding: "0 10px",
           border: "none",
           display:"flex",
           justifyContent:"center",
-          alignItems:"center"
+          alignItems:"center",
+          width:width,
         }}
       >
-        <span style={{ color: isOpen ? "black" : "#A1A1A1" }}>{label}:</span>{" "}
-        <span style={{ color: "black" }}>
+        <span style={{ color:  "#A1A1A1",fontSize:11 }}>{label}:  </span>{" "}
+        <span style={{ color: "black",paddingLeft:3}}>
           {renderSelected ? renderSelected(selected) : getDisplayValue(options.find(opt => 
             (typeof opt === 'object' ? opt.value : opt) === selected) || selected
           )}
@@ -39,7 +40,9 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
         />
       </Dropdown.Toggle>
 
-      <Dropdown.Menu>
+      <Dropdown.Menu
+      style={{ fontSize: "12px" ,width:width,}}
+      >
         {options.map((option, index) => {
           const value = typeof option === 'object' ? option.value : option;
           const displayValue = getDisplayValue(option);
@@ -48,7 +51,7 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
             <Dropdown.Item 
               key={index} 
               onClick={() => onSelect(value)}
-              style={{ fontSize: "12px" }}
+              style={{ fontSize: "12px" ,}}
             >
               <div className="d-flex justify-content-between align-items-center w-100">
                 <span>

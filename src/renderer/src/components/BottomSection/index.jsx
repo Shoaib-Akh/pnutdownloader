@@ -46,7 +46,7 @@ function BottomSection({
   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [isWebViewReady, setIsWebViewReady] = useState(false);
-  console.log("isWebViewReadyisWebViewReady",isWebViewReady);
+  // console.log("isWebViewReadyisWebViewReady",isWebViewReady);
   
   const [canGoBack, setCanGoBack] = useState(false);
 const [canGoForward, setCanGoForward] = useState(false);
@@ -116,7 +116,6 @@ const [canGoForward, setCanGoForward] = useState(false);
   }, [pastLinkUrl])
 
 
-  const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
   const extractPlaylistId = (url) => {
     const playlistMatch = url.match(
       /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i
@@ -257,75 +256,132 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
       webviewRef.current.addEventListener('dom-ready', onDomReady);
     }
   };
-  const getVideoInfo = async (url) => {
-    const videoId = extractVideoId(url)
-    const playlistId = extractPlaylistId(url)
+// Array of API keys from environment variables
+// apiKeys.js
 
-    if (!videoId && !playlistId) return null
 
-    if (url.includes('watch') || videoId) {
+let currentApiKeyIndex = typeof window !== 'undefined' 
+  ? parseInt(localStorage.getItem('ytKeyIndex')) || 0
+  : 0;
+
+const API_KEYS = [
+  import.meta.env.VITE_YOUTUBE_API_KEY1,
+  import.meta.env.VITE_YOUTUBE_API_KEY2,
+  import.meta.env.VITE_YOUTUBE_API_KEY3,
+  import.meta.env.VITE_YOUTUBE_API_KEY4,
+  import.meta.env.VITE_YOUTUBE_API_KEY5,
+  // ... other keys
+].filter(key => {
+  const isValid = key && key.startsWith('AIza');
+  if (!isValid) console.warn('Invalid YouTube API key detected');
+  return isValid;
+});
+
+const getNextApiKey = () => {
+  if (API_KEYS.length === 0) throw new Error("No valid YouTube API keys available");
+  
+  const key = API_KEYS[currentApiKeyIndex];
+  currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
+  
+  // Persist in browser storage (remove if using Node.js)
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('ytKeyIndex', currentApiKeyIndex.toString());
+  }
+  
+  return key;
+};
+
+
+const getVideoInfo = async (url) => {
+  const videoId = extractVideoId(url);
+  const playlistId = extractPlaylistId(url);
+
+  if (!videoId && !playlistId) return null;
+
+  const API_KEY = getNextApiKey(); // Get the next API key for this request
+
+  if (url.includes('watch') || videoId) {
+    try {
       const response = await fetch(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
-      )
-      const data = await response.json()
-      if (data.items.length === 0) return null
-      const { snippet, contentDetails } = data.items[0]
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      if (data.items.length === 0) return null;
+      const { snippet, contentDetails } = data.items[0];
 
       return {
         videoUrl: url,
-        title: customSanitize (snippet.title),
+        title: customSanitize(snippet.title),
         thumbnail:
           snippet?.thumbnails?.standard?.url ||
-          snippet?.thumbnails.default.url ||
-          snippet.thumbnails.high.url,
+          snippet?.thumbnails?.default?.url ||
+          snippet?.thumbnails?.high?.url,
         duration: contentDetails.duration,
-        isPlaylist: false
-      }
+        isPlaylist: false,
+      };
+    } catch (error) {
+      console.error(`Video fetch failed with key ${API_KEY}: ${error.message}`);
+      return null;
     }
+  }
 
-    if (!url.includes('watch') && playlistId) {
+  if (!url.includes('watch') && playlistId) {
+    try {
       const playlistResponse = await fetch(
         `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
-      )
-      const playlistData = await playlistResponse.json()
+      );
+      if (!playlistResponse.ok) {
+        throw new Error(`HTTP error! status: ${playlistResponse.status}`);
+      }
+      const playlistData = await playlistResponse.json();
 
-      if (playlistData.items.length === 0) return null
-      const { snippet } = playlistData.items[0]
+      if (playlistData.items.length === 0) return null;
+      const { snippet } = playlistData.items[0];
 
       const itemsResponse = await fetch(
         `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=2&key=${API_KEY}`
-      )
-      const itemsData = await itemsResponse.json()
+      );
+      if (!itemsResponse.ok) {
+        throw new Error(`HTTP error! status: ${itemsResponse.status}`);
+      }
+      const itemsData = await itemsResponse.json();
 
-      const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com'
+      const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com';
       const videos = itemsData.items.map((item) => ({
         videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
         videoId: item.snippet.resourceId.videoId,
         title: item.snippet.title,
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url ||
-            snippet.thumbnails.default.url ||
-            snippet.thumbnails.high.url
-          : snippet.thumbnails.standard.url ||
-            snippet.thumbnails.default.url ||
-            snippet.thumbnails.high.url
-      }))
+          ? snippet.thumbnails?.standard?.url ||
+            snippet.thumbnails?.default?.url ||
+            snippet.thumbnails?.high?.url
+          : snippet.thumbnails?.standard?.url ||
+            snippet.thumbnails?.default?.url ||
+            snippet.thumbnails?.high?.url,
+      }));
 
       return {
         playlistUrl: url,
         playlistTitle: customSanitize(snippet.title),
         thumbnail: isYouTubeMusic
-          ? snippet.thumbnails.standard.url ||
-            snippet.thumbnails.default.url ||
-            snippet.thumbnails.high.url
-          : snippet.thumbnails.standard.url ||
-            snippet.thumbnails.default.url ||
-            snippet.thumbnails.high.url,
+          ? snippet.thumbnails?.standard?.url ||
+            snippet.thumbnails?.default?.url ||
+            snippet.thumbnails?.high?.url
+          : snippet.thumbnails?.standard?.url ||
+            snippet.thumbnails?.default?.url ||
+            snippet.thumbnails?.high?.url,
         videos,
-        isPlaylist: true
-      }
+        isPlaylist: true,
+      };
+    } catch (error) {
+      console.error(`Playlist fetch failed with key ${API_KEY}: ${error.message}`);
+      return null;
     }
   }
+};
 
   const isAnyDownloadInProgress = () => {
      
@@ -428,18 +484,25 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
             )&& stored[itemIdx].isPlaylist
           ) {
-            
-            // Skip getVideoInfo call; use existing item data
-            stored[itemIdx] = {
-              ...stored[itemIdx],
-              title: stored[itemIdx].title || 'Unknown',
-              thumbnail: stored[itemIdx].thumbnail || '',
-              duration: stored[itemIdx].duration || 'Unknown',
-              status: 'Downloading',
-            };
-            localStorage.setItem('downloadList', JSON.stringify(stored));
+           const match = progressData.message.match(
+              /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+            )
+            const youtubeUrl = match[0]
+            const videoId = match[2]
+
+            getVideoInfo(youtubeUrl).then((ytInfo) => {
+              stored[itemIdx] = {
+                ...stored[itemIdx],
+                title: ytInfo?.title || 'Unknown',
+                thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
+                duration: ytInfo?.duration || 'Unknown',
+                status: 'Downloading'
+              }
+              localStorage.setItem('downloadList', JSON.stringify(stored))
+            })
+          
           }
-      
+        
           // Check for authentication error
        
       
@@ -607,7 +670,38 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
       }
     }
   }, [])
+const handleRetry = (id) => {
+  let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
+  const itemIndex = storedDownloads.findIndex((item) => item.id === id);
 
+  if (itemIndex === -1) return;
+
+  const item = storedDownloads[itemIndex];
+
+  // Only retry if the item has failed
+  if (item.status !== 'Failed') return;
+
+  // Reset the item's status and progress
+  storedDownloads[itemIndex] = {
+    ...item,
+    status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
+    isFailed: false,
+    progress: 0,
+    fileSize: 'Unknown',
+    speed: 'Unknown',
+    eta: 'Unknown',
+  };
+
+  localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+
+  // Add the item back to the queue
+  downloadQueue.current.push(id);
+
+  // Trigger queue processing if not already in progress
+  if (!isProcessing.current) {
+    processQueue();
+  }
+};
   return (
     <div style={{ width: !showWebView ? '90%' : '100%' }}>
       {aboutUs ? (
@@ -630,7 +724,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
                 progressMap={progressMap}
                 videoInfo={videoInfo}
                 bitrate={bitrate}
-
+                onRetry={handleRetry}
               />
               <OverlayTrigger
                 placement="top"

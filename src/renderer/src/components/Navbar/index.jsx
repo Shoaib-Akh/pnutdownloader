@@ -14,7 +14,6 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   const bitrateOptions = ['320K', '256K', '192K', '128K', '96K', '64K'];
   const saveToOptions = ['Downloads', 'Desktop', 'Custom'];
 
-  // Map quality state to dropdown option (e.g., "1080p" -> "1080p (HD)")
   const qualityOptions = [
     { value: '2160p', label: '2160p', badge: '4K' },
     { value: '1440p', label: '1440p', badge: 'HD' },
@@ -26,13 +25,11 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     { value: '144p', label: '144p' },
   ];
 
-  // Get display label for selected quality
   const getQualityDisplay = (qualityValue) => {
     const option = qualityOptions.find(opt => opt.value === qualityValue);
     return option ? option.label : qualityValue;
   } 
 
-  // Get value from localStorage or return default
   const getLocalStorageValue = (key, defaultValue) => {
     try {
       const savedState = JSON.parse(localStorage.getItem('navbarState')) || {};
@@ -43,7 +40,6 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     }
   };
 
-  // Save value to localStorage without triggering re-render
   const saveToLocalStorage = (key, value) => {
     try {
       const currentState = JSON.parse(localStorage.getItem('navbarState')) || {};
@@ -80,7 +76,6 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     }
   }, []); // Empty dependency array to run only once on mount
 
-  // Ensure format is valid when downloadType changes
   React.useEffect(() => {
     if (downloadType && formatOptions[downloadType]) {
       const currentFormat = getLocalStorageValue('format', formatOptions[downloadType][0]);
@@ -91,7 +86,6 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     }
   }, [downloadType, formatOptions]);
 
-  // Ensure bitrate is reset when switching away from Audio
   React.useEffect(() => {
     if (downloadType !== 'Audio') {
       if (bitrate !== null) {
@@ -104,7 +98,6 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     }
   }, [downloadType, bitrate, bitrateOptions]);
 
-  // Handle dropdown changes
   const handleDownloadTypeChange = (value) => {
     setDownloadType(value);
     saveToLocalStorage('downloadType', value);
@@ -116,7 +109,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   };
 
   const handleQualityChange = (value) => {
-    const pureQuality = value.split(' ')[0]; // Extract resolution (e.g., "1440p")
+    const pureQuality = value.split(' ')[0]; 
     setQuality(pureQuality);
     saveToLocalStorage('quality', pureQuality);
   };
@@ -194,8 +187,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           }}
         >
           <div className="d-flex" style={{ gap: 2 }}>
-            <button
-              className="btn btn-danger d-flex align-items-center px-3"
+            <button className="btn btn-danger d-flex align-items-center px-3 me-2"
               style={{ background: '#BB4F28', fontSize: 15 }}
               onClick={async () => {
                 try {
@@ -235,6 +227,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             </button>
 
             <CustomDropdown
+            width={130}
               label="Download"
               options={Object.keys(formatOptions)}
               selected={downloadType}
@@ -243,6 +236,8 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {downloadType === 'Video' && (
                <CustomDropdown
+            width={150}
+
                label="Quality"
                options={qualityOptions}
                selected={quality}
@@ -257,6 +252,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {downloadType === 'Audio' && (
               <CustomDropdown
+            width={150}
                 label="Quality"
                 options={bitrateOptions}
                 selected={bitrate}
@@ -266,6 +262,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {formatOptions[downloadType] && (
               <CustomDropdown
+            width={120}
                 label="Format"
                 options={formatOptions[downloadType]}
                 selected={format}
@@ -274,6 +271,8 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             )}
 
             <CustomDropdown
+            width={150}
+
               label="Save To"
               options={saveToOptions}
               selected={getSaveToDisplay()}
