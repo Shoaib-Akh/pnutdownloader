@@ -7,7 +7,6 @@ import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
-import { machineId, machineIdSync } from 'node-machine-id'
 import { extractVideoId } from '../renderer/src/components/commonFunction';
 
 import { initialize, trackEvent } from "@aptabase/electron/main";
@@ -50,14 +49,7 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
-ipcMain.handle('getMachineId', async () => {
-  try {
-    return await machineId();
-  } catch (error) {
-    console.error('Failed to get machine ID:', error);
-    return 'anonymous-machine-id';
-  }
-});
+
 
 // Prevent multiple instances
 const gotTheLock = app.requestSingleInstanceLock()
