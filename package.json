@@ -1,6 +1,6 @@
 {
   "name": "PNUTDownloader",
-  "version": "1.0.40",
+  "version": "1.0.41",
   "description": "Your favorite video downloader",
   "main": "./out/main/index.js",
   "author": "PNUT Downloader",
@@ -19,6 +19,7 @@
     "publish:release": "electron-builder --publish=always"
   },
   "dependencies": {
+    "@aptabase/electron": "^0.3.1",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
     "@firebase/analytics": "^0.10.12",
@@ -56,10 +57,10 @@
   "build": {
     "appId": "com.shoaibakh.pnutdownloader",
     "files": [
-    "out/**/*",
-    "public/**/*",
-    "src/firebase-config.js"
-  ],
+      "out/**/*",
+      "public/**/*",
+      "src/firebase-config.js"
+    ],
     "win": {
       "icon": "public/icon.ico"
     },

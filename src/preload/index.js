@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
+import { trackEvent } from "@aptabase/electron/renderer";
 
 const api = {
   openWebview: (url) => ipcRenderer.send('open-webview', url),
@@ -8,7 +9,7 @@ const api = {
   getYoutubeInfo: (url) => ipcRenderer.invoke('get-youtube-info', url),
 
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
-
+trackEvent: (eventName, props) => trackEvent(eventName, props),
   downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id,selectBitrate ,title}) =>
     ipcRenderer.invoke('downloadVideo', {
       url,

@@ -23,8 +23,8 @@ function App() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
-const [aboutUs,setAboutUs]=useState(false)
- 
+  const [aboutUs, setAboutUs] = useState(false)
+
   useEffect(() => {
     const initializeApp = async () => {
       try {
@@ -67,6 +67,7 @@ const [aboutUs,setAboutUs]=useState(false)
             console.error('Update error:', err)
           })
         } else {
+          console.error('window.api is not defined')
           setIsLoading(false)
         }
       } catch (error) {
@@ -76,20 +77,34 @@ const [aboutUs,setAboutUs]=useState(false)
     }
 
     initializeApp()
-
-    // Google Analytics page view tracking
-    // window.dataLayer = window.dataLayer || [];
-    // function gtag() { window.dataLayer.push(arguments); }
-    // gtag('js', new Date());
-    // gtag('config', 'G-HKMV37FXQ3'); // Replace with your Google Analytics Measurement ID
   }, [])
 
   const handleInstallUpdate = () => {
     if (window.api) {
-      window.api.installUpdate()
-      setUpdateAvailable(false)
-      setUpdateDownloaded(false)
-      setUpdateInfo(null)
+      try {
+        window.api.trackEvent('update_install_clicked', { version: updateInfo?.version })
+        console.log('Tracked event: update_install_clicked')
+        window.api.installUpdate()
+        setUpdateAvailable(false)
+        setUpdateDownloaded(false)
+        setUpdateInfo(null)
+      } catch (error) {
+        console.error('Failed to track update_install_clicked:', error)
+      }
+    }
+  }
+
+  const handleFeedbackClick = () => {
+    if (window.api) {
+      try {
+        window.api.trackEvent('feedback_button_clicked')
+        console.log('Tracked event: feedback_button_clicked')
+        window.api.openExternal(feedbackUrl)
+      } catch (error) {
+        console.error('Failed to track feedback_button_clicked:', error)
+      }
+    } else {
+      console.error('window.api is not defined')
     }
   }
 
@@ -102,14 +117,14 @@ const [aboutUs,setAboutUs]=useState(false)
           alignItems: 'center',
           height: '100vh',
           backgroundColor: '#f0f0f0',
-          flexDirection: 'column'
+          flexDirection: 'column',
         }}
       >
         <div
           style={{
             fontSize: '24px',
             marginBottom: '20px',
-            color: '#333'
+            color: '#333',
           }}
         >
           Initializing Dependencies...
@@ -121,7 +136,7 @@ const [aboutUs,setAboutUs]=useState(false)
             border: '5px solid #ccc',
             borderTop: '5px solid #007bff',
             borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
+            animation: 'spin 1s linear infinite',
           }}
         ></div>
         <style>{`
@@ -133,14 +148,12 @@ const [aboutUs,setAboutUs]=useState(false)
       </div>
     )
   }
+
   const feedbackUrl =
-    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform' // Replace with actual feedback URL
+    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform'
 
   return (
-    <div className="vh-100" >
-      {/* Google Analytics Script */}
-      {/* <script async src="https://www.googletagmanager.com/gtag/js?id=G-HKMV37FXQ3"></script> */}
-
+    <div className="vh-100">
       {updateAvailable && (
         <UpdateNotification
           updateInfo={updateInfo}
@@ -164,10 +177,9 @@ const [aboutUs,setAboutUs]=useState(false)
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         setPastLinkUrl={setPastLinkUrl}
-        
       />
 
-      <div className="d-flex" style={{ paddingTop: "10px",borderTop:"1px solid #faaa8d" }}>
+      <div className="d-flex" style={{ paddingTop: '10px', borderTop: '1px solid #faaa8d' }}>
         <div style={{ width: showWebView ? '0%' : '20%' }}>
           {!showWebView && (
             <Sidebar
@@ -185,27 +197,12 @@ const [aboutUs,setAboutUs]=useState(false)
           )}
         </div>
 
-        <button
-          className="feedback-button"
-          onClick={() => {
-            if (window.api) {
-              window.api.openExternal(feedbackUrl)
-            }
-          }}
-        >
-          {' '}
-          <MdFeedback /> Feedback{' '}
+        <button className="feedback-button" onClick={handleFeedbackClick}>
+          <MdFeedback /> Feedback
         </button>
 
-        <div
-          style={{
-            display: 'none'
-          }}
-        >
-          <webview
-            src="https://pnutdownloader.com/app/index.html"
-            title="Bottom Banner"
-          />
+        <div style={{ display: 'none' }}>
+          <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
         </div>
 
         <BottomSection
@@ -231,8 +228,6 @@ const [aboutUs,setAboutUs]=useState(false)
           setAboutUs={setAboutUs}
         />
       </div>
-
-      {/* Render banner.html in an iframe */}
     </div>
   )
 }

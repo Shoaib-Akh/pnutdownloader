@@ -197,6 +197,24 @@ const [canGoForward, setCanGoForward] = useState(false);
   }
 
   const handleDownloadClick = () => {
+
+     if (window.api) {
+      try {
+        window.api.trackEvent('download_button_clicked', {
+          url: pastLinkUrl || currentWebViewUrl,
+          downloadType: downloadType.toLowerCase(),
+          format: format.toLowerCase(),
+          quality: quality.toLowerCase(),
+          saveTo: saveTo.toLowerCase(),
+          bitrate: bitrate?.toLowerCase()
+        })
+        console.log('Tracked event: download_button_clicked')
+      } catch (error) {
+        console.error('Failed to track download_button_clicked:', error)
+      }
+    } else {
+      console.error('window.api is not defined')
+    }
     setAboutUs(false);
     const urlToDownload = pastLinkUrl || currentWebViewUrl;
     if (!urlToDownload) return;

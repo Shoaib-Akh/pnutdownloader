@@ -9,6 +9,18 @@ import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
 import { machineId, machineIdSync } from 'node-machine-id'
 import { extractVideoId } from '../renderer/src/components/commonFunction';
+
+import { initialize, trackEvent } from "@aptabase/electron/main";
+try {
+  console.log('Initializing Aptabase...')
+  initialize('A-EU-9162087634')
+  console.log('Aptabase initialized successfully')
+  // Track event in main process
+  trackEvent('app_started')
+} catch (error) {
+  console.error('Aptabase initialization failed:', error)
+}
+
 const https = require('https');
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, 'ffmpeg.exe')
@@ -289,6 +301,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  
+  
   downloadAndExtractFFmpeg();
   if (!existsSync(ytdlpPath)) {
     console.log('yt-dlp not found, downloading...');
