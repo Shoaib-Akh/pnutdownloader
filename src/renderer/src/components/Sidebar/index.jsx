@@ -28,6 +28,7 @@ function Sidebar({
  
 
   const handleClick = () => {
+         window.api.trackEvent('Support us')
     window.api.openExternal('https://ko-fi.com/pnutdownloader');
   };
 

@@ -662,7 +662,7 @@ border-bottom:  0.5px solid #faaa8d;
   border: none;
   background-color: #ffffff;
   overflow: hidden;
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
 }
 
@@ -685,7 +685,7 @@ border-bottom:  0.5px solid #faaa8d;
 .custom-close-button {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 3rem;
   color: #6c757d;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -729,13 +729,15 @@ border-bottom:  0.5px solid #faaa8d;
   color: #ffffff;
   border-color: #6c757d;
   transform: translateY(-1px);
+
 }
 
 .custom-login-button {
   background-color: #28a745; /* YouTube red */
   border: none;
   color: #ffffff;
-  font-weight: 500;
+ 
+  font-size: 16px;
   padding: 10px 20px;
   border-radius: 8px;
   transition: all 0.3s ease;
@@ -743,6 +745,7 @@ border-bottom:  0.5px solid #faaa8d;
   align-items: center;
   justify-content: center;
   gap: 8px;
+  width: 100%;
 }
 
 .custom-login-button:hover {

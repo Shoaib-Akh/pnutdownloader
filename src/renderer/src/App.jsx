@@ -98,7 +98,7 @@ function App() {
     if (window.api) {
       try {
         window.api.trackEvent('feedback_button_clicked')
-        console.log('Tracked event: feedback_button_clicked')
+       
         window.api.openExternal(feedbackUrl)
       } catch (error) {
         console.error('Failed to track feedback_button_clicked:', error)

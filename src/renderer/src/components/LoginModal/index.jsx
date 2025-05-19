@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
-import '../common.css'; // Custom CSS for the modal
+import '../common.css'; 
 
 function LoginModal({ isOpen, onClose, handleLogin }) {
   return (
@@ -31,19 +31,12 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
       </Modal.Header>
       <Modal.Body className="custom-modal-body">
         <p className="modal-message">
-          YouTube has restricted downloads. Please log in to YouTube to resume downloading your content.
+          YouTube has restricted downloads.<br/> Please log in to YouTube to resume downloading your content.
         </p>
        
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer">
-        <Button
-          variant="outline-secondary"
-          onClick={onClose}
-          className="custom-cancel-button"
-          aria-label="Cancel login"
-        >
-          Cancel
-        </Button>
+       
         <Button
           onClick={handleLogin}
           className="custom-login-button"

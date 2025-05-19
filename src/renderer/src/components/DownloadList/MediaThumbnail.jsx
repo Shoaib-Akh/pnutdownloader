@@ -45,7 +45,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
       className="retry-icon"
       style={{
         fontSize: '24px',
-        color: '#FF0000',
+       color: 'white',
         cursor: 'pointer',
         position: 'absolute',
         top: '50%',
@@ -68,7 +68,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
           <div
             className="thumbnail-wrapper"
             onClick={onClick}
-            style={{ display: 'inline-block', cursor: 'pointer', position: 'relative' }}
+            style={{ display: 'inline-block', cursor: 'pointer', position: 'relative',backgroundColor:status === 'Failed'? "rgba(0, 0, 0, 0.5)":"" }}
           >
             {thumbnail && !imageError ? (
               <>
@@ -83,11 +83,12 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
                     height: '40px',
                     objectFit: 'cover',
                     cursor: 'pointer',
-                    maxWidth: '200px',
+                    maxWidth: '100px',
                     aspectRatio: '16 / 9',
+                    opacity:status === 'Failed'? "0.2":""
                   }}
                 />
-                <div className={status === 'Failed' ? "" : "play-overlay"} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
+                <div className={status === 'Failed' ? "" : "play-overlay"} >
                   {status === 'Failed' ? retryIcon : (
                     <FaPlayCircle
                       className="play-icon"

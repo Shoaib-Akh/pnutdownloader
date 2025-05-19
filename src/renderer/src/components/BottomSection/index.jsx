@@ -62,19 +62,19 @@ const [canGoForward, setCanGoForward] = useState(false);
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
-  const customSanitize = (str) => {
-    if (!str) return 'Unknown';
-    return str
-      .replace(/[<>:"/\\|?*]+/g, ' ') // Remove invalid characters
-      .replace(/\s+/g, ' ') // Replace spaces with underscores
-      .replace(/[^a-zA-Z0-9._-]/g, ' ') // Keep only alphanumeric, dots, underscores, hyphens
-      .substring(0, 200); // Limit length
-  };
+const customSanitize = (str) => {
+  if (!str) return 'Unknown';
+  return str
+    .replace(/[<>:"/\\|?*]+/g, ' ') 
+    .replace(/\s+/g, ' ') 
+    .replace(/[^\p{L}\p{N}._-]/gu, ' ') 
+    .substring(0, 200); 
+};
   const handleCopyUrl = () => {
     navigator.clipboard
       .writeText(currentWebViewUrl)
       .then(() => {
-        // Optional: Show a tooltip or notification for feedback
+        
         alert('URL copied to clipboard!')
       })
       .catch((err) => {
@@ -82,7 +82,6 @@ const [canGoForward, setCanGoForward] = useState(false);
       })
   }
 
-  // Function to handle "Go" button click
   const handleGo = () => {
     if (currentWebViewUrl && webviewRef.current) {
       webviewRef.current.src = currentWebViewUrl
@@ -129,18 +128,13 @@ const [canGoForward, setCanGoForward] = useState(false);
   
       const onDomReady = () => {
         setIsWebViewReady(true);
-        // Check navigation status after dom-ready
         setCanGoBack(webview.canGoBack());
         setCanGoForward(webview.canGoForward());
       };
-  
       webview.addEventListener('dom-ready', onDomReady);
-  
       const handleNavigation = (event) => {
         setCurrentWebViewUrl(event.url);
         checkIfDownloadable(event.url);
-
-        // Update navigation status after navigation
         setCanGoBack(webview.canGoBack());
         setCanGoForward(webview.canGoForward());
       };
@@ -165,6 +159,7 @@ const [canGoForward, setCanGoForward] = useState(false);
   }, [currentWebViewUrl])
 
   const handlePlatformClick = (platformUrl) => {
+      window.api.trackEvent('platformUrl',{platformUrl})
     setUrl(platformUrl)
     setShowWebView(true)
     setIsDownloadable(false)
@@ -253,6 +248,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
   };
 
   const handleLogin = () => {
+             window.api.trackEvent('youtube-login')
     const youtubeLoginUrl = 'https://accounts.google.com/ServiceLogin?service=youtube';
     setCurrentWebViewUrl(youtubeLoginUrl);
     setUrl(youtubeLoginUrl);
@@ -689,13 +685,14 @@ const getVideoInfo = async (url) => {
     }
   }, [])
 const handleRetry = (id) => {
+  window.api.trackEvent('handleRetry')
   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
   const itemIndex = storedDownloads.findIndex((item) => item.id === id);
 
   if (itemIndex === -1) return;
 
   const item = storedDownloads[itemIndex];
-
+ window.api.trackEvent('handleRetry',)
   // Only retry if the item has failed
   if (item.status !== 'Failed') return;
 

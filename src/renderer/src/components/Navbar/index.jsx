@@ -190,6 +190,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             <button className="btn btn-danger d-flex align-items-center px-3 me-2"
               style={{ background: '#BB4F28', fontSize: 15 }}
               onClick={async () => {
+                 window.api.trackEvent('Paste')
                 try {
                   const clipboardText = await navigator.clipboard.readText();
                   if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {

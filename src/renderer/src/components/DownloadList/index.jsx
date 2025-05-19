@@ -96,6 +96,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     return remainingSeconds
   }
   const handleThumbnailClick = async (item) => {
+      window.api.trackEvent('play',{playUrl:item.url})
     if (!item.isCompleted || item.status !== 'Completed') {
       console.log('Thumbnail click ignored: Item not completed or status not Completed', {
         id: item.id,
