@@ -95,132 +95,145 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
-  const handleThumbnailClick = async (item) => {
-      window.api.trackEvent('play',{playUrl:item.url})
-    if (!item.isCompleted || item.status !== 'Completed') {
-      console.log('Thumbnail click ignored: Item not completed or status not Completed', {
-        id: item.id,
-        title: item.title,
-        isCompleted: item.isCompleted,
-        status: item.status,
-      });
-      return;
+const handleThumbnailClick = async (item) => {
+  window.api.trackEvent('play', { playUrl: item.url });
+  if (!item.isCompleted || item.status !== 'Completed') {
+    console.log('Thumbnail click ignored: Item not completed or status not Completed', {
+      id: item.id,
+      title: item.title,
+      isCompleted: item.isCompleted,
+      status: item.status,
+    });
+    return;
+  }
+
+  console.log(`Starting handleThumbnailClick: title=${item.title}, fileType=${item.downloadType}, saveTo=${item.saveTo}`);
+
+  try {
+    const videoExtensions = ['mp4', 'webm', 'mkv', 'avi'];
+    const audioExtensions = ['mp3', 'flac', 'wav', 'aac'];
+    const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
+    console.log(`Possible extensions: ${possibleExtensions}`);
+
+    let allPathsToSearch = [];
+    if (item.saveTo && typeof item.saveTo === 'string') {
+      try {
+        await window.api.readDirectory(item.saveTo);
+        allPathsToSearch.push(item.saveTo);
+        console.log(`Valid saveTo path added: ${item.saveTo}`);
+      } catch (err) {
+        console.warn(`saveTo path not accessible: ${item.saveTo}`, err);
+      }
     }
-  
-    console.log(`Starting handleThumbnailClick: title=${item.title}, fileType=${item.downloadType}, saveTo=${item.saveTo}`);
-  
-    try {
-      // Define extensions based on fileType
-      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi'];
-      const audioExtensions = ['mp3', 'flac', 'wav', 'aac'];
-      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
-      console.log(`Possible extensions: ${possibleExtensions}`);
-  
-      // Build search directories
-      let allPathsToSearch = [];
-  
-      // Check item.saveTo
-      if (item.saveTo && typeof item.saveTo === 'string') {
-        try {
-          await window.api.readDirectory(item.saveTo);
-          allPathsToSearch.push(item.saveTo);
-          console.log(`Valid saveTo path added: ${item.saveTo}`);
-        } catch (err) {
-          console.warn(`saveTo path not accessible: ${item.saveTo}`, err);
+
+    const fallbackFolders = [
+      await window.api.getPath('downloads'),
+      await window.api.getPath('desktop'),
+    ];
+    console.log(`Fallback folders: ${fallbackFolders}`);
+
+    fallbackFolders.forEach((path) => {
+      if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path);
+    });
+    console.log(`All paths to search: ${allPathsToSearch}`);
+
+    const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
+    const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`);
+    console.log(`Search directories: ${directories}`);
+
+    const normalizedTitle = item.title
+      .normalize('NFC') // Normalize Unicode characters
+      .toLowerCase()
+      .replace(/[\|\:]/g, '_')
+      .replace(/’/g, "'")
+      .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, '');
+    console.log(`Normalized title: ${normalizedTitle}`);
+
+    let filePath = null;
+    for (const dir of directories) {
+      try {
+        console.log(`Reading directory: ${dir}`);
+        const files = await window.api.readDirectory(dir);
+        console.log(`Files found in ${dir}: ${files.join(', ')}`);
+
+        filePath = files.find((file) => {
+          const fileName = file.toLowerCase();
+          const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
+          const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
+          const normalizedFileTitle = titlePart
+            .normalize('NFC')
+            .replace(/[\|\:]/g, '_')
+            .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          const isExactMatch = normalizedFileTitle === normalizedTitle;
+          const isPartialMatch = normalizedFileTitle.includes(
+            normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
+          );
+
+          console.log(
+            `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
+          );
+
+          return hasValidExtension && (isExactMatch || isPartialMatch);
+        });
+
+        if (filePath) {
+          filePath = `${dir}\\${filePath}`;
+          console.log(`File found: ${filePath}`);
+          break;
+        } else {
+          console.log(`No matching file found in ${dir}`);
         }
+      } catch (dirError) {
+        console.error(`Error reading directory ${dir}:`, dirError);
       }
-  
-      // Add fallback folders
-      const fallbackFolders = [
-        await window.api.getPath('downloads'),
-        await window.api.getPath('desktop'),
-      ];
-      console.log(`Fallback folders: ${fallbackFolders}`);
-  
-      // Avoid duplicates
-      fallbackFolders.forEach((path) => {
-        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path);
-      });
-      console.log(`All paths to search: ${allPathsToSearch}`);
-  
-      // Create subdirectories based on fileType
-      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
-      const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`);
-      console.log(`Search directories: ${directories}`);
-  
-      // Normalize title (flexible for long titles)
-      const normalizedTitle = item.title
-        .toLowerCase()
-        .replace(/[\|\:]/g, '_')
-        .replace(/’/g, "'")
-        .replace(/[^a-zA-Z0-9\s\.\-]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, ''); // Remove extension if present
-      console.log(`Normalized title: ${normalizedTitle}`);
-  
-      let filePath = null;
-  
-      // Search directories
-      for (const dir of directories) {
-        try {
-          console.log(`Reading directory: ${dir}`);
-          const files = await window.api.readDirectory(dir);
-          console.log(`Files found in ${dir}: ${files.join(', ')}`);
-  
-          filePath = files.find((file) => {
-            const fileName = file.toLowerCase();
-            const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
-            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
-            const normalizedFileTitle = titlePart
-              .replace(/[\|\:]/g, '_')
-              .replace(/[^a-zA-Z0-9\s\.\-]/g, '')
-              .replace(/\s+/g, ' ')
-              .trim();
-  
-            const isExactMatch = normalizedFileTitle === normalizedTitle;
-            const isPartialMatch = normalizedFileTitle.includes(
-              normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
-            );
-  
-            console.log(
-              `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
-            );
-  
-            return hasValidExtension && (isExactMatch || isPartialMatch);
-          });
-  
-          if (filePath) {
-            filePath = `${dir}\\${filePath}`;
-            console.log(`File found: ${filePath}`);
-            break;
-          } else {
-            console.log(`No matching file found in ${dir}`);
-          }
-        } catch (dirError) {
-          console.error(`Error reading directory ${dir}:`, dirError);
-        }
+    }
+
+    if (filePath) {
+      console.log(`Attempting to open file: ${filePath}`);
+      // Verify file existence before attempting to open
+      try {
+        await window.api.accessFile(filePath); // Assumes an API to check file existence
+        console.log(`File exists at: ${filePath}`);
+      } catch (accessError) {
+        console.error(`File is not accessible: ${filePath}`, accessError);
+        alert(`Cannot access file: ${filePath}. It may have been moved or deleted.`);
+        return;
       }
-  
-      if (filePath) {
-        console.log(`Attempting to open file: ${filePath}`);
-        try {
-          const fileUrl = `file://${filePath.replace(/\\/g, '/')}`;
+
+      try {
+        // Prefer openPath for local files
+        if (window.api.openPath) {
+          console.log(`Using openPath for: ${filePath}`);
+          await window.api.openPath(filePath);
+          console.log('File opened successfully with openPath');
+        } else {
+          console.warn('window.api.openPath not available, falling back to openExternal');
+          // Encode the file path for file:// URL
+          const encodedPath = encodeURI(filePath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25');
+          const fileUrl = `file:///${encodedPath}`;
+          console.log(`Attempting to open file URL: ${fileUrl}`);
           await window.api.openExternal(fileUrl);
-          console.log('File opened successfully');
-        } catch (openError) {
-          console.error(`Failed to open file ${filePath}:`, openError);
-          alert('Failed to open file: ' + openError.message);
+          console.log('File opened successfully with openExternal');
         }
-      } else {
-        console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${fileType}`);
-        alert('File not found. It may have been moved, deleted, or saved with a different name.');
+      } catch (openError) {
+        console.error(`Failed to open file ${filePath}:`, openError);
+        alert(`Failed to open file: ${openError.message}. Path: ${filePath}`);
       }
-    } catch (error) {
-      console.error('Error in handleThumbnailClick:', error);
-      alert('Failed to process file. Please check the console for details.');
+    } else {
+      console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${item.downloadType}`);
+      alert(`File not found. It may have been moved, deleted, or saved with a different name. Expected path: ${filePath}`);
     }
-  };
+  } catch (error) {
+    console.error('Error in handleThumbnailClick:', error);
+    alert('Failed to process file. Please check the console for details.');
+  }
+};
   
 
   return (

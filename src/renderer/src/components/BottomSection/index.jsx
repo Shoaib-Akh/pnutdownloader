@@ -24,6 +24,7 @@ import LoginModal from '../LoginModal'
 
 function BottomSection({
   downloadType,
+  setPastLinkUrl,
   bitrate,
   quality,
   format,
@@ -39,6 +40,7 @@ function BottomSection({
   setDownloadListOpen,
   downloadListOpen,
   pastLinkUrl,
+  
   aboutUs,
   setAboutUs,
   updateInfo
@@ -574,6 +576,7 @@ const getVideoInfo = async (url) => {
           if (progressData.message.includes('has already been downloaded')) {
             stored[itemIdx].status = 'Completed';
             stored[itemIdx].isCompleted = true;
+            setPastLinkUrl("")
             setProgressMap((prev) => {
               const newMap = new Map(prev);
               newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
@@ -592,6 +595,7 @@ const getVideoInfo = async (url) => {
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed';
           stored[itemIdx].isCompleted = true;
+          setPastLinkUrl("")
           setProgressMap((prev) => {
             const newMap = new Map(prev);
             newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
@@ -626,6 +630,7 @@ const getVideoInfo = async (url) => {
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
       const completedIndex = storedDownloads.findIndex((i) => i.id === currentId);
       if (completedIndex !== -1) {
+        setPastLinkUrl("")
         storedDownloads[completedIndex].status = 'Completed';
         storedDownloads[completedIndex].isCompleted = true;
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));

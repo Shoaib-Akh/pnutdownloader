@@ -711,28 +711,54 @@ ipcMain.handle('load-download-state', () => {
   return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : null;
 });
 
-ipcMain.handle('get-path', async (_event, name) => {
-  return app.getPath(name);
-});
-
-ipcMain.handle('read-directory', async (_event, dirPath) => {
+ipcMain.handle('openPath', async (event, path) => {
   try {
-    return await fs.readdir(dirPath);
+    await shell.openPath(path); // Use Electron's shell.openPath for local files
+    return { success: true };
   } catch (error) {
-    console.error('Failed to read directory:', error);
-    return [];
+    console.error(`Failed to open path ${path}:`, error);
+    throw error;
   }
 });
 
-ipcMain.handle('file-exists', async (_event, filePath) => {
+ipcMain.handle('openExternal', async (event, url) => {
   try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
+    await shell.openExternal(url); // Use Electron's shell.openExternal for URLs
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to open external URL ${url}:`, error);
+    throw error;
   }
 });
 
+ipcMain.handle('read-directory', async (event, dir) => {
+  const fs = require('fs').promises;
+  try {
+    const files = await fs.readdir(dir);
+    return files;
+  } catch (error) {
+    console.error(`Failed to read directory ${dir}:`, error);
+    throw error;
+  }
+});
+ipcMain.handle('accessFile', async (event, filePath) => {
+  try {
+    await fs.access(filePath, fs.constants.F_OK | fs.constants.R_OK);
+    return { success: true };
+  } catch (error) {
+    console.error(`Cannot access file ${filePath}:`, error);
+    throw error;
+  }
+});
+ipcMain.handle('getPath', async (event, name) => {
+  const path = require('path');
+  try {
+    return path.join(require('electron').app.getPath(name));
+  } catch (error) {
+    console.error(`Failed to get path ${name}:`, error);
+    throw error;
+  }
+});
 ipcMain.handle('show-confirm-dialog', async (event, options) => {
   const result = await dialog.showMessageBox({
     type: 'warning',
@@ -816,9 +842,9 @@ ipcMain.handle('check-dependencies', async () => {
   return await checkDependencies();
 });
 
-ipcMain.handle('getPath', (event, pathName) => {
-  return app.getPath(pathName);
-});
+// ipcMain.handle('getPath', (event, pathName) => {
+//   return app.getPath(pathName);
+// });
 
 ipcMain.handle('fileExists', (event, filePath) => {
   return existsSync(filePath);

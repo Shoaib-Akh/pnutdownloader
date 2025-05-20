@@ -45,7 +45,8 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
   },
   openExternal: (url) => shell.openExternal(url),
   getPath: (type) => ipcRenderer.invoke('get-path', type),
-
+accessFile: (path) => ipcRenderer.invoke('accessFile', path),
+openPath: (path) => ipcRenderer.invoke('openPath', path),
   // ✅ New function to read directory contents
   readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
 

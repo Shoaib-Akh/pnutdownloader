@@ -206,6 +206,7 @@ function App() {
         </div>
 
         <BottomSection
+        setPastLinkUrl={setPastLinkUrl}
           bitrate={bitrate}
           setBitrate={setBitrate}
           downloadType={downloadType}
