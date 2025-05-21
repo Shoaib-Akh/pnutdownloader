@@ -172,7 +172,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
 
   return (
-    <nav className="p-3" style={{ backgroundColor: 'white' }}>
+    <nav className="p-3" style={{ backgroundColor: 'white',width:"100%" }}>
       <div className="d-flex align-items-center justify-content-between flex-grow-1">
         <div href="#" style={{ cursor: 'default', width: '17%' }} className="logo-div">
           <img src={Logo} alt="PNUT Logo" className="logo" />
@@ -182,11 +182,12 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           className="d-flex align-items-center justify-content-between flex-grow-1 bg-body"
           style={{
             padding: 10,
+            width:"20%",
             borderRadius: 5,
             boxShadow: 'rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px',
           }}
         >
-          <div className="d-flex" style={{ gap: 2 }}>
+          <div className="d-flex" >
             <button className="btn btn-danger d-flex align-items-center px-3 me-2"
               style={{ background: '#BB4F28', fontSize: 15 }}
               onClick={async () => {
@@ -228,7 +229,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             </button>
 
             <CustomDropdown
-            width={130}
+            // width={125}
               label="Download"
               options={Object.keys(formatOptions)}
               selected={downloadType}
@@ -237,7 +238,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {downloadType === 'Video' && (
                <CustomDropdown
-            width={150}
+            // width={140}
 
                label="Quality"
                options={qualityOptions}
@@ -253,7 +254,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {downloadType === 'Audio' && (
               <CustomDropdown
-            width={150}
+            // width={107}
                 label="Quality"
                 options={bitrateOptions}
                 selected={bitrate}
@@ -263,7 +264,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
             {formatOptions[downloadType] && (
               <CustomDropdown
-            width={120}
+            width={108}
                 label="Format"
                 options={formatOptions[downloadType]}
                 selected={format}
@@ -272,7 +273,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             )}
 
             <CustomDropdown
-            width={150}
+            // width={146}
 
               label="Save To"
               options={saveToOptions}

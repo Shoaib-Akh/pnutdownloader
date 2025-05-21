@@ -633,6 +633,7 @@ const getVideoInfo = async (url) => {
         setPastLinkUrl("")
         storedDownloads[completedIndex].status = 'Completed';
         storedDownloads[completedIndex].isCompleted = true;
+      
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
       }
     } catch (error) {
@@ -690,6 +691,7 @@ const getVideoInfo = async (url) => {
     }
   }, [])
 const handleRetry = (id) => {
+  if (isProcessing.current) return;
   window.api.trackEvent('handleRetry')
   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
   const itemIndex = storedDownloads.findIndex((item) => item.id === id);
@@ -697,7 +699,7 @@ const handleRetry = (id) => {
   if (itemIndex === -1) return;
 
   const item = storedDownloads[itemIndex];
- window.api.trackEvent('handleRetry',)
+
   // Only retry if the item has failed
   if (item.status !== 'Failed') return;
 

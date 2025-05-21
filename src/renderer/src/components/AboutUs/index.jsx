@@ -45,14 +45,14 @@ function AboutUs() {
 
   return (
     <section
-      className="py-2 pe-4 d-flex flex-column about-us-section"
+className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-between justify-content-lg-evenly"
       style={{
         width: '100%',
         height: '85vh',
         // Ensure the section takes full height and uses Flexbox
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
+        
       }}
     >
       {/* Show update pop-up if update is available */}
@@ -76,9 +76,9 @@ function AboutUs() {
         </div>
 
         <div className="row g-4">
-          <div className="col-md-6">
+          <div className="col-md-6 mt-lg-5">
             <div className="card h-100 border-0 shadow-sm">
-              <div className="card-body p-2 p-lg-3">
+              <div className="card-body p-2 p-lg-3 ">
                 <h2 className="h4 fw-semibold text-dark mb-lg-3 mb-1">Our Mission</h2>
                 <p className="text-muted">
                   At PNUT Downloader, we strive to empower users by providing a seamless experience
@@ -89,9 +89,9 @@ function AboutUs() {
             </div>
           </div>
 
-          <div className="col-md-6">
+          <div className="col-md-6 mt-lg-5">
             <div className="card h-100 border-0 shadow-sm">
-              <div className="card-body p-2 p-lg-3">
+              <div className="card-body p-2 p-lg-3 ">
                 <h2 className="h4 fw-semibold text-dark mb-3">Who We Are</h2>
                 <p className="text-muted">
                   We are a dedicated team of developers and designers committed to creating
@@ -121,6 +121,26 @@ function AboutUs() {
             >
               Check for Update
             </button>
+                <div>
+
+             <button
+  className="btn btn-danger px-3 mt-lg-3 mt-2"
+  type="button"
+  style={{ background: '#BB4F28', fontSize: 15, width: 250 }}
+  aria-label="Join our Reddit community"
+  onClick={() => {
+    if (window.api?.openExternal) {
+        window.api.trackEvent('Join our Reddit community')
+      window.api.openExternal('https://www.reddit.com/r/PNutDownloader/s/DEDPXcvWgS');
+    } else {
+      window.open('https://www.reddit.com/r/PNutDownloader/s/DEDPXcvWgS', '_blank', 'noopener,noreferrer');
+    }
+  }}
+>
+  Join Our Reddit Community
+</button>
+                </div>
+
           </div>
         </div>
 
@@ -129,6 +149,7 @@ function AboutUs() {
             <button
               onClick={() => {
                 if (window.api) {
+                       window.api.trackEvent('feedback_button_clicked')
                   window.api.openExternal(
                     'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true'
                   )

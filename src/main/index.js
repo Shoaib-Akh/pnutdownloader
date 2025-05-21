@@ -12,7 +12,7 @@ import { extractVideoId } from '../renderer/src/components/commonFunction';
 import { initialize, trackEvent } from "@aptabase/electron/main";
 try {
   console.log('Initializing Aptabase...')
-  initialize('A-EU-9162087634')
+  initialize('A-US-9628986453')
   console.log('Aptabase initialized successfully')
   // Track event in main process
   trackEvent('app_started')

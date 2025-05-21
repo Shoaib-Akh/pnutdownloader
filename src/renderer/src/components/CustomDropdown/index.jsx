@@ -25,11 +25,11 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
           display:"flex",
           justifyContent:"center",
           alignItems:"center",
-          minWidth:width,
+          // minWidth:width,
         }}
       >
-        <span style={{ color:  "#A1A1A1",fontSize:12 }}>{label}:  </span>{" "}
-        <span style={{ color: "black",paddingLeft:3}}>
+        <span style={{ color:  "#A1A1A1",fontSize:12,fontWeight:"500" }}>{label}:  </span>{" "}
+        <span style={{ color: "black",paddingLeft:3,fontSize:13,fontWeight:"500"}}>
           {renderSelected ? renderSelected(selected) : getDisplayValue(options.find(opt => 
             (typeof opt === 'object' ? opt.value : opt) === selected) || selected
           )}
@@ -40,7 +40,7 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
       </Dropdown.Toggle>
 
       <Dropdown.Menu
-      style={{ fontSize: "12px" ,minWidth:width,}}
+      style={{ fontSize: "14px" ,minWidth: width?width:"100%", }}
       >
         {options.map((option, index) => {
           const value = typeof option === 'object' ? option.value : option;
@@ -50,7 +50,7 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
             <Dropdown.Item 
               key={index} 
               onClick={() => onSelect(value)}
-              style={{ fontSize: "12px" ,}}
+              style={{ fontSize: "14px" ,}}
             >
               <div className="d-flex justify-content-between align-items-center w-100">
                 <span>

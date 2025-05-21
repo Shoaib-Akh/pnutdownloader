@@ -291,11 +291,7 @@ h1 {
     :not(.btn-check) {
       font-size: 12px;
     }
-    #custom-dropdown{
-      font-size: 14px;
-      /* width: 120px; */
-   
-    }
+  
    
   }
   .dropdown-menu show{
@@ -676,7 +672,7 @@ border-bottom:  0.5px solid #faaa8d;
 }
 
 .custom-modal-title {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   font-weight: 600;
   color: #1a1a1a;
   margin: 0;
@@ -685,12 +681,13 @@ border-bottom:  0.5px solid #faaa8d;
 .custom-close-button {
   background: none;
   border: none;
-  font-size: 3rem;
-  color: #6c757d;
+  font-size: 2rem;
+  
   cursor: pointer;
   transition: color 0.2s ease;
   line-height: 1;
   padding: 0;
+  font-weight: 800;
 }
 
 .custom-close-button:hover {
@@ -757,10 +754,12 @@ border-bottom:  0.5px solid #faaa8d;
   color: black;
   font-size: 15px;
   font-weight: 500;
+  margin: 0px;
 }
 .custom-login-button:active {
   transform: translateY(0);
   box-shadow: 0 2px 6px rgba(255, 0, 0, 0.2);
+  background-color: #28a745 !important;
 }
 
 /* Responsive adjustments */
