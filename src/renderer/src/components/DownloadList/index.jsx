@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -94,6 +94,53 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
+  }
+  const handleOpenFolder = async (item) => {
+    try {
+      const allPathsToSearch = []
+
+      if (item.saveTo && typeof item.saveTo === 'string') {
+        try {
+          await window.api.readDirectory(item.saveTo)
+          allPathsToSearch.push(item.saveTo)
+        } catch (err) {
+          console.warn(`saveTo path not accessible: ${item.saveTo}`, err)
+        }
+      }
+
+      const fallbackFolders = [
+        await window.api.getPath('downloads'),
+        await window.api.getPath('desktop')
+      ]
+
+      fallbackFolders.forEach((path) => {
+        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path)
+      })
+
+      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
+      const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`)
+
+      for (const dir of directories) {
+        try {
+          await window.api.readDirectory(dir)
+          if (window.api.openPath) {
+            await window.api.openPath(dir)
+          } else {
+            const encodedPath = encodeURI(dir.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25')
+            const folderUrl = `file:///${encodedPath}`
+            await window.api.openExternal(folderUrl)
+          }
+          return
+        } catch (err) {
+          console.warn(`Folder not accessible: ${dir}`, err)
+        }
+      }
+
+      alert('Could not locate the download folder. It may have been moved or is not accessible.')
+    } catch (error) {
+      console.error('Error in handleOpenFolder:', error)
+      alert('Failed to open folder. Please check the console for details.')
+    }
   }
 const handleThumbnailClick = async (item) => {
   window.api.trackEvent('play', { playUrl: item.url });
@@ -384,33 +431,43 @@ const handleThumbnailClick = async (item) => {
                       {item.status === 'Fetching Info...' ? (
                         <Skeleton width={40} height={40} borderRadius={100} />
                       ) : (
-                        <Dropdown
-                          style={{ marginLeft: '6px' }}
-                          show={openDropdown === item.id}
-                          onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
-                        >
-                          <Dropdown.Toggle as="button" className="three-dots-btn">
-                            <FaEllipsisV color='white' />
-                          </Dropdown.Toggle>
-                          <Dropdown.Menu className="dropdown-menu">
-                            <Dropdown.Item
-                              onClick={() => {
-                                handleDelete(item)
-                                setOpenDropdown(null)
-                              }}
-                            >
-                           Delete    <FaTrash className="me-2" />
-                            </Dropdown.Item>
-                            <Dropdown.Item
-                              onClick={() => {
-                                handleDeleteAll()
-                                setOpenDropdown(null)
-                              }}
-                            >
-                         Delete All     <FaTrash className="me-2" /> 
-                            </Dropdown.Item>
-                          </Dropdown.Menu>
-                        </Dropdown>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <button
+                            type="button"
+                            className="btn btn-light btn-sm"
+                            onClick={() => handleOpenFolder(item)}
+                            title="Open folder"
+                          >
+                            <FaFolderOpen />
+                          </button>
+                          <Dropdown
+                            style={{ marginLeft: '6px' }}
+                            show={openDropdown === item.id}
+                            onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
+                          >
+                            <Dropdown.Toggle as="button" className="three-dots-btn">
+                              <FaEllipsisV color='white' />
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu className="dropdown-menu">
+                              <Dropdown.Item
+                                onClick={() => {
+                                  handleDelete(item)
+                                  setOpenDropdown(null)
+                                }}
+                              >
+                                Delete <FaTrash className="me-2" />
+                              </Dropdown.Item>
+                              <Dropdown.Item
+                                onClick={() => {
+                                  handleDeleteAll()
+                                  setOpenDropdown(null)
+                                }}
+                              >
+                                Delete All <FaTrash className="me-2" /> 
+                              </Dropdown.Item>
+                            </Dropdown.Menu>
+                          </Dropdown>
+                        </div>
                       )}
                     </td>
                   </tr>

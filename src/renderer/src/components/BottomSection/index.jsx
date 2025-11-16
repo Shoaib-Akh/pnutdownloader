@@ -21,6 +21,7 @@ import alljson from '../../../../../public/all.json'
 import { extractVideoId } from '../commonFunction'
 import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
+import DonationModal from '../DonationModal'
 
 function BottomSection({
   downloadType,
@@ -47,9 +48,10 @@ function BottomSection({
 }) {
   let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false)
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   // console.log("isWebViewReadyisWebViewReady",isWebViewReady);
-  
+ 
   const [canGoBack, setCanGoBack] = useState(false);
 const [canGoForward, setCanGoForward] = useState(false);
   const [url, setUrl] = useState('')
@@ -160,6 +162,8 @@ const customSanitize = (str) => {
     setDownload(false)
   }, [currentWebViewUrl])
 
+  const DONATION_URL = "https://ko-fi.com/pnutdownloader'"
+
   const handlePlatformClick = (platformUrl) => {
       window.api.trackEvent('platformUrl',{platformUrl})
     setUrl(platformUrl)
@@ -248,6 +252,13 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
     setDownload(true);
     addToQueue(urlToDownload);
   };
+
+  const handleDonate = () => {
+    if (DONATION_URL && window.api) {
+      window.api.openExternal(DONATION_URL)
+    }
+    setShowDonationModal(false)
+  }
 
   const handleLogin = () => {
              window.api.trackEvent('youtube-login')
@@ -583,6 +594,7 @@ const getVideoInfo = async (url) => {
               return newMap;
             });
             localStorage.setItem('downloadList', JSON.stringify(stored));
+            setShowDonationModal(true)
           }
       
           if (progressData.message.includes('Finished downloading playlist:')) {
@@ -602,6 +614,7 @@ const getVideoInfo = async (url) => {
             return newMap;
           });
           localStorage.setItem('downloadList', JSON.stringify(stored));
+          setShowDonationModal(true)
         }
         if (
           progressData?.error?.includes('Sign in to confirm') ||
@@ -913,10 +926,20 @@ const handleRetry = (id) => {
           )}
         </div>
       )}
-      {showLoginPopup &&
-             <LoginModal isOpen={showLoginPopup} onClose={() => setShowLoginPopup(false)} handleLogin={handleLogin} />
-      
-      }
+      {showLoginPopup && (
+        <LoginModal
+          isOpen={showLoginPopup}
+          onClose={() => setShowLoginPopup(false)}
+          handleLogin={handleLogin}
+        />
+      )}
+      {showDonationModal && (
+        <DonationModal
+          isOpen={showDonationModal}
+          onClose={() => setShowDonationModal(false)}
+          onDonate={handleDonate}
+        />
+      )}
 
     </div>
   )
