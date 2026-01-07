@@ -19,6 +19,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../../../../public/all.json'
 import { extractVideoId } from '../commonFunction'
+import { detectPlatform, isYouTubePlatform, PLATFORMS } from '../platformUtils'
 import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
 import DonationModal from '../DonationModal'
@@ -192,9 +193,23 @@ const customSanitize = (str) => {
   }
 
   const checkIfDownloadable = (currentUrl) => {
-    setIsDownloadable(
-      alljson?.videoPatterns?.some((pattern) => new RegExp(pattern).test(currentUrl))
-    )
+    if (!currentUrl) {
+      setIsDownloadable(false);
+      return;
+    }
+    
+    // Check against all video patterns from all.json
+    const isDownloadable = alljson?.videoPatterns?.some((pattern) => {
+      try {
+        const regex = new RegExp(pattern);
+        return regex.test(currentUrl);
+      } catch (error) {
+        console.warn(`Invalid regex pattern: ${pattern}`, error);
+        return false;
+      }
+    });
+    
+    setIsDownloadable(isDownloadable || false);
   }
 
   const handleDownloadClick = () => {
@@ -318,8 +333,61 @@ const getNextApiKey = () => {
   return key;
 };
 
+// Helper function to format duration from seconds to ISO format
+const formatDurationToISO = (duration) => {
+  if (typeof duration === 'string' && duration.includes('PT')) {
+    // Already in ISO format
+    return duration;
+  }
+  if (typeof duration === 'number') {
+    // Convert seconds to ISO format (PT1H2M3S)
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = Math.floor(duration % 60);
+    
+    let isoDuration = 'PT';
+    if (hours > 0) isoDuration += `${hours}H`;
+    if (minutes > 0) isoDuration += `${minutes}M`;
+    if (seconds > 0) isoDuration += `${seconds}S`;
+    return isoDuration || 'PT0S';
+  }
+  return duration || 'PT0S';
+};
 
 const getVideoInfo = async (url) => {
+  const platform = detectPlatform(url);
+  
+  // For non-YouTube platforms, use yt-dlp via IPC
+  if (!isYouTubePlatform(platform)) {
+    try {
+      const info = await window.api.fetchVideoInfo(url);
+      if (!info) return null;
+      
+      // Extract thumbnail from yt-dlp response
+      let thumbnail = '';
+      if (Array.isArray(info.thumbnails) && info.thumbnails.length > 0) {
+        thumbnail = info.thumbnails[info.thumbnails.length - 1].url;
+      } else if (info.thumbnail) {
+        thumbnail = info.thumbnail;
+      }
+      
+      // Format duration from seconds to ISO format
+      const duration = info.duration ? formatDurationToISO(info.duration) : 'PT0S';
+      
+      return {
+        videoUrl: url,
+        title: customSanitize(info.title || 'Unknown'),
+        thumbnail: thumbnail,
+        duration: duration,
+        isPlaylist: false,
+      };
+    } catch (error) {
+      console.error(`Failed to fetch video info for ${platform}:`, error);
+      return null;
+    }
+  }
+  
+  // YouTube-specific logic (keep existing)
   const videoId = extractVideoId(url);
   const playlistId = extractPlaylistId(url);
 

@@ -9,6 +9,7 @@ import {
   FaTwitter, 
   FaInstagram, 
   FaTiktok,
+  FaVideo,
 } from "react-icons/fa";
 import "../common.css";
 import youtubekids from '../../assets/Images/youtubekids.png';
@@ -29,11 +30,12 @@ const PlatformIcons = ({ handlePlatformClick }) => {
       color: "#FF0000",
       alt: "YouTube Kids" 
     }, // YouTube Kids with image
-    // { Component: FaVimeo, url: "https://www.vimeo.com", color: "blue" },
-    // { Component: FaFacebook, url: "https://www.facebook.com/watch", color: "#1877F2" },
-    // { Component: FaTwitter, url: "https://twitter.com", color: "#1DA1F2" },
-    // { Component: FaInstagram, url: "https://www.instagram.com/reels", color: "#E4405F" },
-    // { Component: FaTiktok, url: "https://www.tiktok.com", color: "black" },
+    { Component: FaFacebook, url: "https://www.facebook.com/watch", color: "#1877F2", alt: "Facebook" },
+    { Component: FaInstagram, url: "https://www.instagram.com/reels", color: "#E4405F", alt: "Instagram" },
+    { Component: FaTiktok, url: "https://www.tiktok.com", color: "black", alt: "TikTok" },
+    { Component: FaTwitter, url: "https://twitter.com", color: "#1DA1F2", alt: "Twitter" },
+    { Component: FaVimeo, url: "https://www.vimeo.com", color: "#1AB7EA", alt: "Vimeo" },
+    { Component: FaVideo, url: "https://www.dailymotion.com", color: "#0066DC", alt: "Dailymotion" },
   ];
 
   return (
