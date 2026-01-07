@@ -50,9 +50,11 @@ openPath: (path) => ipcRenderer.invoke('openPath', path),
   // ✅ New function to read directory contents
   readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
 
+  // ✅ New function to create directory
+  createDirectory: (dirPath) => ipcRenderer.invoke('create-directory', dirPath),
+
   // ✅ New function to check if a file exists
   fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
-  getPath: (filePath) => ipcRenderer.invoke('getPath', filePath),
   openFile: (openFile) => ipcRenderer.invoke('openFile', openFile),
 
   

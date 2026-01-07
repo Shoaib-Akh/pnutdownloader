@@ -18,6 +18,9 @@ mac:
 extraResources:
   - from: public/yt-dlp.exe
     to: yt-dlp.exe
+  
+  - from: public/yt-dlp_macos
+    to: yt-dlp_macos
  
   - from: public/cookies.txt
     to: cookies.txt

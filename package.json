@@ -68,6 +68,10 @@
         "to": "yt-dlp.exe"
       },
       {
+        "from": "public/yt-dlp_macos",
+        "to": "yt-dlp_macos"
+      },
+      {
         "from": "public/ffmpeg.exe",
         "to": "ffmpeg.exe"
       },

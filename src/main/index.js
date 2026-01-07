@@ -21,17 +21,62 @@ try {
 }
 
 const https = require('https');
+
+// Platform detection utilities
+const getPlatformExecutableName = (baseName) => {
+  if (process.platform === 'win32') {
+    return `${baseName}.exe`;
+  }
+  return baseName;
+};
+
+const getYtdlpExecutableName = () => {
+  if (process.platform === 'win32') {
+    return 'yt-dlp.exe';
+  } else if (process.platform === 'darwin') {
+    return 'yt-dlp_macos';
+  }
+  return 'yt-dlp';
+};
+
+const getFfmpegExecutableName = () => {
+  return getPlatformExecutableName('ffmpeg');
+};
+
 const ffmpegPath = app.isPackaged
-  ? join(process.resourcesPath, 'ffmpeg.exe')
-  : join(__dirname, '../../public/ffmpeg.exe')
+  ? join(process.resourcesPath, getFfmpegExecutableName())
+  : join(__dirname, '../../public', getFfmpegExecutableName())
 const cookiesPath = app.isPackaged
   ? join(process.resourcesPath, 'cookies.txt')
   : join(__dirname, '../../public/cookies.txt')
 let mainWindow
 const { dirname } = require('path');
-const ytdlpPath = app.isPackaged
-  ? join(process.resourcesPath, 'yt-dlp.exe')
-  : join(__dirname, '../../public/yt-dlp.exe')
+// Get yt-dlp path - prefer system installation on macOS/Linux if available
+const getYtdlpPath = () => {
+  if (app.isPackaged) {
+    return join(process.resourcesPath, getYtdlpExecutableName());
+  }
+  
+  // In development, check for system yt-dlp first (macOS/Linux)
+  if (process.platform !== 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      if (systemYtdlp && existsSync(systemYtdlp)) {
+        return systemYtdlp;
+      }
+    } catch (err) {
+      // System yt-dlp not found, use bundled version
+    }
+  }
+  
+  return join(__dirname, '../../public', getYtdlpExecutableName());
+};
+
+// Initialize with default path, will be updated in app.whenReady()
+let ytdlpPath = app.isPackaged
+  ? join(process.resourcesPath, getYtdlpExecutableName())
+  : join(__dirname, '../../public', getYtdlpExecutableName());
 // Set icon path based on OS
 let iconPath = ''
 switch (process.platform) {
@@ -119,17 +164,18 @@ function downloadFile(url, destPath) {
 
 async function checkYtdlpVersion() {
   if (!existsSync(ytdlpPath)) {
-    throw new Error(`yt-dlp.exe not found at ${ytdlpPath}`);
+    throw new Error(`yt-dlp not found at ${ytdlpPath}`);
   }
 
   const stats = await fs.stat(ytdlpPath);
   if (stats.size === 0) {
-    throw new Error(`yt-dlp.exe is empty at ${ytdlpPath}`);
+    throw new Error(`yt-dlp is empty at ${ytdlpPath}`);
   }
 
   return new Promise((resolve, reject) => {
     console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
-    const proc = spawn(ytdlpPath, ['--version'], { windowsHide: true });
+    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+    const proc = spawn(ytdlpPath, ['--version'], spawnOptions);
     
     let version = '';
     let errorOutput = '';
@@ -162,13 +208,79 @@ async function checkYtdlpVersion() {
 }
 
 async function updateYtdlp() {
-  const ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+  // Check for system yt-dlp first (macOS/Linux) - don't override if already set
+  if (process.platform !== 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      if (systemYtdlp && existsSync(systemYtdlp)) {
+        // Only update if we're not already using system yt-dlp
+        if (ytdlpPath !== systemYtdlp) {
+          ytdlpPath = systemYtdlp;
+          console.log('Using system yt-dlp at:', systemYtdlp);
+        }
+        return;
+      }
+    } catch (err) {
+      console.log('System yt-dlp not found, will download standalone binary...');
+    }
+  }
+  
+  // Determine download URL and target path
+  let ytdlpUrl;
+  const bundledPath = app.isPackaged
+    ? join(process.resourcesPath, getYtdlpExecutableName())
+    : join(__dirname, '../../public', getYtdlpExecutableName());
+  
+  if (process.platform === 'win32') {
+    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+  } else if (process.platform === 'darwin') {
+    // Download the standalone macOS binary
+    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+  } else {
+    // Linux
+    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+  }
+  
+  // Only update path to bundled version if we're not using system yt-dlp
+  if (!ytdlpPath || ytdlpPath === bundledPath || !existsSync(ytdlpPath)) {
+    ytdlpPath = bundledPath;
+  }
+  
   try {
+    // Remove old binary if it exists (in case it's corrupted)
+    if (existsSync(ytdlpPath)) {
+      await fs.unlink(ytdlpPath).catch(() => {});
+    }
     await downloadFile(ytdlpUrl, ytdlpPath);
     console.log('yt-dlp downloaded successfully');
     const stats = await fs.stat(ytdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
-    await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+    // Set executable permissions on Unix-like systems
+    if (process.platform !== 'win32') {
+      await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+    }
+    
+    // Verify the downloaded binary works (skip on Windows as it might show a console window)
+    if (process.platform !== 'win32') {
+      try {
+        const { execSync } = require('child_process');
+        execSync(`"${ytdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000 });
+        console.log('Downloaded yt-dlp binary verified successfully');
+      } catch (verifyErr) {
+        console.warn('Downloaded yt-dlp binary verification failed:', verifyErr.message);
+        // If verification fails, try system yt-dlp as fallback
+        try {
+          const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+          if (systemYtdlp && existsSync(systemYtdlp)) {
+            ytdlpPath = systemYtdlp;
+            console.log('Switching to system yt-dlp as fallback');
+          }
+        } catch (fallbackErr) {
+          console.warn('System yt-dlp fallback also failed:', fallbackErr.message);
+        }
+      }
+    }
   } catch (error) {
     console.error(`Failed to update yt-dlp: ${error.message}`);
     throw error;
@@ -176,8 +288,27 @@ async function updateYtdlp() {
 }
 
 async function downloadAndExtractFFmpeg() {
-  const ffmpegUrl = 'https://cdn.pnutdownloader.com/ffmpeg.exe.tar.gz';
-  const tempTarPath = join(app.getPath('temp'), 'ffmpeg.exe.tar.gz');
+  let ffmpegUrl;
+  let tempTarPath;
+  let ffmpegFileName;
+  
+  if (process.platform === 'win32') {
+    ffmpegUrl = 'https://cdn.pnutdownloader.com/ffmpeg.exe.tar.gz';
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg.exe.tar.gz');
+    ffmpegFileName = 'ffmpeg.exe';
+  } else if (process.platform === 'darwin') {
+    // For macOS, download from a source that provides macOS binaries
+    // Using a direct download approach for macOS FFmpeg
+    ffmpegUrl = 'https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip';
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg.zip');
+    ffmpegFileName = 'ffmpeg';
+  } else {
+    // Linux - download static build
+    ffmpegUrl = 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz';
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg.tar.xz');
+    ffmpegFileName = 'ffmpeg';
+  }
+  
   const extractPath = dirname(ffmpegPath);
 
   try {
@@ -193,20 +324,86 @@ async function downloadAndExtractFFmpeg() {
       mkdirSync(extractPath, { recursive: true });
     }
 
-    console.log('Downloading FFmpeg...');
-    await downloadFile(ffmpegUrl, tempTarPath);
+    if (process.platform === 'win32') {
+      console.log('Downloading FFmpeg...');
+      await downloadFile(ffmpegUrl, tempTarPath);
+      console.log('Extracting FFmpeg...');
+      await tar.x({
+        file: tempTarPath,
+        cwd: extractPath,
+        filter: (path) => path.endsWith('ffmpeg.exe')
+      });
+    } else if (process.platform === 'darwin') {
+      // For macOS, try to use system ffmpeg first, then download if needed
+      const { execSync } = require('child_process');
+      let ffmpegFound = false;
+      
+      try {
+        const systemFfmpeg = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
+        if (systemFfmpeg && existsSync(systemFfmpeg)) {
+          // Copy system ffmpeg to our resources
+          await fs.copyFile(systemFfmpeg, ffmpegPath);
+          console.log('Using system FFmpeg');
+          ffmpegFound = true;
+        }
+      } catch (err) {
+        console.log('System FFmpeg not found, will download...');
+      }
+      
+      if (!ffmpegFound) {
+        // System ffmpeg not found, download static binary
+        console.log('Downloading FFmpeg for macOS...');
+        const macFfmpegUrl = 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip';
+        await downloadFile(macFfmpegUrl, tempTarPath);
+        // Extract using unzip command
+        const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
+        mkdirSync(extractDir, { recursive: true });
+        execSync(`unzip -q -o "${tempTarPath}" -d "${extractDir}"`);
+        // Find ffmpeg binary in extracted files
+        const findFfmpeg = async (dir) => {
+          const files = await fs.readdir(dir, { withFileTypes: true });
+          for (const file of files) {
+            const fullPath = join(dir, file.name);
+            if (file.isDirectory()) {
+              const found = await findFfmpeg(fullPath);
+              if (found) return found;
+            } else if (file.name === 'ffmpeg') {
+              return fullPath;
+            }
+          }
+          return null;
+        };
+        const extractedFfmpeg = await findFfmpeg(extractDir);
+        if (extractedFfmpeg) {
+          await fs.copyFile(extractedFfmpeg, ffmpegPath);
+          // Clean up
+          await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
+        } else {
+          throw new Error('FFmpeg binary not found in extracted archive');
+        }
+      }
+    } else {
+      // Linux - download and extract tar.xz
+      console.log('Downloading FFmpeg for Linux...');
+      await downloadFile(ffmpegUrl, tempTarPath);
+      const { execSync } = require('child_process');
+      execSync(`tar -xf ${tempTarPath} -C ${extractPath} --strip-components=1 --wildcards "*/ffmpeg"`);
+      // Find and move ffmpeg to the correct location
+      const extractedFiles = await fs.readdir(extractPath);
+      const ffmpegFile = extractedFiles.find(f => f === 'ffmpeg');
+      if (ffmpegFile) {
+        await fs.rename(join(extractPath, ffmpegFile), ffmpegPath);
+      }
+    }
 
-    console.log('Extracting FFmpeg...');
-    await tar.x({
-      file: tempTarPath,
-      cwd: extractPath,
-      filter: (path) => path.endsWith('ffmpeg.exe')
-    });
-
-    await fs.unlink(tempTarPath);
-    await fs.chmod(ffmpegPath, 0o755).catch(err => 
-      console.warn(`Failed to set FFmpeg permissions: ${err.message}`)
-    );
+    await fs.unlink(tempTarPath).catch(() => {});
+    
+    // Set executable permissions on Unix-like systems
+    if (process.platform !== 'win32') {
+      await fs.chmod(ffmpegPath, 0o755).catch(err => 
+        console.warn(`Failed to set FFmpeg permissions: ${err.message}`)
+      );
+    }
 
     const stats = await fs.stat(ffmpegPath);
     console.log(`FFmpeg downloaded and extracted successfully. Size: ${stats.size} bytes`);
@@ -292,17 +489,66 @@ function createWindow() {
   }
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Initialize yt-dlp path - check for system installation first
+  const initializeYtdlp = async () => {
+    // First, try to find and use system yt-dlp
+    if (process.platform !== 'win32') {
+      try {
+        const { execSync } = require('child_process');
+        const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        if (systemYtdlp && existsSync(systemYtdlp)) {
+          ytdlpPath = systemYtdlp;
+          console.log('Using system yt-dlp at:', systemYtdlp);
+          return true;
+        }
+      } catch (err) {
+        // System yt-dlp not found, continue to check bundled version
+      }
+    }
+    
+    // Check if bundled version exists
+    const bundledPath = app.isPackaged
+      ? join(process.resourcesPath, getYtdlpExecutableName())
+      : join(__dirname, '../../public', getYtdlpExecutableName());
+    
+    if (existsSync(bundledPath)) {
+      ytdlpPath = bundledPath;
+      // Verify it works
+      try {
+        await checkYtdlpVersion();
+        console.log('Using bundled yt-dlp at:', bundledPath);
+        return true;
+      } catch (err) {
+        console.warn('Bundled yt-dlp failed verification:', err.message);
+        // If it's a PyInstaller error or binary doesn't work, we'll download a new one
+        if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
+          console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
+        }
+      }
+    }
+    
+    return false;
+  };
   
+  const ytdlpInitialized = await initializeYtdlp();
+  console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
   
   downloadAndExtractFFmpeg();
-  if (!existsSync(ytdlpPath)) {
-    console.log('yt-dlp not found, downloading...');
-    updateYtdlp();
+  
+  if (!ytdlpInitialized) {
+    console.log('yt-dlp not found or not working, downloading...');
+    await updateYtdlp().catch(downloadErr => {
+      console.error('Failed to download yt-dlp:', downloadErr);
+    });
+    console.log('yt-dlp path after update:', ytdlpPath);
   } else {
+    // Verify the version
     checkYtdlpVersion().then(version => {
       console.log('yt-dlp version:', version);
-    }).catch(err => console.error('Failed to check yt-dlp version:', err));
+    }).catch(err => {
+      console.error('Failed to check yt-dlp version:', err);
+    });
   }
 
   checkDependencies().then(deps => {
@@ -429,9 +675,34 @@ ipcMain.handle('getYoutubeCookies', async () => {
 ipcMain.handle('fetch-video-info', async (event, url) => {
   console.log("url",url);
   
+  const getYtdlpPath = () => {
+    if (app.isPackaged) {
+      return join(process.resourcesPath, getYtdlpExecutableName());
+    }
+    
+    // In development, check for system yt-dlp first (macOS/Linux)
+    if (process.platform !== 'win32') {
+      try {
+        const { execSync } = require('child_process');
+        const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        if (systemYtdlp && existsSync(systemYtdlp)) {
+          return systemYtdlp;
+        }
+      } catch (err) {
+        // System yt-dlp not found, use bundled version
+      }
+    }
+    
+    return join(__dirname, '../../public', getYtdlpExecutableName());
+  };
+
+  const currentYtdlpPath = getYtdlpPath();
+  console.log('Using yt-dlp path for video info:', currentYtdlpPath);
+  
   return new Promise((resolve, reject) => {
     const args = ['-J', url];
-    const proc = spawn(ytdlpPath, args, { windowsHide: true });
+    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+    const proc = spawn(currentYtdlpPath, args, spawnOptions);
 
     let stdout = '';
     let stderr = '';
@@ -547,7 +818,31 @@ console.log("options",options);
             isPlaylist ? '--yes-playlist' : '--no-playlist',
             url,
           ];
-          const titleProcess = spawn(ytdlpPath, titleArgs, { windowsHide: true });
+          
+          const getYtdlpPath = () => {
+            if (app.isPackaged) {
+              return join(process.resourcesPath, getYtdlpExecutableName());
+            }
+            
+            // In development, check for system yt-dlp first (macOS/Linux)
+            if (process.platform !== 'win32') {
+              try {
+                const { execSync } = require('child_process');
+                const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+                if (systemYtdlp && existsSync(systemYtdlp)) {
+                  return systemYtdlp;
+                }
+              } catch (err) {
+                // System yt-dlp not found, use bundled version
+              }
+            }
+            
+            return join(__dirname, '../../public', getYtdlpExecutableName());
+          };
+
+          const currentYtdlpPath = getYtdlpPath();
+          const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+          const titleProcess = spawn(currentYtdlpPath, titleArgs, spawnOptions);
           let titleData = '';
 
           titleProcess.stdout.on('data', (data) => {
@@ -635,7 +930,32 @@ console.log("options",options);
 
         console.log('Downloading with args:', args);
 
-        downloadProcess = spawn(ytdlpPath, args, { windowsHide: true });
+        const getYtdlpPath = () => {
+          if (app.isPackaged) {
+            return join(process.resourcesPath, getYtdlpExecutableName());
+          }
+          
+          // In development, check for system yt-dlp first (macOS/Linux)
+          if (process.platform !== 'win32') {
+            try {
+              const { execSync } = require('child_process');
+              const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+              if (systemYtdlp && existsSync(systemYtdlp)) {
+                return systemYtdlp;
+              }
+            } catch (err) {
+              // System yt-dlp not found, use bundled version
+            }
+          }
+          
+          return join(__dirname, '../../public', getYtdlpExecutableName());
+        };
+
+        const currentYtdlpPath = getYtdlpPath();
+        console.log('Using yt-dlp path:', currentYtdlpPath);
+
+        const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+        downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
         activeDownloads[downloadId] = true;
 
         downloadProcess.stdout.on('data', (data) => {
@@ -765,6 +1085,20 @@ ipcMain.handle('read-directory', async (event, dir) => {
     throw error;
   }
 });
+
+ipcMain.handle('create-directory', async (event, dirPath) => {
+  try {
+    if (!existsSync(dirPath)) {
+      mkdirSync(dirPath, { recursive: true });
+      console.log(`Directory created: ${dirPath}`);
+    }
+    return { success: true };
+  } catch (error) {
+    console.error(`Failed to create directory ${dirPath}:`, error);
+    throw error;
+  }
+});
+
 ipcMain.handle('accessFile', async (event, filePath) => {
   try {
     await fs.access(filePath, fs.constants.F_OK | fs.constants.R_OK);
@@ -774,10 +1108,9 @@ ipcMain.handle('accessFile', async (event, filePath) => {
     throw error;
   }
 });
-ipcMain.handle('getPath', async (event, name) => {
-  const path = require('path');
+ipcMain.handle('get-path', async (event, name) => {
   try {
-    return path.join(require('electron').app.getPath(name));
+    return app.getPath(name);
   } catch (error) {
     console.error(`Failed to get path ${name}:`, error);
     throw error;

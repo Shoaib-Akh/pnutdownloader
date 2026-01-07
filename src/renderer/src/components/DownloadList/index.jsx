@@ -118,10 +118,12 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       })
 
       const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
-      const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`)
+      const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`)
 
       for (const dir of directories) {
         try {
+          // Create directory if it doesn't exist
+          await window.api.createDirectory(dir);
           await window.api.readDirectory(dir)
           if (window.api.openPath) {
             await window.api.openPath(dir)
@@ -185,7 +187,7 @@ const handleThumbnailClick = async (item) => {
     console.log(`All paths to search: ${allPathsToSearch}`);
 
     const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
-    const directories = allPathsToSearch.map((path) => `${path}\\PNUT Downloader\\${subDir}`);
+    const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`);
     console.log(`Search directories: ${directories}`);
 
     const normalizedTitle = item.title
@@ -202,6 +204,8 @@ const handleThumbnailClick = async (item) => {
     let filePath = null;
     for (const dir of directories) {
       try {
+        // Create directory if it doesn't exist
+        await window.api.createDirectory(dir);
         console.log(`Reading directory: ${dir}`);
         const files = await window.api.readDirectory(dir);
         console.log(`Files found in ${dir}: ${files.join(', ')}`);
@@ -230,7 +234,7 @@ const handleThumbnailClick = async (item) => {
         });
 
         if (filePath) {
-          filePath = `${dir}\\${filePath}`;
+          filePath = `${dir}/${filePath}`;
           console.log(`File found: ${filePath}`);
           break;
         } else {
