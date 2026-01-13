@@ -1,0 +1,469 @@
+/* Navbar Modern Styles with Gradient & Bold Design */
+
+:root {
+  --navbar-primary: #BB4F28;
+  --navbar-primary-dark: #a03d1f;
+  --navbar-primary-light: #d66b4a;
+  --navbar-gradient-start: #BB4F28;
+  --navbar-gradient-end: #d66b4a;
+  --navbar-bg: #ffffff;
+  --navbar-border: #e0e0e0;
+  --navbar-shadow: rgba(0, 0, 0, 0.08);
+  --navbar-shadow-hover: rgba(187, 79, 40, 0.25);
+  --navbar-text-primary: #333333;
+  --navbar-text-secondary: #666666;
+  --navbar-input-bg: #ffffff;
+  --navbar-input-border: #ddd;
+  --navbar-input-focus: #BB4F28;
+}
+
+.navbar-modern {
+  background: linear-gradient(135deg, var(--navbar-bg) 0%, #fafafa 100%);
+  width: 85.5%;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--navbar-border);
+  box-shadow: 0 2px 8px var(--navbar-shadow), 0 1px 2px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: nowrap;
+  position: fixed;
+  top: 0;
+  /* left: 0; */
+  right: 0;
+  z-index: 1000;
+  margin: 0;
+}
+
+.navbar-modern::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--navbar-gradient-start), var(--navbar-gradient-end));
+  opacity: 0.6;
+}
+
+/* Logo Section */
+.navbar-logo-container {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+
+
+.navbar-logo:hover {
+  transform: scale(1.02);
+}
+
+/* Input Group Container */
+.navbar-input-group {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 0;
+  min-width: 0;
+  background: var(--navbar-input-bg);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid var(--navbar-input-border);
+}
+
+.navbar-input-group:focus-within {
+  box-shadow: 0 4px 16px var(--navbar-shadow-hover), 0 0 0 3px rgba(187, 79, 40, 0.1);
+  border-color: var(--navbar-input-focus);
+  transform: translateY(-1px);
+}
+
+/* Paste Button */
+.navbar-paste-btn {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: none;
+  border-right: 1px solid var(--navbar-input-border);
+  border-radius: 12px 0 0 12px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--navbar-primary);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.navbar-paste-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(187, 79, 40, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.navbar-paste-btn:hover::before {
+  left: 100%;
+}
+
+.navbar-paste-btn:hover {
+  background: linear-gradient(135deg, #f8f9fa 0%, #f0f0f0 100%);
+  color: var(--navbar-primary-dark);
+  transform: translateX(2px);
+}
+
+.navbar-paste-btn:active {
+  transform: translateX(2px) scale(0.98);
+}
+
+.navbar-paste-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.navbar-paste-btn:hover svg {
+  transform: scale(1.1) rotate(5deg);
+}
+
+/* Input Field */
+.navbar-input {
+  flex: 1;
+  padding: 12px 18px;
+  border: none;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  font-size: 14px;
+  outline: none;
+  min-width: 200px;
+  background: transparent;
+  color: var(--navbar-text-primary);
+  transition: all 0.3s ease;
+}
+
+.navbar-input::placeholder {
+  color: var(--navbar-text-secondary);
+  opacity: 0.7;
+}
+
+.navbar-input:focus {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Download Button */
+.navbar-download-btn {
+  background: linear-gradient(135deg, var(--navbar-gradient-start) 0%, var(--navbar-gradient-end) 100%);
+  color: white;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 12px 12px 0;
+  padding: 12px 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 8px rgba(187, 79, 40, 0.3);
+}
+
+.navbar-download-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.navbar-download-btn:hover::before {
+  left: 100%;
+}
+
+.navbar-download-btn:hover {
+  background: linear-gradient(135deg, var(--navbar-primary-dark) 0%, var(--navbar-gradient-start) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 4px 16px var(--navbar-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.navbar-download-btn:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(187, 79, 40, 0.3);
+}
+
+.navbar-download-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.navbar-download-btn:hover svg {
+  transform: scale(1.15) translateY(-1px);
+}
+
+/* Secondary Controls */
+.navbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+
+/* Dropdown Styling for Navbar */
+.navbar-controls .dropdown {
+  position: relative;
+}
+
+.navbar-controls .dropdown-toggle {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%) !important;
+  border: 1px solid var(--navbar-input-border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  line-height: 1.5;
+  color: var(--navbar-text-primary) !important;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.navbar-controls .dropdown-toggle:hover,
+.navbar-controls .dropdown-toggle.show {
+  background: linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(187, 79, 40, 0.1);
+  transform: translateY(-1px);
+  border-color: var(--navbar-primary);
+}
+
+.navbar-controls .dropdown-toggle span:first-child {
+  color: var(--navbar-text-secondary) !important;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.navbar-controls .dropdown-toggle span:last-child {
+  color: var(--navbar-text-primary) !important;
+  font-size: 13px;
+  font-weight: 600;
+  padding-left: 4px;
+}
+
+.navbar-controls .dropdown-toggle svg {
+  color: var(--navbar-text-secondary);
+  transition: transform 0.3s ease;
+  margin-left: 4px;
+}
+
+.navbar-controls .dropdown-toggle.show svg {
+  transform: rotate(180deg);
+}
+
+.navbar-controls .dropdown-menu {
+  background: white;
+  border: 1px solid var(--navbar-input-border);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 6px;
+  margin-top: 8px;
+  min-width: 160px;
+  animation: dropdownFadeIn 0.2s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.navbar-controls .dropdown-item {
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--navbar-text-primary);
+  transition: all 0.2s ease;
+  margin: 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navbar-controls .dropdown-item:hover {
+  background: linear-gradient(135deg, rgba(187, 79, 40, 0.08) 0%, rgba(187, 79, 40, 0.12) 100%);
+  color: var(--navbar-primary-dark);
+  transform: translateX(2px);
+}
+
+.navbar-controls .dropdown-item.active {
+  background: linear-gradient(135deg, rgba(187, 79, 40, 0.15) 0%, rgba(187, 79, 40, 0.2) 100%);
+  color: var(--navbar-primary-dark);
+  font-weight: 600;
+}
+
+.navbar-controls .dropdown-item svg {
+  color: var(--navbar-primary);
+  font-size: 12px;
+}
+
+/* Quality Badge */
+.navbar-quality-badge {
+  background: linear-gradient(135deg, var(--navbar-primary) 0%, var(--navbar-primary-dark) 100%);
+  color: white;
+  font-size: 0.65rem;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(187, 79, 40, 0.3);
+  margin-left: 8px;
+  display: inline-block;
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .navbar-modern {
+    gap: 16px;
+    padding: 16px 20px;
+  }
+
+  .navbar-logo {
+    max-width: 100px;
+  }
+
+  .navbar-paste-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  .navbar-download-btn {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+
+  .navbar-controls {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 900px) {
+  .navbar-modern {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .navbar-input-group {
+    order: 2;
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .navbar-logo-container {
+    order: 1;
+  }
+
+  .navbar-controls {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .navbar-logo {
+    max-width: 90px;
+  }
+}
+
+@media (max-width: 600px) {
+  .navbar-modern {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .navbar-paste-btn {
+    padding: 10px 12px;
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .navbar-paste-btn span {
+    display: none;
+  }
+
+  .navbar-input {
+    padding: 10px 12px;
+    font-size: 13px;
+    min-width: 0;
+  }
+
+  .navbar-download-btn {
+    padding: 10px 16px;
+    font-size: 13px;
+    gap: 6px;
+  }
+
+  .navbar-download-btn span {
+    display: none;
+  }
+
+  .navbar-logo {
+    max-width: 80px;
+  }
+}
+
+/* Animation Keyframes */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Focus visible for accessibility */
+.navbar-paste-btn:focus-visible,
+.navbar-download-btn:focus-visible {
+  outline: 2px solid var(--navbar-primary);
+  outline-offset: 2px;
+}
+
+/* Loading state */
+.navbar-download-btn.loading {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.navbar-download-btn.loading svg {
+  animation: pulse 1.5s ease-in-out infinite;
+}

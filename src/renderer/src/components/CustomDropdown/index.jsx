@@ -19,9 +19,8 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
          backgroundColor:isOpen ?  "rgb(231 231 231)":"transparent" ,
           lineHeight: "35px",
           color: isOpen ? "black" : "#A1A1A1",
-        
           padding: "0 10px",
-          border: "none",
+          // border: "none",
           display:"flex",
           justifyContent:"center",
           alignItems:"center",

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
-import BottomSection from './components/BottomSection'
+import BodySection from './components/BodySection'
 import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'
 import { FaRegLightbulb } from 'react-icons/fa'
@@ -134,7 +134,7 @@ function App() {
             width: '50px',
             height: '50px',
             border: '5px solid #ccc',
-            borderTop: '5px solid #007bff',
+            borderTop: '5px solid #BB4F28',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }}
@@ -163,7 +163,30 @@ function App() {
         />
       )}
 
-      <Navbar
+     
+
+      <div className="d-flex" style={{ paddingTop: '0', borderTop: '1px solid #e0e0e0',  }}>
+        <div style={{ width: '16%' }}>
+          <Sidebar
+              setSelectedItem={setSelectedItem}
+              selectedItem={selectedItem}
+              setDownload={setDownload}
+              download={download}
+              setShowWebView={setShowWebView}
+              showWebView={showWebView}
+              setDownloadListOpen={setDownloadListOpen}
+              setAboutUs={setAboutUs}
+            />
+        </div>
+
+        <button className="feedback-button" onClick={handleFeedbackClick}>
+          <MdFeedback /> Feedback
+        </button>
+
+        <div style={{ display: 'none' }}>
+          <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
+        </div>
+ {!showWebView && <Navbar
         bitrate={bitrate}
         setBitrate={setBitrate}
         downloadType={downloadType}
@@ -175,37 +198,10 @@ function App() {
         saveTo={saveTo}
         setSaveTo={setSaveTo}
         isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
+        // setIsSidebarOpen={setIsSidebarOpen}
         setPastLinkUrl={setPastLinkUrl}
-      />
-
-      <div className="d-flex" style={{ paddingTop: '10px', borderTop: '1px solid #faaa8d' }}>
-        <div style={{ width: showWebView ? '0%' : '20%' }}>
-          {!showWebView && (
-            <Sidebar
-              isOpen={isSidebarOpen}
-              setIsOpen={setIsSidebarOpen}
-              setSelectedItem={setSelectedItem}
-              selectedItem={selectedItem}
-              setDownload={setDownload}
-              download={download}
-              setShowWebView={setShowWebView}
-              showWebView={showWebView}
-              setDownloadListOpen={setDownloadListOpen}
-              setAboutUs={setAboutUs}
-            />
-          )}
-        </div>
-
-        <button className="feedback-button" onClick={handleFeedbackClick}>
-          <MdFeedback /> Feedback
-        </button>
-
-        <div style={{ display: 'none' }}>
-          <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
-        </div>
-
-        <BottomSection
+      />}
+        <BodySection
         setPastLinkUrl={setPastLinkUrl}
           bitrate={bitrate}
           setBitrate={setBitrate}

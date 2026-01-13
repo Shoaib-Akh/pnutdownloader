@@ -24,7 +24,7 @@ import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
 import DonationModal from '../DonationModal'
 
-function BottomSection({
+function BodySection({
   downloadType,
   setPastLinkUrl,
   bitrate,
@@ -114,6 +114,8 @@ const customSanitize = (str) => {
           setSelectedItem('All File')
           setDownload(true)
         }
+        // Clear pastLinkUrl after processing to prevent re-triggering
+        setPastLinkUrl("")
       }
       fetchAndDownload()
     }
@@ -615,13 +617,15 @@ const getVideoInfo = async (url) => {
           }
   
           const progressMatch = progressData.message.match(
-            /(\d+\.\d+)%\s+of\s+([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+)/
+            /(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+|Unknown)/
           );
           if (progressMatch) {
             const [, progress, fileSize, speed, eta] = progressMatch;
             const rawProgress = parseFloat(progress);
             let totalProgress = 0;
             const currentFileType = currentFileTypes.current.get(currentId);
+            
+            console.log('Progress matched:', { progress, fileSize, speed, eta, rawProgress, currentFileType });
       
             if (currentFileType === 'video') {
               totalProgress = rawProgress * 0.9;
@@ -640,6 +644,35 @@ const getVideoInfo = async (url) => {
               newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
               return newMap;
             });
+          } else {
+            // Try to match simpler progress format without ETA
+            const simpleProgressMatch = progressData.message.match(
+              /(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)/
+            );
+            if (simpleProgressMatch) {
+              const [, progress, fileSize] = simpleProgressMatch;
+              const rawProgress = parseFloat(progress);
+              let totalProgress = 0;
+              const currentFileType = currentFileTypes.current.get(currentId);
+              
+              console.log('Simple progress matched:', { progress, fileSize, rawProgress, currentFileType });
+              
+              if (currentFileType === 'video') {
+                totalProgress = rawProgress * 0.9;
+              } else if (currentFileType === 'audio') {
+                totalProgress = 90 + rawProgress * 0.1;
+              } else if (currentFileType === 'justAudio') {
+                totalProgress = rawProgress;
+              } else {
+                totalProgress = rawProgress; // Default to raw progress if no file type detected
+              }
+              
+              setProgressMap((prev) => {
+                const newMap = new Map(prev);
+                newMap.set(currentId, { progress: totalProgress, fileSize, speed: 'N/A', eta: 'N/A' });
+                return newMap;
+              });
+            }
           }
       
           const itemCountMatch = progressData.message.match(
@@ -655,7 +688,6 @@ const getVideoInfo = async (url) => {
           if (progressData.message.includes('has already been downloaded')) {
             stored[itemIdx].status = 'Completed';
             stored[itemIdx].isCompleted = true;
-            setPastLinkUrl("")
             setProgressMap((prev) => {
               const newMap = new Map(prev);
               newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
@@ -675,7 +707,6 @@ const getVideoInfo = async (url) => {
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed';
           stored[itemIdx].isCompleted = true;
-          setPastLinkUrl("")
           setProgressMap((prev) => {
             const newMap = new Map(prev);
             newMap.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' });
@@ -711,7 +742,6 @@ const getVideoInfo = async (url) => {
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
       const completedIndex = storedDownloads.findIndex((i) => i.id === currentId);
       if (completedIndex !== -1) {
-        setPastLinkUrl("")
         storedDownloads[completedIndex].status = 'Completed';
         storedDownloads[completedIndex].isCompleted = true;
       
@@ -852,17 +882,6 @@ const handleRetry = (id) => {
             </div>
           ) : (
             <div className="bottom-container">
-              <h1
-                style={{
-                  color: '#333',
-                  fontSize: '20px',
-                  fontWeight: 'bold',
-                  marginBottom: '20px',
-                  textAlign: 'center'
-                }}
-              >
-                Select a service below and enter your search query
-              </h1>
               <PlatformIcons handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
                 <OverlayTrigger
@@ -1013,4 +1032,4 @@ const handleRetry = (id) => {
   )
 }
 
-export default BottomSection
+export default BodySection

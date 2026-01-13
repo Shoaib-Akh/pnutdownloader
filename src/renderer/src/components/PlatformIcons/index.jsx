@@ -1,6 +1,5 @@
 
 
-
 import React from "react";
 import { 
   FaYoutube, 
@@ -9,80 +8,100 @@ import {
   FaTwitter, 
   FaInstagram, 
   FaTiktok,
-  FaVideo,
+  FaReddit,
+  FaPinterest,
+  FaLinkedin,
 } from "react-icons/fa";
+import { SiDailymotion, SiBilibili, SiSoundcloud } from "react-icons/si";
 import "../common.css";
-import youtubekids from '../../assets/Images/youtubekids.png';
-import youtubeMusic from '../../assets/Images/youtubeMusic.png';
 
 const PlatformIcons = ({ handlePlatformClick }) => {
   const platforms = [
-    { Component: FaYoutube, url: "https://www.youtube.com", color: "red" ,  alt: "YouTube" },
-    { 
-      Image: youtubeMusic, 
-      url: "https://music.youtube.com", 
-      color: "#FF0000",
-      alt: "YouTube Music" 
-    }, // YouTube Music with image
-    { 
-      Image: youtubekids, 
-      url: "https://www.youtubekids.com", 
-      color: "#FF0000",
-      alt: "YouTube Kids" 
-    }, // YouTube Kids with image
-    { Component: FaFacebook, url: "https://www.facebook.com/watch", color: "#1877F2", alt: "Facebook" },
-    { Component: FaInstagram, url: "https://www.instagram.com/reels", color: "#E4405F", alt: "Instagram" },
-    { Component: FaTiktok, url: "https://www.tiktok.com", color: "black", alt: "TikTok" },
-    { Component: FaTwitter, url: "https://twitter.com", color: "#1DA1F2", alt: "Twitter" },
-    { Component: FaVimeo, url: "https://www.vimeo.com", color: "#1AB7EA", alt: "Vimeo" },
-    { Component: FaVideo, url: "https://www.dailymotion.com", color: "#0066DC", alt: "Dailymotion" },
+    { Component: FaYoutube, url: "https://www.youtube.com", color: "#FF0000", bgColor: "#FFE5E5", alt: "YouTube", domain: "www.youtube.com" },
+    { Component: FaTiktok, url: "https://www.tiktok.com", color: "#000000", bgColor: "#F0F0F0", alt: "TikTok", domain: "www.tiktok.com" },
+    { Component: FaInstagram, url: "https://www.instagram.com/reels", color: "#E4405F", bgColor: "#FFE5ED", alt: "Instagram", domain: "www.instagram.com" },
+    { Component: FaTwitter, url: "https://twitter.com", color: "#1DA1F2", bgColor: "#E5F3FF", alt: "Twitter", domain: "www.twitter.com" },
+    { Component: FaFacebook, url: "https://www.facebook.com/watch", color: "#1877F2", bgColor: "#E5EFFF", alt: "Facebook", domain: "www.facebook.com" },
+    { Component: FaVimeo, url: "https://www.vimeo.com", color: "#1AB7EA", bgColor: "#E5F5FC", alt: "Vimeo", domain: "www.vimeo.com" },
+    { Component: SiDailymotion, url: "https://www.dailymotion.com", color: "#0066DC", bgColor: "#E5EDFF", alt: "Dailymotion", domain: "dailymotion.com" },
+    { Component: SiSoundcloud, url: "https://soundcloud.com", color: "#FF5500", bgColor: "#FFE8E0", alt: "SoundCloud", domain: "soundcloud.com" },
+    { Component: SiBilibili, url: "https://www.bilibili.com", color: "#FB7299", bgColor: "#FFE5F0", alt: "Bilibili", domain: "bilibili.com" },
+    { Component: FaReddit, url: "https://www.reddit.com", color: "#FF4500", bgColor: "#FFE8E0", alt: "Reddit", domain: "www.reddit.com" },
+    { Component: FaPinterest, url: "https://www.pinterest.com", color: "#BD081C", bgColor: "#FFE5EA", alt: "Pinterest", domain: "www.pinterest.com" },
+    { Component: FaLinkedin, url: "https://www.linkedin.com", color: "#0077B5", bgColor: "#E5F0F5", alt: "LinkedIn", domain: "www.linkedin.com" },
   ];
 
   return (
-    <div className="icon-container">
-     
-      {platforms.map(({ Component, Image, url, color, alt }, index) => (
-         <div 
-         key={index}
-         style={{border:"1px solid red",padding:30,borderRadius:10}}
-         onClick={() => handlePlatformClick(url)}
-         >
-        
-      {  Image ? (
-         <>
-          <img
+    <div style={{ width: '100%', marginTop: '40px' }}>
+      <h1 style={{
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: '#333',
+        textAlign: 'center',
+        marginBottom: '30px'
+      }}>
+        Popular Sites
+      </h1>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '20px',
+        width: '100%',
+        padding: '0 20px'
+      }}>
+        {platforms.map(({ Component, url, color, bgColor, alt, domain }, index) => (
+          <div
             key={index}
-            src={Image}
-            alt={alt}
-           
-            style={{ cursor: "pointer", width: "50px", height: "50px" }}
-            className="platform-icon"
-          />
-       <h3 
-          className="platform-icon"
-       style={{marginTop:10}}>
-       {  alt}
-             </h3>
-      
-         </>
-        ) : (
-          <div className="px-3" >
-          <Component
-            key={index}
-            className="platform-icon"
             onClick={() => handlePlatformClick(url)}
-            style={{ cursor: "pointer", color, fontSize: "60px",}}
-          />
-           <h3   className="platform-icon" style={{color:"black",marginTop:5}}>
-       {  alt}
-             </h3>
+            style={{
+              background: bgColor || '#f8f9fa',
+              borderRadius: '12px',
+              padding: '20px',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              border: '1px solid rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '12px',
+              minHeight: '140px',
+              justifyContent: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <Component
+              style={{
+                fontSize: '48px',
+                color: color,
+              }}
+            />
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#333',
+                margin: '0 0 4px 0'
+              }}>
+                {alt}
+              </h3>
+              <p style={{
+                fontSize: '12px',
+                color: '#666',
+                margin: 0
+              }}>
+                {domain}
+              </p>
+            </div>
           </div>
-
-        )}
+        ))}
       </div>
-
-      ))}
-
     </div>
   );
 };

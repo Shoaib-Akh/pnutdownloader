@@ -1,11 +1,13 @@
-import React from 'react';
-import { FaPaste } from 'react-icons/fa';
+import React, { useState, useEffect } from 'react';
+import { FaPaste, FaDownload } from 'react-icons/fa';
 import Logo from '../../assets/Images/logo.png';
 import '../common.css';
+import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';
 import { extractYotubePastLink } from '../commonFunction';
 
-function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType }) {
+function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick }) {
+  const [urlInput, setUrlInput] = useState('');
   const formatOptions = {
     Video: ['MP4', 'AVI', 'MKV'],
     Audio: ['MP3', 'FLAC', 'WAV', 'AAC'],
@@ -51,7 +53,11 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   };
 
   // Initialize localStorage with default values on first render
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!setDownloadType || !setFormat || !setQuality || !setBitrate || !setSaveTo) {
+      return; // Don't run if required props are missing
+    }
+    
     const navbarState = JSON.parse(localStorage.getItem('navbarState'));
     if (!navbarState) {
       const defaultState = {
@@ -74,9 +80,10 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
       setBitrate(getLocalStorageValue('bitrate', '128K'));
       setSaveTo(getLocalStorageValue('saveTo', 'Downloads'));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array to run only once on mount
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (downloadType && formatOptions[downloadType]) {
       const currentFormat = getLocalStorageValue('format', formatOptions[downloadType][0]);
       if (!formatOptions[downloadType].includes(currentFormat)) {
@@ -84,9 +91,10 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
         saveToLocalStorage('format', formatOptions[downloadType][0]);
       }
     }
-  }, [downloadType, formatOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [downloadType]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (downloadType !== 'Audio') {
       if (bitrate !== null) {
         setBitrate(null);
@@ -96,7 +104,8 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
       setBitrate(bitrateOptions[3]);
       saveToLocalStorage('bitrate', bitrateOptions[3]);
     }
-  }, [downloadType, bitrate, bitrateOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [downloadType, bitrate]);
 
   const handleDownloadTypeChange = (value) => {
     setDownloadType(value);
@@ -154,134 +163,149 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     <div className="d-flex align-items-center">
       <span>{option.label}</span>
       {option.badge && (
-        <span 
-          className="badge rounded-pill ms-2" 
-          style={{
-            backgroundColor:  '#007bff',
-            color: 'white',
-            fontSize: '0.65rem',
-            padding: '2px 6px',
-            fontWeight: 'normal'
-          }}
-        >
+        <span className="navbar-quality-badge">
           {option.badge}
         </span>
       )}
     </div>
   );
 
+  const handlePasteClick = async () => {
+    try {
+      if (window.api && window.api.trackEvent) {
+        window.api.trackEvent('Paste');
+      }
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
+        setUrlInput(clipboardText);
+        const videoId = extractYotubePastLink(clipboardText);
+        if (!videoId) {
+          alert('The URL does not contain a valid video or playlist');
+          return;
+        }
+        let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
+        const existingDownload = storedDownloads.some(
+          (item) => extractYotubePastLink(item.url) === videoId
+        );
+        if (existingDownload) {
+          if (!window.alertShown) {
+            if (window.api && window.api.showMessageBox) {
+              window.api.showMessageBox({
+                type: 'warning',
+                title: 'Duplicate Download',
+                message: 'This video is already in the download list.',
+              });
+            } else {
+              alert('This video is already in the download list.');
+            }
+            window.alertShown = true;
+            setTimeout(() => (window.alertShown = false), 1000);
+          }
+          return;
+        }
+        if (setPastLinkUrl) {
+          setPastLinkUrl(clipboardText);
+        }
+      } else {
+        alert('Copied content is not a valid URL.');
+      }
+    } catch (error) {
+      console.error('Failed to read clipboard: ', error);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    setUrlInput(e.target.value);
+  };
+
+  const handleInputKeyPress = (e) => {
+    if (e.key === 'Enter' && urlInput) {
+      if (urlInput.startsWith('http://') || urlInput.startsWith('https://')) {
+        setPastLinkUrl(urlInput);
+      }
+    }
+  };
+
+  const handleDownloadButtonClick = () => {
+    if (urlInput && (urlInput.startsWith('http://') || urlInput.startsWith('https://'))) {
+      setPastLinkUrl(urlInput);
+    } else if (onDownloadClick) {
+      onDownloadClick();
+    }
+  };
 
   return (
-    <nav className="p-3" style={{ backgroundColor: 'white',width:"100%" }}>
-      <div className="d-flex align-items-center justify-content-between flex-grow-1">
-        <div href="#" style={{ cursor: 'default', width: '17%' }} className="logo-div">
-          <img src={Logo} alt="PNUT Logo" className="logo" />
-        </div>
+    <nav className="navbar-modern">
+      {/* Logo on Left */}
+     
 
-        <div
-          className="d-flex align-items-center justify-content-between flex-grow-1 bg-body"
-          style={{
-            padding: 10,
-            width:"20%",
-            borderRadius: 5,
-            boxShadow: 'rgba(50, 50, 93, 0.25) 0px 2px 5px -1px, rgba(0, 0, 0, 0.3) 0px 1px 3px -1px',
-          }}
+      {/* Input Group in Center */}
+      <div className="navbar-input-group">
+        {/* Paste Button */}
+        <button 
+          className="navbar-paste-btn"
+          onClick={handlePasteClick}
         >
-          <div className="d-flex" >
-            <button className="btn btn-danger d-flex align-items-center px-3 me-2"
-              style={{ background: '#BB4F28', fontSize: 15 }}
-              onClick={async () => {
-                 window.api.trackEvent('Paste')
-                try {
-                  const clipboardText = await navigator.clipboard.readText();
-                  if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
-                    const videoId = extractYotubePastLink(clipboardText);
-                    if (!videoId) {
-                      alert('The URL does not contain a valid video or playlist');
-                      return;
-                    }
-                    let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-                    const existingDownload = storedDownloads.some(
-                      (item) => extractYotubePastLink(item.url) === videoId
-                    );
-                    if (existingDownload) {
-                      if (!window.alertShown) {
-                        window.api.showMessageBox({
-                          type: 'warning',
-                          title: 'Duplicate Download',
-                          message: 'This video is already in the download list.',
-                        });
-                        window.alertShown = true;
-                        setTimeout(() => (window.alertShown = false), 1000);
-                      }
-                      return;
-                    }
-                    setPastLinkUrl(clipboardText);
-                  } else {
-                    alert('Copied content is not a valid URL.');
-                  }
-                } catch (error) {
-                  console.error('Failed to read clipboard: ', error);
-                }
-              }}
-            >
-              <FaPaste className="me-2" /> Paste
-            </button>
+          <FaPaste /> <span>Paste</span>
+        </button>
 
-            <CustomDropdown
-            // width={125}
-              label="Download"
-              options={Object.keys(formatOptions)}
-              selected={downloadType}
-              onSelect={handleDownloadTypeChange}
-            />
+        {/* Input Field */}
+        <input
+          type="text"
+          className="navbar-input"
+          value={urlInput}
+          onChange={handleInputChange}
+          onKeyPress={handleInputKeyPress}
+          placeholder="Paste the video URL and choose the format to convert"
+        />
 
-            {downloadType === 'Video' && (
-               <CustomDropdown
-            // width={140}
+        {/* Download Button */}
+        <button
+          className="navbar-download-btn"
+          onClick={handleDownloadButtonClick}
+        >
+          <FaDownload /> <span>Download</span>
+        </button>
+      </div>
 
-               label="Quality"
-               options={qualityOptions}
-               selected={quality}
-               onSelect={handleQualityChange}
-               renderOption={renderQualityOption}
-               renderSelected={(value) => {
-                 const option = qualityOptions.find(opt => opt.value === value);
-                 return renderQualityOption(option || { value, label: value });
-               }}
-             />
-            )}
+      {/* Secondary Controls on Right */}
+      <div className="navbar-controls">
+        <CustomDropdown
+          label="Download"
+          options={Object.keys(formatOptions)}
+          selected={downloadType}
+          onSelect={handleDownloadTypeChange}
+        />
 
-            {downloadType === 'Audio' && (
-              <CustomDropdown
-            // width={107}
-                label="Quality"
-                options={bitrateOptions}
-                selected={bitrate}
-                onSelect={handleBitrateChange}
-              />
-            )}
+        {downloadType === 'Video' && (
+          <CustomDropdown
+            label="Quality"
+            options={qualityOptions}
+            selected={quality}
+            onSelect={handleQualityChange}
+            renderOption={renderQualityOption}
+            renderSelected={(value) => {
+              const option = qualityOptions.find(opt => opt.value === value);
+              return renderQualityOption(option || { value, label: value });
+            }}
+          />
+        )}
 
-            {formatOptions[downloadType] && (
-              <CustomDropdown
-            width={108}
-                label="Format"
-                options={formatOptions[downloadType]}
-                selected={format}
-                onSelect={handleFormatChange}
-              />
-            )}
+        {downloadType === 'Audio' && (
+          <CustomDropdown
+            label="Quality"
+            options={bitrateOptions}
+            selected={bitrate}
+            onSelect={handleBitrateChange}
+          />
+        )}
 
-            <CustomDropdown
-            // width={146}
-
-              label="Save To"
-              options={saveToOptions}
-              selected={getSaveToDisplay()}
-              onSelect={handleSaveToSelect}
-            />
-          </div>
-        </div>
+        <CustomDropdown
+          label="Save To"
+          options={saveToOptions}
+          selected={getSaveToDisplay()}
+          onSelect={handleSaveToSelect}
+        />
       </div>
     </nav>
   );
