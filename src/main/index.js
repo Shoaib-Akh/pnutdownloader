@@ -435,8 +435,9 @@ function createWindow() {
       webviewTag: true,
       nodeIntegration: false,
       contextIsolation: true,
-     
-    },
+      webSecurity: false,
+      allowRunningInsecureContent: true,
+     },
   });
 
   // Handle window close event to show confirmation dialog
@@ -487,6 +488,19 @@ function createWindow() {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
+
+  // Configure session to handle CORS issues
+  const session = mainWindow.webContents.session;
+  session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Access-Control-Allow-Origin': ['*'],
+        'Access-Control-Allow-Methods': ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        'Access-Control-Allow-Headers': ['*'],
+      },
+    });
+  });
 }
 
 app.whenReady().then(async () => {
@@ -700,7 +714,7 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
   console.log('Using yt-dlp path for video info:', currentYtdlpPath);
   
   return new Promise((resolve, reject) => {
-    const args = ['-J', url];
+    const args = ['-J', '--no-playlist', '--extractor-retries', '3', url];
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
     const proc = spawn(currentYtdlpPath, args, spawnOptions);
 
@@ -717,13 +731,42 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
 
     proc.on('close', (code) => {
       if (code !== 0) {
+        // Check if this is a Twitch authentication error
+        const isTwitchError = stderr.includes('[twitch]') && (
+          stderr.includes('logged-in') || 
+          stderr.includes('cookies') ||
+          stderr.includes('OAuth token')
+        );
+        
+        if (isTwitchError) {
+          console.warn('Twitch video requires authentication - returning basic info');
+          // Try to extract Twitch video ID for fallback thumbnail
+          const twitchMatch = url.match(/twitch\.tv\/(?:videos|\w+)\/?(\d+)?/);
+          let fallbackThumbnail = '';
+          if (twitchMatch) {
+            const videoId = twitchMatch[1] || twitchMatch[2];
+            fallbackThumbnail = `https://static-cdn.jtvnw.net/video-twitch-thumbnails/${videoId}.jpg`;
+          }
+          
+          // For Twitch videos that require auth, return basic info with fallback thumbnail
+          resolve({ 
+            title: 'Twitch Video (Authentication Required)', 
+            thumbnail: fallbackThumbnail, 
+            filename: 'twitch_video', 
+            duration: 0,
+            thumbnails: fallbackThumbnail ? [{ url: fallbackThumbnail }] : [],
+            requiresAuth: true
+          });
+          return;
+        }
+        
         reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`));
         return;
       }
 
       try {
         const json = JSON.parse(stdout);
-        const title = json.title || '';
+        const title = json.title || 'Unknown Video';
         let thumbnail = '';
         if (Array.isArray(json.thumbnails) && json.thumbnails.length > 0) {
           thumbnail = json.thumbnails[json.thumbnails.length - 1].url;
@@ -875,6 +918,63 @@ console.log("options",options);
         }
       };
 
+      // Import platform detection utilities
+      const detectPlatform = (url) => {
+        if (!url || typeof url !== 'string') return 'unknown'
+        const urlLower = url.toLowerCase()
+        
+        // YouTube variants
+        if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+          if (urlLower.includes('music.youtube.com')) return 'youtube_music'
+          if (urlLower.includes('youtubekids.com')) return 'youtube_kids'
+          return 'youtube'
+        }
+        
+        // Other platforms
+        if (urlLower.includes('facebook.com') || urlLower.includes('fb.com') || urlLower.includes('fb.watch')) {
+          return 'facebook'
+        }
+        if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
+          return 'instagram'
+        }
+        if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
+          return 'tiktok'
+        }
+        if (urlLower.includes('twitter.com') || urlLower.includes('x.com') || urlLower.includes('t.co')) {
+          return 'twitter'
+        }
+        if (urlLower.includes('twitch.tv') || urlLower.includes('twitch.com')) {
+          return 'twitch'
+        }
+        if (urlLower.includes('dailymotion.com') || urlLower.includes('dai.ly')) {
+          return 'dailymotion'
+        }
+        
+        return 'unknown'
+      };
+
+      const isYouTubePlatform = (platform) => {
+        return platform === 'youtube' || 
+               platform === 'youtube_music' || 
+               platform === 'youtube_kids'
+      };
+
+      // Fetch thumbnail for non-YouTube content
+      const fetchThumbnail = async (url) => {
+        try {
+          const platform = detectPlatform(url)
+          if (isYouTubePlatform(platform)) {
+            return null // Skip YouTube content, it already has thumbnails
+          }
+          
+          const thumbnail = await getThumbnailInfo(url)
+          return thumbnail
+        } catch (error) {
+          console.error('Error fetching thumbnail:', error)
+          return null
+        }
+      };
+
       const setupDownloadPath = async () => {
         const sanitizedTitle = await title; // Single sanitized title
         const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
@@ -914,7 +1014,19 @@ console.log("options",options);
         return downloadPath;
       };
 
-      setupDownloadPath().then((downloadPath) => {
+      setupDownloadPath().then(async (downloadPath) => {
+        // Fetch thumbnail for non-YouTube content before starting download
+        const thumbnail = await fetchThumbnail(url);
+        
+        // Send thumbnail information to renderer
+        if (thumbnail) {
+          event.sender.send('download-progress', { 
+            downloadId,
+            thumbnail,
+            message: 'Thumbnail fetched for non-YouTube content'
+          });
+        }
+
         const args = [
           '--continue',
           '--ffmpeg-location', ffmpegPath,
@@ -923,6 +1035,7 @@ console.log("options",options);
           '--newline',
           '--ignore-errors',
           '--progress',
+          '--extractor-retries', '3',
           ...formatSpecifier.split(' '),
           url,
           isPlaylist ? '--yes-playlist' : '--no-playlist',
@@ -965,7 +1078,22 @@ console.log("options",options);
 
         downloadProcess.stderr.on('data', (data) => {
           const errorMessage = data.toString().trim();
-          event.sender.send('download-progress', { error: errorMessage });
+          
+          // Check if this is a Twitch authentication error
+          const isTwitchError = errorMessage.includes('[twitch]') && (
+            errorMessage.includes('logged-in') || 
+            errorMessage.includes('cookies') ||
+            errorMessage.includes('OAuth token')
+          );
+          
+          if (isTwitchError) {
+            event.sender.send('download-progress', { 
+              error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
+              isAuthError: true
+            });
+          } else {
+            event.sender.send('download-progress', { error: errorMessage });
+          }
         });
 
         downloadProcess.on('close', (code) => {
@@ -1294,6 +1422,312 @@ const getVideoInfo = async (url) => {
     };
   }
 };
+
+// Get thumbnail information from yt-dlp
+const getThumbnailInfo = async (url) => {
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--get-thumbnail',
+      '--no-playlist',
+      '--extractor-retries', '3',
+      url
+    ];
+    
+    const getYtdlpPath = () => {
+      if (app.isPackaged) {
+        return join(process.resourcesPath, getYtdlpExecutableName());
+      }
+      
+      // In development, check for system yt-dlp first (macOS/Linux)
+      if (process.platform !== 'win32') {
+        try {
+          const { execSync } = require('child_process');
+          const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+          if (systemYtdlp && existsSync(systemYtdlp)) {
+            return systemYtdlp;
+          }
+        } catch (err) {
+          // System yt-dlp not found, use bundled version
+        }
+      }
+      
+      return join(__dirname, '../../public', getYtdlpExecutableName());
+    };
+
+    const currentYtdlpPath = getYtdlpPath();
+    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+    const thumbnailProcess = spawn(currentYtdlpPath, args, spawnOptions);
+    
+    let thumbnailData = '';
+    let errorData = '';
+
+    thumbnailProcess.stdout.on('data', (data) => {
+      thumbnailData += data.toString().trim();
+    });
+
+    thumbnailProcess.stderr.on('data', (data) => {
+      errorData += data.toString().trim();
+      console.error('Thumbnail fetch stderr:', data.toString().trim());
+    });
+
+    thumbnailProcess.on('close', (code) => {
+      if (code === 0 && thumbnailData) {
+        const thumbnails = thumbnailData.split('\n').filter(Boolean);
+        resolve(thumbnails[0] || null); // Return first thumbnail URL
+      } else {
+        // Check if this is a Twitch authentication error
+        const isTwitchError = errorData.includes('[twitch]') && (
+          errorData.includes('logged-in') || 
+          errorData.includes('cookies') ||
+          errorData.includes('OAuth token')
+        );
+        
+        if (isTwitchError) {
+          console.warn('Twitch video requires authentication - attempting fallback thumbnail');
+          // Try to extract Twitch video ID and construct a fallback thumbnail URL
+          const twitchMatch = url.match(/twitch\.tv\/(?:videos|\w+)\/?(\d+)?/);
+          if (twitchMatch) {
+            const videoId = twitchMatch[1] || twitchMatch[2];
+            // Use Twitch's default thumbnail pattern
+            const fallbackThumbnail = `https://static-cdn.jtvnw.net/video-twitch-thumbnails/${videoId}.jpg`;
+            resolve(fallbackThumbnail);
+          } else {
+            resolve(null);
+          }
+        } else {
+          console.warn(`Failed to fetch thumbnail with code ${code}: ${errorData}`);
+          resolve(null); // Return null instead of rejecting
+        }
+      }
+    });
+
+    thumbnailProcess.on('error', (err) => {
+      console.error('Thumbnail process error:', err);
+      resolve(null); // Return null instead of rejecting
+    });
+  });
+};
+
+// Helper function to parse cookies from cookies.txt (Netscape format)
+const parseCookiesFromFile = async (domain) => {
+  try {
+    if (!existsSync(cookiesPath)) {
+      return null;
+    }
+    
+    const content = await fs.readFile(cookiesPath, 'utf-8');
+    const lines = content.split('\n');
+    const cookies = [];
+    
+    for (const line of lines) {
+      // Skip comments and empty lines
+      if (line.trim().startsWith('#') || !line.trim()) continue;
+      
+      // Netscape cookie format: domain, flag, path, secure, expiration, name, value
+      const parts = line.split('\t');
+      if (parts.length >= 7) {
+        const cookieDomain = parts[0].trim();
+        const cookieName = parts[5].trim();
+        const cookieValue = parts[6].trim();
+        
+        // Check if cookie matches the domain
+        if (cookieDomain.includes(domain) || domain.includes(cookieDomain.replace(/^\./, ''))) {
+          cookies.push(`${cookieName}=${cookieValue}`);
+        }
+      }
+    }
+    
+    return cookies.length > 0 ? cookies.join('; ') : null;
+  } catch (error) {
+    // Silently fail - cookies.txt might not exist or be readable
+    return null;
+  }
+};
+
+// Image proxy handler to bypass 403 errors from external CDNs
+ipcMain.handle('proxy-image', async (event, imageUrl) => {
+  const maxRetries = 3;
+  const retryDelay = 1000; // 1 second between retries
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const parsedUrl = new URL(imageUrl);
+      
+      // Enhanced headers specifically for Instagram/Facebook CDN
+      const headers = {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 Instagram 300.0.0.0.81',
+        'Accept': 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Referer': 'https://www.instagram.com/',
+        'Origin': 'https://www.instagram.com',
+        'Sec-Fetch-Dest': 'image',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Site': 'same-site',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?1',
+        'Sec-Ch-Ua-Platform': '"iOS"',
+        'Cache-Control': 'max-age=0',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      };
+
+      // Add platform-specific headers
+      if (parsedUrl.hostname.includes('instagram.com') || parsedUrl.hostname.includes('fbcdn.net')) {
+        // Instagram/Facebook specific headers
+        headers['X-IG-App-ID'] = '936619743392459';
+        headers['X-IG-WWW-Claim'] = '0';
+        headers['X-Requested-With'] = 'XMLHttpRequest';
+        headers['Authority'] = parsedUrl.hostname;
+        headers['Scheme'] = 'https';
+        headers['Path'] = parsedUrl.pathname + parsedUrl.search;
+        headers['Method'] = 'GET';
+        headers['Referer'] = 'https://www.instagram.com/';
+        headers['Origin'] = 'https://www.instagram.com';
+        
+        // Try to get Instagram cookies from the session first
+        let cookieString = null;
+        try {
+          const cookies = await session.defaultSession.cookies.get({ domain: '.instagram.com' });
+          if (cookies && cookies.length > 0) {
+            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+          }
+        } catch (cookieError) {
+          // Silently continue to try cookies.txt
+        }
+        
+        // Fallback to cookies.txt if session cookies aren't available
+        if (!cookieString) {
+          cookieString = await parseCookiesFromFile('instagram.com');
+        }
+        
+        if (cookieString) {
+          headers['Cookie'] = cookieString;
+        }
+      } else if (parsedUrl.hostname.includes('twimg.com')) {
+        // Twitter specific headers
+        headers['Referer'] = 'https://twitter.com/';
+        headers['Origin'] = 'https://twitter.com';
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        
+        // Try to get Twitter cookies from the session
+        let cookieString = null;
+        try {
+          const cookies = await session.defaultSession.cookies.get({ domain: '.twitter.com' });
+          if (cookies && cookies.length > 0) {
+            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+          }
+        } catch (cookieError) {
+          // Silently continue to try cookies.txt
+        }
+        
+        // Fallback to cookies.txt if session cookies aren't available
+        if (!cookieString) {
+          cookieString = await parseCookiesFromFile('twitter.com');
+        }
+        
+        if (cookieString) {
+          headers['Cookie'] = cookieString;
+        }
+      }
+
+      // Try using Node's fetch if available, otherwise fall back to http module
+      let response;
+      if (global.fetch) {
+        // Create AbortController with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        
+        try {
+          response = await global.fetch(imageUrl, { 
+            headers,
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+        } catch (error) {
+          clearTimeout(timeoutId);
+          throw error;
+        }
+      } else {
+        // Fallback to http/https modules
+        const https = require('https');
+        const http = require('http');
+        const client = parsedUrl.protocol === 'https:' ? https : http;
+        
+        response = await new Promise((resolve, reject) => {
+          const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: 'GET',
+            headers,
+            timeout: 15000
+          };
+
+          const req = client.request(options, (res) => {
+            if (res.statusCode === 200) {
+              const chunks = [];
+              res.on('data', (chunk) => chunks.push(chunk));
+              res.on('end', () => {
+                const buffer = Buffer.concat(chunks);
+                resolve({
+                  ok: true,
+                  status: res.statusCode,
+                  headers: {
+                    get: (name) => res.headers[name.toLowerCase()]
+                  },
+                  arrayBuffer: async () => buffer
+                });
+              });
+            } else {
+              reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+            }
+          });
+
+          req.on('error', reject);
+          req.setTimeout(15000, () => {
+            req.destroy();
+            reject(new Error('Request timeout'));
+          });
+          req.end();
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error(`Failed to proxy image: ${response.status} ${response.statusText}`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const base64 = Buffer.from(buffer).toString('base64');
+      return `data:${contentType};base64,${base64}`;
+      
+    } catch (error) {
+      // Only log non-403 errors to reduce console spam
+      // 403 errors are expected for Instagram/Facebook CDN images without proper authentication
+      const is403Error = error.message.includes('403') || error.message.includes('Forbidden');
+      
+      if (!is403Error && attempt === maxRetries) {
+        console.warn(`Failed to proxy image after ${maxRetries} attempts:`, error.message);
+      }
+      
+      // If this is the last attempt, return fallback
+      if (attempt === maxRetries) {
+        // Return a fallback placeholder image for Instagram/Facebook/Twitter CDN failures
+        if (imageUrl.includes('instagram.com') || imageUrl.includes('fbcdn.net') || imageUrl.includes('twimg.com')) {
+          // Simple 1x1 transparent PNG as fallback
+          const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+          return fallbackImage;
+        }
+        throw error;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, retryDelay));
+    }
+  }
+});
 
 ipcMain.handle('get-youtube-info', async (event, url) => {
   try {

@@ -10,7 +10,7 @@ export const PLATFORMS = {
   INSTAGRAM: 'instagram',
   TIKTOK: 'tiktok',
   TWITTER: 'twitter',
-  VIMEO: 'vimeo',
+  TWITCH: 'twitch',
   DAILYMOTION: 'dailymotion',
   UNKNOWN: 'unknown'
 }
@@ -52,9 +52,9 @@ export const detectPlatform = (url) => {
     return PLATFORMS.TWITTER
   }
 
-  // Vimeo
-  if (urlLower.includes('vimeo.com')) {
-    return PLATFORMS.VIMEO
+  // Twitch
+  if (urlLower.includes('twitch.tv') || urlLower.includes('twitch.com')) {
+    return PLATFORMS.TWITCH
   }
 
   // Dailymotion
@@ -100,7 +100,7 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.INSTAGRAM]: 'Instagram',
     [PLATFORMS.TIKTOK]: 'TikTok',
     [PLATFORMS.TWITTER]: 'Twitter',
-    [PLATFORMS.VIMEO]: 'Vimeo',
+    [PLATFORMS.TWITCH]: 'Twitch',
     [PLATFORMS.DAILYMOTION]: 'Dailymotion',
     [PLATFORMS.UNKNOWN]: 'Unknown'
   }
@@ -121,7 +121,7 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.INSTAGRAM]: 'https://www.instagram.com',
     [PLATFORMS.TIKTOK]: 'https://www.tiktok.com',
     [PLATFORMS.TWITTER]: 'https://twitter.com',
-    [PLATFORMS.VIMEO]: 'https://www.vimeo.com',
+    [PLATFORMS.TWITCH]: 'https://www.twitch.tv',
     [PLATFORMS.DAILYMOTION]: 'https://www.dailymotion.com'
   }
   return urls[platform] || null

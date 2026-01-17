@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react'; // Import useEffect
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe } from 'react-icons/fa';
+import React, { useEffect } from 'react'; 
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar } from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
 import squirrel from '../../assets/Images/squirrel.png';
@@ -17,6 +17,13 @@ function Sidebar({
   setDownloadListOpen,
   setAboutUs
 }) {
+  // Set Home as auto-selected on load
+  useEffect(() => {
+    if (!selectedItem) {
+      setSelectedItem('Home');
+    }
+  }, [selectedItem, setSelectedItem]);
+
   const myFilesItems = [
     { icon: FaHome, label: 'Home' },
     { icon: FaFolderOpen, label: 'All Files' },
@@ -27,6 +34,14 @@ function Sidebar({
   ];
 
   const systemItems = [
+    { 
+      icon: FaCommentDots, 
+      label: 'Feedback',
+      badge: 'NEW',
+      color: '#10b981',
+      isHighlighted: true,
+      description: 'Help us improve'
+    },
     { icon: FaInfoCircle, label: 'About us' },
   ];
 
@@ -86,19 +101,40 @@ function Sidebar({
               key={index}
               className={`sidebar__menu-item ${
                 selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
+              } ${
+                item.isHighlighted ? 'sidebar__menu-item--highlighted' : ''
               }`}
               onClick={() => {
                 setSelectedItem(item.label);
                 setDownload(false);
                 setShowWebView(false);
                 setDownloadListOpen(false);
-                setAboutUs(true);
+                if (item.label === 'Feedback') {
+                  setAboutUs(false);
+                  window.api.trackEvent('Feedback Clicked');
+                  window.api.openExternal('https://your-feedback-url.com');
+                } else {
+                  setAboutUs(true);
+                }
               }}
             >
-              <div className="sidebar__icon-container">
+              <div className={`sidebar__icon-container ${
+                item.isHighlighted ? 'sidebar__icon-container--green' : ''
+              }`}>
                 <item.icon className="sidebar__icon" />
+                {item.badge && (
+                  <span className="sidebar__badge">{item.badge}</span>
+                )}
               </div>
-              <span className="sidebar__label">{item.label}</span>
+              <div className="sidebar__text-container">
+                <span className="sidebar__label">{item.label}</span>
+                {item.description && (
+                  <span className="sidebar__description">{item.description}</span>
+                )}
+              </div>
+              {item.isHighlighted && (
+                <FaStar className="sidebar__star-icon" />
+              )}
             </div>
           ))}
         </div>

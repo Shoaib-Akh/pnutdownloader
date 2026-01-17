@@ -3,7 +3,7 @@
 import React from "react";
 import { 
   FaYoutube, 
-  FaVimeo, 
+  FaTwitch, 
   FaFacebook, 
   FaTwitter, 
   FaInstagram, 
@@ -22,7 +22,7 @@ const PlatformIcons = ({ handlePlatformClick }) => {
     { Component: FaInstagram, url: "https://www.instagram.com/reels", color: "#E4405F", bgColor: "#FFE5ED", alt: "Instagram", domain: "www.instagram.com" },
     { Component: FaTwitter, url: "https://twitter.com", color: "#1DA1F2", bgColor: "#E5F3FF", alt: "Twitter", domain: "www.twitter.com" },
     { Component: FaFacebook, url: "https://www.facebook.com/watch", color: "#1877F2", bgColor: "#E5EFFF", alt: "Facebook", domain: "www.facebook.com" },
-    { Component: FaVimeo, url: "https://www.vimeo.com", color: "#1AB7EA", bgColor: "#E5F5FC", alt: "Vimeo", domain: "www.vimeo.com" },
+    { Component: FaTwitch, url: "https://www.twitch.tv", color: "#9146FF", bgColor: "#F5EFFF", alt: "Twitch", domain: "www.twitch.tv" },
     { Component: SiDailymotion, url: "https://www.dailymotion.com", color: "#0066DC", bgColor: "#E5EDFF", alt: "Dailymotion", domain: "dailymotion.com" },
     { Component: SiSoundcloud, url: "https://soundcloud.com", color: "#FF5500", bgColor: "#FFE8E0", alt: "SoundCloud", domain: "soundcloud.com" },
     { Component: SiBilibili, url: "https://www.bilibili.com", color: "#FB7299", bgColor: "#FFE5F0", alt: "Bilibili", domain: "bilibili.com" },

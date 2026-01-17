@@ -1,14 +1,179 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
+import { detectPlatform, isYouTubePlatform } from '../platformUtils'
 
 function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen,onRetry}) {
   const [openDropdown, setOpenDropdown] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [proxiedThumbnails, setProxiedThumbnails] = useState({})
+
+  // Listen for download progress events to capture thumbnail data
+  useEffect(() => {
+    const handleDownloadProgress = (progressData) => {
+      if (progressData.thumbnail && progressData.downloadId) {
+        // Update the download list item with thumbnail data
+        const downloadListData = JSON.parse(localStorage.getItem('downloadList')) || []
+        const updatedList = downloadListData.map((item) => {
+          if (item.id === progressData.downloadId) {
+            return { ...item, thumbnail: progressData.thumbnail }
+          }
+          return item
+        })
+        localStorage.setItem('downloadList', JSON.stringify(updatedList))
+        
+        // Force re-render by updating a small state change
+        setSearchQuery(prev => prev)
+      }
+    }
+
+    // Register the event listener
+    if (window.api && window.api.onDownloadProgress) {
+      window.api.onDownloadProgress(handleDownloadProgress)
+    }
+
+    // Cleanup
+    return () => {
+      if (window.api && window.api.removeListener) {
+        window.api.removeListener('download-progress')
+      }
+    }
+  }, [])
+
+  // Helper function to check if URL is Instagram/Facebook/Twitter CDN (needs proxying)
+  const isInstagramFacebookCDN = (url) => {
+    if (!url) return false
+    return url.includes('instagram.com') || 
+           url.includes('fbcdn.net') || 
+           url.includes('scontent.') ||
+           url.includes('twimg.com')
+  }
+
+  // Function to get proxied thumbnail URL
+  const getProxiedThumbnail = async (thumbnailUrl, platform) => {
+    // Don't proxy YouTube images (they work fine)
+    if (isYouTubePlatform(platform)) {
+      return thumbnailUrl
+    }
+
+    // Check if API is available
+    if (!window.api || !window.api.proxyImage) {
+      // For Instagram/Facebook/Twitter CDN, return null to prevent direct loading
+      if (isInstagramFacebookCDN(thumbnailUrl)) {
+        console.warn('proxyImage API not available, cannot load Instagram/Facebook/Twitter image')
+        return null
+      }
+      // For other platforms, use original URL
+      return thumbnailUrl
+    }
+
+    // Check if we already cached this proxied thumbnail
+    if (proxiedThumbnails[thumbnailUrl]) {
+      return proxiedThumbnails[thumbnailUrl]
+    }
+
+    // Mark as loading to prevent multiple simultaneous requests
+    setProxiedThumbnails(prev => ({
+      ...prev,
+      [thumbnailUrl]: 'LOADING'
+    }))
+
+    try {
+      const proxiedUrl = await window.api.proxyImage(thumbnailUrl)
+      setProxiedThumbnails(prev => ({
+        ...prev,
+        [thumbnailUrl]: proxiedUrl
+      }))
+      return proxiedUrl
+    } catch (error) {
+      // Suppress console errors for 403/Forbidden errors as they're expected for Instagram/Facebook CDN
+      // The fallback UI will handle these cases gracefully
+      const isExpectedError = error.message?.includes('403') || 
+                              error.message?.includes('Forbidden') ||
+                              error.message?.includes('Failed to proxy image');
+      
+      if (!isExpectedError) {
+        console.warn('Error proxying thumbnail:', error.message || error);
+      }
+      
+      // Mark as failed to prevent repeated attempts
+      setProxiedThumbnails(prev => ({
+        ...prev,
+        [thumbnailUrl]: 'FAILED'
+      }))
+      return null // Return null to trigger fallback UI
+    }
+  }
+
+  // Function to get correct thumbnail URL for an item
+  const getThumbnailUrl = (item) => {
+    if (!item.thumbnail) return null
+    
+    const platform = detectPlatform(item.url)
+    const isYouTube = isYouTubePlatform(platform)
+    
+    if (isYouTube) {
+      return item.thumbnail
+    }
+    
+    const cachedResult = proxiedThumbnails[item.thumbnail]
+    
+    // For Instagram/Facebook/Twitter CDN images, never return original URL
+    // Only return proxied version or null (to show placeholder)
+    if (isInstagramFacebookCDN(item.thumbnail)) {
+      if (cachedResult === 'FAILED' || cachedResult === 'LOADING' || !cachedResult) {
+        return null // Show fallback UI if proxying failed, loading, or not started
+      }
+      // Only return if we have a proxied result (data URL)
+      // Don't return original URL to prevent CORS errors
+      return cachedResult.startsWith('data:') ? cachedResult : null
+    }
+    
+    // For other platforms, return proxied version if available, otherwise original
+    if (cachedResult === 'FAILED' || cachedResult === 'LOADING') {
+      return null // Show fallback UI if proxying failed or is loading
+    }
+    
+    return cachedResult || item.thumbnail
+  }
+
+  // Function to trigger thumbnail proxying for an item
+  const proxyThumbnailIfNeeded = async (item) => {
+    if (!item.thumbnail) return
+    
+    const platform = detectPlatform(item.url)
+    const isYouTube = isYouTubePlatform(platform)
+    
+    // For Instagram/Facebook, always proxy (don't wait for completion)
+    // For other non-YouTube, also proxy
+    if (!isYouTube && !proxiedThumbnails[item.thumbnail] && window.api && window.api.proxyImage) {
+      // Trigger proxying but don't wait - it will update state when done
+      getProxiedThumbnail(item.thumbnail, platform).catch(() => {
+        // Error already handled in getProxiedThumbnail
+      })
+    }
+  }
+
+  // Proxy thumbnails for items that need it
+  useEffect(() => {
+    const downloadListData = JSON.parse(localStorage.getItem('downloadList')) || []
+    
+    // Proxy thumbnails for all items with thumbnails, not just completed ones
+    downloadListData.forEach(item => {
+      if (item.thumbnail) {
+        proxyThumbnailIfNeeded(item)
+      }
+    })
+  }, [])
+
+  const handleSearchChange = (event) => {
+    setSearchQuery(event.target.value)
+  }
   
   // useEffect(() => {
   //   async function fetchDownloadedFiles() {
@@ -53,6 +218,42 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     window.api.pauseDownload(items.id)
   }
 
+  // New handler functions for context menu
+  const handleAddToFolder = (item) => {
+    // TODO: Implement add to folder functionality
+    console.log('Add to folder:', item.title)
+    setOpenDropdown(null)
+  }
+
+  const handleCopyUrl = (item) => {
+    navigator.clipboard.writeText(item.url)
+      .then(() => {
+        alert('URL copied to clipboard!')
+      })
+      .catch((err) => {
+        console.error('Failed to copy URL:', err)
+      })
+    setOpenDropdown(null)
+  }
+
+  const handleShowInFinder = (item) => {
+    // Show file in Finder/Explorer
+    if (window.api && window.api.showItemInFolder) {
+      const normalizedTitle = item.title.replace(/\|/g, '｜').trim()
+      const filePath = `${item.savePath || `${require('os').homedir()}/Downloads/pnutdownloader`}/${normalizedTitle}.${item.format || 'mp4'}`
+      window.api.showItemInFolder(filePath)
+    } else {
+      alert('Show in Finder not available')
+    }
+    setOpenDropdown(null)
+  }
+
+  const handleShare = (item) => {
+    // TODO: Implement share functionality
+    console.log('Share:', item.title)
+    setOpenDropdown(null)
+  }
+
   // const filteredList =
   //   JSON.parse(localStorage.getItem('downloadList')) ||
   //   videoInfo
@@ -74,27 +275,44 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     .filter((item) => {
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=');
+      if (selectedItem === 'All Files' || selectedItem === 'All File') return true;
       if (selectedItem === 'Playlist') return isPlaylist;
       if (selectedItem === 'Video') return item.format === 'mp4' && !isPlaylist;
       if (selectedItem === 'Audio') return ['mp3', 'flac', 'wav', 'aac'].includes(item.format);
-      if (selectedItem === 'All File') return true;
       return false;
     })
     .sort((a, b) => {
+      // Sort by download date (newest first) for All Files
+      if (selectedItem === 'All Files' || selectedItem === 'All File') {
+        return new Date(b.downloadDate || 0) - new Date(a.downloadDate || 0);
+      }
       // If filtering by Audio, sort by format; otherwise, sort by URL for Playlists or keep original order
       if (selectedItem === 'Audio') {
         const audioFormats = ['mp3', 'flac', 'wav', 'aac']; // Define order of formats
         return audioFormats.indexOf(a.format) - audioFormats.indexOf(b.format);
       }
       if (selectedItem === 'Playlist') return a.url.localeCompare(b.url);
+      if (selectedItem === 'Video') {
+        // Sort videos by download date (newest first)
+        return new Date(b.downloadDate || 0) - new Date(a.downloadDate || 0);
+      }
       return 0; // No sorting for other cases
     })
     // .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
+
+  // Apply search filter
+  const searchFilteredList = searchQuery
+    ? filteredList.filter(item =>
+        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : filteredList
+
   const calculateRemainingTime = (duration, progress) => {
     const totalSeconds = convertISODurationToSeconds(duration)
     const remainingSeconds = (totalSeconds * (100 - progress)) / 100
     return remainingSeconds
   }
+
   const handleOpenFolder = async (item) => {
     try {
       const allPathsToSearch = []
@@ -298,13 +516,14 @@ const handleThumbnailClick = async (item) => {
   };
 
   return (
-    <div className="container-fluid p-0" style={{ padding: '20px' }}>
+    <div className="container-fluid p-0" style={{ padding: '30px 20px 20px 20px' }}>
       {/* Header Section */}
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '20px'
+        marginBottom: '30px',
+        paddingTop: '20px'
       }}>
         <h2 style={{ 
           fontSize: '24px', 
@@ -314,32 +533,58 @@ const handleThumbnailClick = async (item) => {
         }}>
           Recent downloaded
         </h2>
-        <button 
-          className="btn"
+      </div>
+
+      {/* Search Bar */}
+      <div style={{
+        marginBottom: '20px',
+        display: 'flex',
+        alignItems: 'center',
+        border: '1px solid #ddd',
+        borderRadius: '25px',
+        padding: '8px 15px',
+        backgroundColor: '#f9f9f9',
+        marginTop: '40px'
+      }}>
+        <FaSearch style={{ color: '#999', marginRight: '10px' }} />
+        <input
+          type="text"
+          placeholder="Search"
+          value={searchQuery}
+          onChange={handleSearchChange}
           style={{
-            background: 'white',
-            border: '1px solid #ddd',
-            borderRadius: '5px',
-            padding: '8px 15px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '14px',
+            border: 'none',
+            outline: 'none',
+            flexGrow: 1,
+            backgroundColor: 'transparent',
+            fontSize: '16px',
             color: '#333'
           }}
-        >
-          <FaTh /> Select
-        </button>
+        />
+      </div>
+
+      {/* Total and Select Button */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        marginBottom: '20px'
+      }}>
+        <span style={{ fontSize: '14px', color: '#666' }}>
+          Total: {filteredList?.length || 0}
+        </span>
       </div>
 
       {/* Download List - Card Layout */}
       <div style={{ 
         display: 'flex', 
         flexDirection: 'column', 
-        gap: '15px',
-        maxHeight: '70vh',
+        gap: '20px',
+        height: 'calc(100vh - 200px)',
         overflowY: 'auto',
-        paddingRight: '10px'
+        paddingRight: '15px',
+        paddingLeft: '5px',
+        overflowX: 'hidden'
       }}>
         {filteredList?.length > 0 ? (
           [...new Set(filteredList.map((item) => item.id))].map((uniqueId, index) => {
@@ -365,18 +610,19 @@ const handleThumbnailClick = async (item) => {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '15px',
-                  padding: '15px',
+                  gap: '18px',
+                  padding: '20px',
                   background: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '10px',
                   border: '1px solid #e0e0e0',
-                  transition: 'box-shadow 0.2s ease'
+                  transition: 'box-shadow 0.2s ease',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = 'none';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
                 }}
               >
                 {/* Number */}
@@ -392,45 +638,103 @@ const handleThumbnailClick = async (item) => {
                 {/* Thumbnail with Duration Overlay */}
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
-                    <Skeleton width={180} height={100} />
+                    <Skeleton width={120} height={70} />
                   ) : (
                     <>
-                      {item.thumbnail ? (
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          style={{
-                            width: '180px',
-                            height: '100px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            cursor: item.isCompleted ? 'pointer' : 'default'
-                          }}
-                          onClick={() => item.isCompleted && handleThumbnailClick(item)}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '180px',
-                          height: '100px',
-                          background: '#f0f0f0',
-                          borderRadius: '8px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                          <FaVideo style={{ fontSize: '32px', color: '#999' }} />
-                        </div>
-                      )}
+                      {(() => {
+                        const platform = detectPlatform(item.url)
+                        const isYouTube = isYouTubePlatform(platform)
+                        const thumbnailUrl = getThumbnailUrl(item)
+                        
+                        // Show thumbnail if available
+                        // Never show Instagram/Facebook/Twitter CDN URLs directly - only proxied versions
+                        if (thumbnailUrl && (!isInstagramFacebookCDN(item.thumbnail) || thumbnailUrl.startsWith('data:'))) {
+                          return (
+                            <>
+                              <img
+                                src={thumbnailUrl}
+                                alt={item.title}
+                                style={{
+                                  width: '120px',
+                                  height: '70px',
+                                  objectFit: 'cover',
+                                  borderRadius: '8px',
+                                  cursor: item.isCompleted ? 'pointer' : 'default'
+                                }}
+                                onClick={() => item.isCompleted && handleThumbnailClick(item)}
+                                onError={(e) => {
+                                  // Fallback to placeholder if image fails to load
+                                  e.target.style.display = 'none'
+                                  if (e.target.nextSibling) {
+                                    e.target.nextSibling.style.display = 'flex'
+                                  }
+                                }}
+                              />
+                              {/* Hidden fallback placeholder for failed images */}
+                              <div style={{
+                                width: '120px',
+                                height: '70px',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '8px',
+                                display: 'none',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                flexDirection: 'column',
+                                gap: '4px'
+                              }}>
+                                <FaVideo style={{ fontSize: '20px', color: '#ffffff' }} />
+                                <span style={{
+                                  fontSize: '8px',
+                                  color: '#ffffff',
+                                  fontWeight: '600',
+                                  textAlign: 'center'
+                                }}>
+                                  Failed
+                                </span>
+                              </div>
+                            </>
+                          )
+                        } else {
+                          // Show placeholder for content without thumbnails
+                          return (
+                            <div style={{
+                              width: '120px',
+                              height: '70px',
+                              background: 'linear-gradient(135deg, #e0e7ff 0%, #cfd9ff 100%)',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}>
+                              <FaVideo style={{ fontSize: '20px', color: '#6366f1' }} />
+                              <span style={{
+                                fontSize: '8px',
+                                color: '#6366f1',
+                                fontWeight: '600',
+                                textAlign: 'center'
+                              }}>
+                                No thumbnail
+                              </span>
+                            </div>
+                          )
+                        }
+                      })()}
                       {duration && (
                         <div style={{
                           position: 'absolute',
-                          bottom: '8px',
-                          left: '8px',
+                          bottom: '6px',
+                          left: '6px',
                           background: 'rgba(0, 0, 0, 0.7)',
                           color: 'white',
-                          padding: '2px 8px',
+                          padding: '2px 6px',
                           borderRadius: '4px',
-                          fontSize: '12px',
+                          fontSize: '11px',
                           fontWeight: '600'
                         }}>
                           {duration}
@@ -441,14 +745,20 @@ const handleThumbnailClick = async (item) => {
                 </div>
 
                 {/* Content Section */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   {/* Title */}
                   <h3 style={{
-                    fontSize: '16px',
+                    fontSize: '15px',
                     fontWeight: '600',
                     color: '#333',
                     margin: 0,
-                    lineHeight: '1.4'
+                    lineHeight: '1.4',
+                    whiteSpace: 'normal',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical'
                   }}>
                     {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
                       <Skeleton width={300} />
@@ -458,21 +768,21 @@ const handleThumbnailClick = async (item) => {
                   </h3>
 
                   {/* Status, Format, Date */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     {/* Status Badge */}
                     {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
-                      <Skeleton width={80} height={24} />
+                      <Skeleton width={70} height={22} />
                     ) : item.isPlaylist ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {item.isPlaylistCompleted && (
-                          <FaCheckCircle style={{ color: '#28a745', fontSize: '14px' }} />
+                          <FaCheckCircle style={{ color: '#28a745', fontSize: '12px' }} />
                         )}
                         <span style={{
                           background: item.isPlaylistCompleted ? '#d4edda' : '#fff3cd',
                           color: item.isPlaylistCompleted ? '#155724' : '#856404',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11px',
                           fontWeight: '600'
                         }}>
                           {item.isPlaylistCompleted ? 'Done' : `${item.currentItem || 0}/${item.totalItems || 0} videos`}
@@ -482,39 +792,39 @@ const handleThumbnailClick = async (item) => {
                       <div style={{
                         background: '#d4edda',
                         color: '#155724',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
                         fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '5px'
+                        gap: '4px'
                       }}>
-                        <FaCheckCircle style={{ fontSize: '14px' }} />
+                        <FaCheckCircle style={{ fontSize: '12px' }} />
                         Done
                       </div>
                     ) : item.status === 'Failed' ? (
                       <div style={{
                         background: '#f8d7da',
                         color: '#721c24',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
                         fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '5px'
+                        gap: '4px'
                       }}>
-                        <FaTimesCircle style={{ fontSize: '14px' }} />
+                        <FaTimesCircle style={{ fontSize: '12px' }} />
                         Failed
                       </div>
                     ) : (
                       <div style={{
                         background: '#d1ecf1',
                         color: '#0c5460',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
                         fontWeight: '600'
                       }}>
                         {item.status === "Downloading" ? (
@@ -535,9 +845,9 @@ const handleThumbnailClick = async (item) => {
                       <span style={{
                         background: '#e9ecef',
                         color: '#495057',
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
                         fontWeight: '500',
                         textTransform: 'uppercase'
                       }}>
@@ -547,7 +857,7 @@ const handleThumbnailClick = async (item) => {
 
                     {/* Date */}
                     <span style={{
-                      fontSize: '12px',
+                      fontSize: '11px',
                       color: '#666'
                     }}>
                       {getFormattedDate(item)}
@@ -558,7 +868,7 @@ const handleThumbnailClick = async (item) => {
                       <div style={{ width: '100%', marginTop: '4px' }}>
                         <ProgressBar
                           now={progress || 0}
-                          style={{ height: '6px' }}
+                          style={{ height: '5px' }}
                         />
                       </div>
                     )}
@@ -566,7 +876,7 @@ const handleThumbnailClick = async (item) => {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                   <button
                     type="button"
                     className="btn"
@@ -575,10 +885,10 @@ const handleThumbnailClick = async (item) => {
                     style={{
                       background: 'transparent',
                       border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      padding: '8px 12px',
+                      borderRadius: '5px',
+                      padding: '6px 10px',
                       color: '#666',
-                      fontSize: '16px'
+                      fontSize: '14px'
                     }}
                   >
                     <FaFolderOpen />
@@ -593,8 +903,8 @@ const handleThumbnailClick = async (item) => {
                         background: 'transparent',
                         border: 'none',
                         color: '#666',
-                        fontSize: '18px',
-                        padding: '8px',
+                        fontSize: '16px',
+                        padding: '6px',
                         cursor: 'pointer'
                       }}
                     >
@@ -603,19 +913,38 @@ const handleThumbnailClick = async (item) => {
                     <Dropdown.Menu className="dropdown-menu">
                       <Dropdown.Item
                         onClick={() => {
+                          handleAddToFolder(item);
+                        }}
+                      >
+                        Add to Folder <FaFolderOpen className="me-2" />
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        onClick={() => {
+                          handleCopyUrl(item);
+                        }}
+                      >
+                        Copy Url <FaCopy className="me-2" />
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        onClick={() => {
+                          handleShowInFinder(item);
+                        }}
+                      >
+                        Show in Finder <FaExternalLinkAlt className="me-2" />
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        onClick={() => {
                           handleDelete(item);
-                          setOpenDropdown(null);
                         }}
                       >
                         Delete <FaTrash className="me-2" />
                       </Dropdown.Item>
                       <Dropdown.Item
                         onClick={() => {
-                          handleDeleteAll();
-                          setOpenDropdown(null);
+                          handleShare(item);
                         }}
                       >
-                        Delete All <FaTrash className="me-2" />
+                        Share <FaShare className="me-2" />
                       </Dropdown.Item>
                     </Dropdown.Menu>
                   </Dropdown>

@@ -48,7 +48,8 @@ function AboutUs() {
 className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-between justify-content-lg-evenly"
       style={{
         width: '100%',
-        height: '85vh',
+        height: '100vh',
+        // height: '85vh',
         // Ensure the section takes full height and uses Flexbox
         display: 'flex',
         flexDirection: 'column',

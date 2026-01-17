@@ -71,6 +71,9 @@ openPath: (path) => ipcRenderer.invoke('openPath', path),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
 
+  // Image proxy for external CDN images
+  proxyImage: (imageUrl) => ipcRenderer.invoke('proxy-image', imageUrl),
+
 }
 
 // Expose API to renderer process

@@ -153,7 +153,10 @@ function App() {
     'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform'
 
   return (
-    <div className="vh-100">
+    <div className="vh-100" style={{
+      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh'
+    }}>
       {updateAvailable && (
         <UpdateNotification
           updateInfo={updateInfo}
@@ -163,9 +166,12 @@ function App() {
         />
       )}
 
-     
-
-      <div className="d-flex" style={{ paddingTop: '0', borderTop: '1px solid #e0e0e0',  }}>
+      <div className="d-flex" style={{ 
+        paddingTop: '0', 
+        borderTop: '1px solid #e2e8f0',
+        height: 'calc(100vh - 60px)',
+        overflow: 'hidden'
+      }}>
         <div style={{ width: '16%' }}>
           <Sidebar
               setSelectedItem={setSelectedItem}

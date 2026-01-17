@@ -9,7 +9,7 @@ import {
   FaSnapchat,
   FaReddit,
   FaWhatsapp,
-  FaVimeo,
+  FaTwitch,
   FaPlayCircle,
   FaVideo, 
   FaMusic,
@@ -29,7 +29,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
     snapchat: <FaSnapchat className="iconstyle" style={{ color: '#FFFC00' }} />,
     reddit: <FaReddit className="iconstyle" style={{ color: '#FF4500' }} />,
     whatsapp: <FaWhatsapp className="iconstyle" style={{ color: '#25D366' }} />,
-    vimeo: <FaVimeo className="iconstyle" style={{ color: '#1AB7EA' }} />,
+    twitch: <FaTwitch className="iconstyle" style={{ color: '#9146FF' }} />,
   };
 
   const platform = Object.keys(socialIcons).find((key) => url?.includes(key));

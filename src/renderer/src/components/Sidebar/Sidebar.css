@@ -1,27 +1,33 @@
-/* css/Sidebar.css */
+/* css/Sidebar.css - Modern Design */
 
 .sidebar {
     transition: width 0.3s ease-in-out;
-    background-color: #ffffff;
-    color: #333;
-    font-size: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    color: #1e293b;
+    font-size: 13px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
     height: 100vh;
-    padding: 20px 0;
-    border-right: 1px solid #e0e0e0;
+    padding: 24px 0;
+    border-right: 1px solid #e2e8f0;
     position: absolute;
     top: 0;
     width: 14.5%;
-  }
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+}
  .navbar-logo {
-  max-width: 200px;
+  max-width: 180px;
   height: auto;
   cursor: default;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  filter: drop-shadow(0 4px 8px rgba(187, 79, 40, 0.15));
   transition: transform 0.3s ease;
+  margin-bottom: 8px;
+}
+
+.navbar-logo:hover {
+  transform: scale(1.05);
 }
   .sidebar__toggle-button {
     background-color: #BB4F28;
@@ -36,17 +42,17 @@
   
   .sidebar__section {
     width: 90%;
-    margin-top: 30px;
+    margin-top: 32px;
   }
 
   .sidebar__section-header {
     font-size: 11px;
-    font-weight: 600;
-    color: #9ca3af;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 12px;
-    padding-left: 15px;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    padding-left: 16px;
   }
 
   .sidebar__menu {
@@ -56,27 +62,115 @@
   .sidebar__menu-item {
     display: flex;
     align-items: center;
-    padding: 10px 15px;
-    border-radius: 0;
+    padding: 12px 16px;
+    border-radius: 8px;
     cursor: pointer;
-    margin-bottom: 2px;
-    color: #6b7280;
+    margin-bottom: 4px;
+    color: #475569;
     font-size: 14px;
-    font-weight: 400;
+    font-weight: 500;
     border: none;
     background-color: transparent;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
   }
   
   .sidebar__menu-item:hover {
-    background-color: #f9fafb;
-    color: #374151;
+    background-color: #f1f5f9;
+    color: #1e293b;
+    transform: translateX(2px);
   }
   
   .sidebar__menu-item--selected {
-    color: #BB4F28;
-    background-color: #fff5f2;
+    color: #ffffff;
+    background: linear-gradient(135deg, #BB4F28 0%, #d9775c 100%);
+    box-shadow: 0 4px 12px rgba(187, 79, 40, 0.25);
+  }
+
+  .sidebar__menu-item--highlighted {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    position: relative;
+    overflow: visible;
+  }
+
+  .sidebar__menu-item--highlighted:hover {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%);
+    border-color: rgba(16, 185, 129, 0.3);
+    transform: translateX(2px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  }
+
+  .sidebar__icon-container--green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    position: relative;
+  }
+
+  .sidebar__menu-item--highlighted:hover .sidebar__icon-container--green {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: scale(1.1);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+  }
+
+  .sidebar__badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 4px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+    animation: pulse 2s infinite;
+  }
+
+  .sidebar__text-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .sidebar__description {
+    font-size: 11px;
+    color: #64748b;
+    font-weight: 400;
+    margin-top: 2px;
+  }
+
+  .sidebar__menu-item--highlighted:hover .sidebar__description {
+    color: #047857;
+  }
+
+  .sidebar__star-icon {
+    color: #fbbf24;
+    font-size: 12px;
+    margin-left: 8px;
+    animation: sparkle 1.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  @keyframes sparkle {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
   }
 
   .sidebar__menu-item--selected::before {
@@ -85,30 +179,32 @@
     left: 0;
     top: 0;
     bottom: 0;
-    width: 3px;
-    background-color: #BB4F28;
-    border-radius: 0 2px 2px 0;
+    width: 4px;
+    background: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.8) 100%);
+    border-radius: 0 4px 4px 0;
   }
   
   .sidebar__icon-container {
-    background-color: transparent;
-    border-radius: 0;
+    background-color: rgba(187, 79, 40, 0.1);
+    border-radius: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 20px;
-    width: 20px;
-    margin-right: 12px;
-    color: #6b7280;
-    transition: all 0.2s ease;
+    height: 24px;
+    width: 24px;
+    margin-right: 14px;
+    color: #BB4F28;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   
   .sidebar__menu-item:hover .sidebar__icon-container {
-    color: #374151;
+    background-color: rgba(187, 79, 40, 0.15);
+    color: #1e293b;
   }
   
   .sidebar__menu-item--selected .sidebar__icon-container {
-    color: #BB4F28;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
   }
   
   .sidebar__icon {
@@ -118,7 +214,7 @@
   .sidebar__label {
     font-size: 14px;
     white-space: nowrap;
-    font-weight: 400;
+    font-weight: 500;
   }
   
   .sidebar__footer {
@@ -135,18 +231,29 @@
   }
   
   .sidebar__buy-nuts-button {
-    background-color: #BB4F28;
+    background: linear-gradient(135deg, #BB4F28 0%, #d9775c 100%);
     border: none;
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     white-space: nowrap;
-    /* padding: 15px 20px; */
-    border-radius: 5px;
+    border-radius: 10px;
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 12px 16px;
+    box-shadow: 0 4px 12px rgba(187, 79, 40, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .sidebar__buy-nuts-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(187, 79, 40, 0.35);
+  }
+
+  .sidebar__buy-nuts-button:hover .sidebar__icon {
+    color: #000000 !important;
   }
   
   @media (max-width: 1200px) {
