@@ -333,11 +333,15 @@
   color: white;
   font-size: 0.65rem;
   padding: 3px 8px;
-  border-radius: 12px;
+  border-radius: 10px;
   font-weight: 600;
   box-shadow: 0 2px 4px rgba(187, 79, 40, 0.3);
   margin-left: 8px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  min-width: 35px;
 }
 
 /* Responsive Design */

@@ -183,6 +183,16 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           alert('The URL does not contain a valid video or playlist');
           return;
         }
+        
+        // Show notification if downloadable video URL is detected
+        if (window.api && window.api.showVideoUrlNotification) {
+          try {
+            await window.api.showVideoUrlNotification(clipboardText);
+          } catch (notifError) {
+            console.warn('Failed to show notification:', notifError);
+          }
+        }
+        
         let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
         const existingDownload = storedDownloads.some(
           (item) => extractYotubePastLink(item.url) === videoId

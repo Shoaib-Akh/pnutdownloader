@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, session, dialog ,globalShortcut} from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session, dialog, globalShortcut, Notification, clipboard } from 'electron'
 import { join } from 'path'
 const tar = require('tar'); // You'll need to install this: npm install tar
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -50,6 +50,8 @@ const cookiesPath = app.isPackaged
   ? join(process.resourcesPath, 'cookies.txt')
   : join(__dirname, '../../public/cookies.txt')
 let mainWindow
+let clipboardMonitorInterval = null
+let lastClipboardText = ''
 const { dirname } = require('path');
 // Get yt-dlp path - prefer system installation on macOS/Linux if available
 const getYtdlpPath = () => {
@@ -92,6 +94,145 @@ switch (process.platform) {
 
 ipcMain.handle('get-app-version', () => {
   return app.getVersion();
+});
+
+// Function to detect if URL is downloadable video URL
+const isDownloadableVideoUrl = (url) => {
+  if (!url || typeof url !== 'string') return false;
+  
+  const urlLower = url.toLowerCase();
+  
+  // YouTube patterns
+  if (urlLower.includes('youtube.com/watch') || 
+      urlLower.includes('youtube.com/shorts/') ||
+      urlLower.includes('youtube.com/embed/') ||
+      urlLower.includes('youtu.be/') ||
+      urlLower.includes('music.youtube.com') ||
+      urlLower.includes('youtube.com/playlist') ||
+      urlLower.includes('youtubekids.com')) {
+    return true;
+  }
+  
+  // Facebook patterns
+  if (urlLower.includes('facebook.com/watch') || 
+      urlLower.includes('facebook.com/') && urlLower.includes('/videos/') ||
+      urlLower.includes('fb.com/watch') ||
+      urlLower.includes('fb.watch')) {
+    return true;
+  }
+  
+  // Instagram patterns
+  if (urlLower.includes('instagram.com/p/') ||
+      urlLower.includes('instagram.com/reels/') ||
+      urlLower.includes('instagram.com/stories/') ||
+      urlLower.includes('instagr.am/')) {
+    return true;
+  }
+  
+  // TikTok patterns
+  if (urlLower.includes('tiktok.com/@') && urlLower.includes('/video/') ||
+      urlLower.includes('vm.tiktok.com/')) {
+    return true;
+  }
+  
+  // Twitter/X patterns
+  if ((urlLower.includes('twitter.com/') || urlLower.includes('x.com/')) && 
+      urlLower.includes('/status/') ||
+      urlLower.includes('t.co/')) {
+    return true;
+  }
+  
+  // Twitch patterns
+  if (urlLower.includes('twitch.tv/videos/') ||
+      urlLower.includes('twitch.com/') && urlLower.includes('/clip/')) {
+    return true;
+  }
+  
+  // Dailymotion patterns
+  if (urlLower.includes('dailymotion.com/video/') ||
+      urlLower.includes('dai.ly/')) {
+    return true;
+  }
+  
+  // Other supported platforms
+  if (urlLower.includes('vimeo.com/') ||
+      urlLower.includes('soundcloud.com/') ||
+      urlLower.includes('bilibili.com/') ||
+      urlLower.includes('rumble.com/v') ||
+      urlLower.includes('bitchute.com/video/') ||
+      urlLower.includes('reddit.com/') ||
+      urlLower.includes('pinterest.com/') ||
+      urlLower.includes('linkedin.com/')) {
+    return true;
+  }
+  
+  return false;
+};
+
+// Function to get platform name from URL
+const getPlatformName = (url) => {
+  if (!url) return 'Video';
+  const urlLower = url.toLowerCase();
+  
+  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be') || urlLower.includes('youtubekids.com')) {
+    if (urlLower.includes('music.youtube.com')) return 'YouTube Music';
+    if (urlLower.includes('youtubekids.com')) return 'YouTube Kids';
+    return 'YouTube';
+  }
+  if (urlLower.includes('facebook.com') || urlLower.includes('fb.com') || urlLower.includes('fb.watch')) return 'Facebook';
+  if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) return 'Instagram';
+  if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) return 'TikTok';
+  if (urlLower.includes('twitter.com') || urlLower.includes('x.com') || urlLower.includes('t.co')) return 'Twitter/X';
+  if (urlLower.includes('twitch.tv') || urlLower.includes('twitch.com')) return 'Twitch';
+  if (urlLower.includes('dailymotion.com') || urlLower.includes('dai.ly')) return 'Dailymotion';
+  if (urlLower.includes('vimeo.com')) return 'Vimeo';
+  if (urlLower.includes('soundcloud.com')) return 'SoundCloud';
+  if (urlLower.includes('bilibili.com')) return 'Bilibili';
+  if (urlLower.includes('rumble.com')) return 'Rumble';
+  if (urlLower.includes('bitchute.com')) return 'BitChute';
+  
+  return 'Video';
+};
+
+// IPC handler to show notification when downloadable video URL is detected
+ipcMain.handle('show-video-url-notification', async (event, url) => {
+  try {
+    if (!url || !isDownloadableVideoUrl(url)) {
+      return { success: false, message: 'Not a downloadable video URL' };
+    }
+    
+    // Check if notifications are supported
+    if (!Notification.isSupported()) {
+      console.warn('Notifications are not supported on this system');
+      return { success: false, message: 'Notifications not supported' };
+    }
+    
+    const platformName = getPlatformName(url);
+    
+    const notification = new Notification({
+      title: 'Downloadable Video Detected',
+      body: `A ${platformName} video URL has been copied. Ready to download!`,
+      icon: iconPath,
+      urgency: 'normal',
+      silent: false
+    });
+    
+    notification.show();
+    
+    // Track notification event
+    try {
+      if (typeof trackEvent === 'function') {
+        trackEvent('video_url_notification_shown', { platform: platformName });
+      }
+    } catch (trackError) {
+      console.warn('Failed to track notification event:', trackError);
+    }
+    
+    return { success: true, platform: platformName };
+  } catch (error) {
+    console.error('Failed to show notification:', error);
+    return { success: false, message: error.message };
+  }
 });
 
 
@@ -470,6 +611,12 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     console.log('Main window closed.');
+    // Stop clipboard monitoring
+    if (clipboardMonitorInterval) {
+      clearInterval(clipboardMonitorInterval);
+      clipboardMonitorInterval = null;
+    }
+    lastClipboardText = '';
     mainWindow = null; // Clear reference
   });
 
@@ -490,8 +637,8 @@ function createWindow() {
   }
 
   // Configure session to handle CORS issues
-  const session = mainWindow.webContents.session;
-  session.webRequest.onHeadersReceived((details, callback) => {
+  const windowSession = mainWindow.webContents.session;
+  windowSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -501,6 +648,156 @@ function createWindow() {
       },
     });
   });
+
+  // Add proper headers for image requests to prevent 403 errors
+  windowSession.webRequest.onBeforeSendHeaders((details, callback) => {
+    const url = details.url;
+    const headers = { ...details.requestHeaders };
+    
+    // Set User-Agent for all requests
+    headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    
+    // Set proper Referer for specific domains
+    if (url.includes('hdslb.com')) {
+      headers['Referer'] = 'https://www.bilibili.com/';
+    } else if (url.includes('sndcdn.com')) {
+      headers['Referer'] = 'https://soundcloud.com/';
+    } else if (url.includes('tiktokcdn.com')) {
+      headers['Referer'] = 'https://www.tiktok.com/';
+    }
+    
+    callback({ requestHeaders: headers });
+  });
+
+  // Automatically collect cookies when Dailymotion or other supported platforms are visited
+  const platformDomains = [
+    'dailymotion.com',
+    'dai.ly',
+    'youtube.com',
+    'facebook.com',
+    'instagram.com',
+    'twitter.com',
+    'x.com'
+  ];
+
+  // Listen for navigation to automatically collect cookies
+  mainWindow.webContents.on('did-navigate', async (event, url) => {
+    if (url) {
+      const urlLower = url.toLowerCase();
+      const isSupportedPlatform = platformDomains.some(domain => urlLower.includes(domain));
+      
+      if (isSupportedPlatform) {
+        console.log(`Detected navigation to supported platform: ${url}`);
+        // Wait a bit for cookies to be set, then update
+        setTimeout(async () => {
+          try {
+            await updateCookiesFile();
+            console.log('Cookies automatically updated after navigation');
+          } catch (error) {
+            console.warn('Failed to auto-update cookies:', error.message);
+          }
+        }, 2000); // Wait 2 seconds for cookies to be set by the browser
+      }
+    }
+  });
+
+  // Also listen for navigation in frames (for embedded content)
+  mainWindow.webContents.on('did-frame-navigate', async (event, url) => {
+    if (url) {
+      const urlLower = url.toLowerCase();
+      const isSupportedPlatform = platformDomains.some(domain => urlLower.includes(domain));
+      
+      if (isSupportedPlatform) {
+        console.log(`Detected frame navigation to supported platform: ${url}`);
+        setTimeout(async () => {
+          try {
+            await updateCookiesFile();
+            console.log('Cookies automatically updated after frame navigation');
+          } catch (error) {
+            console.warn('Failed to auto-update cookies:', error.message);
+          }
+        }, 2000);
+      }
+    }
+  });
+
+  // Listen for cookie changes to immediately update when cookies are set
+  // Use defaultSession to catch cookies from all browser windows
+  session.defaultSession.cookies.on('changed', async (event, cookie, cause, removed) => {
+    if (!removed && cookie.domain) {
+      const cookieDomain = cookie.domain.toLowerCase();
+      const isSupportedPlatform = platformDomains.some(domain => {
+        const normalizedDomain = domain.startsWith('.') ? domain.substring(1) : domain;
+        return cookieDomain.includes(normalizedDomain);
+      });
+      
+      if (isSupportedPlatform) {
+        console.log(`Cookie changed for ${cookie.domain}, updating cookies file...`);
+        // Debounce: wait a bit to avoid too frequent updates
+        setTimeout(async () => {
+          try {
+            await updateCookiesFile();
+            console.log('Cookies automatically updated due to cookie change');
+          } catch (error) {
+            console.warn('Failed to auto-update cookies:', error.message);
+          }
+        }, 1000);
+      }
+    }
+  });
+
+  // Start clipboard monitoring to detect downloadable video URLs
+  const startClipboardMonitoring = () => {
+    // Stop any existing monitoring
+    if (clipboardMonitorInterval) {
+      clearInterval(clipboardMonitorInterval);
+    }
+
+    // Check clipboard every 2 seconds
+    clipboardMonitorInterval = setInterval(() => {
+      try {
+        const clipboardText = clipboard.readText();
+        
+        // Only process if clipboard content changed and is a valid URL
+        if (clipboardText && clipboardText !== lastClipboardText) {
+          if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
+            if (isDownloadableVideoUrl(clipboardText)) {
+              lastClipboardText = clipboardText;
+              
+              // Show notification
+              if (Notification.isSupported()) {
+                const platformName = getPlatformName(clipboardText);
+                const notification = new Notification({
+                  title: 'Downloadable Video Detected',
+                  body: `A ${platformName} video URL has been copied. Ready to download!`,
+                  icon: iconPath,
+                  urgency: 'normal',
+                  silent: false
+                });
+                
+                notification.show();
+                
+                // Track notification event
+                try {
+                  if (typeof trackEvent === 'function') {
+                    trackEvent('clipboard_video_detected', { platform: platformName });
+                  }
+                } catch (trackError) {
+                  console.warn('Failed to track clipboard notification event:', trackError);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        // Silently ignore clipboard read errors (might be due to permissions or empty clipboard)
+        // console.warn('Failed to read clipboard:', error);
+      }
+    }, 2000); // Check every 2 seconds
+  };
+
+  // Start clipboard monitoring when window is ready
+  startClipboardMonitoring();
 }
 
 app.whenReady().then(async () => {
@@ -620,7 +917,9 @@ async function updateCookiesFile() {
       '.facebook.com',
       '.instagram.com',
       '.twitter.com',
-      '.x.com'
+      '.x.com',
+      '.dailymotion.com',
+      'dailymotion.com'
     ];
 
     const allCookies = [];
@@ -645,7 +944,7 @@ async function updateCookiesFile() {
       '# Netscape HTTP Cookie File',
       '# This file is generated by Electron for use by yt-dlp.',
       '# This file was last updated on ' + new Date().toString(),
-      '# Supports: YouTube, Facebook, Instagram, Twitter/X',
+      '# Supports: YouTube, Facebook, Instagram, Twitter/X, Dailymotion',
       ''
     ];
 
@@ -681,13 +980,21 @@ async function updateCookiesFile() {
 
 ipcMain.handle('getYoutubeCookies', async () => {
   // Note: This handler name is kept for backward compatibility
-  // but now updates cookies for all platforms (YouTube, Facebook, Instagram, Twitter)
+  // but now updates cookies for all platforms (YouTube, Facebook, Instagram, Twitter, Dailymotion)
   await updateCookiesFile();
   return cookiesPath;
 });
 
 ipcMain.handle('fetch-video-info', async (event, url) => {
   console.log("url",url);
+  
+  // Update cookies before fetching video info (important for Dailymotion and other platforms)
+  try {
+    await updateCookiesFile();
+  } catch (cookieError) {
+    console.warn('Failed to update cookies before fetching video info:', cookieError.message);
+    // Continue anyway - old cookies might still work
+  }
   
   const getYtdlpPath = () => {
     if (app.isPackaged) {
@@ -714,7 +1021,14 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
   console.log('Using yt-dlp path for video info:', currentYtdlpPath);
   
   return new Promise((resolve, reject) => {
-    const args = ['-J', '--no-playlist', '--extractor-retries', '3', url];
+    const args = [
+      '-J', 
+      '--no-playlist', 
+      '--cookies', cookiesPath,
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--extractor-retries', '3', 
+      url
+    ];
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
     const proc = spawn(currentYtdlpPath, args, spawnOptions);
 
@@ -738,6 +1052,13 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
           stderr.includes('OAuth token')
         );
         
+        // Check if this is a Dailymotion error
+        const isDailymotionError = stderr.includes('[dailymotion]') && (
+          stderr.includes('403') || 
+          stderr.includes('Forbidden') ||
+          stderr.includes('No video formats found')
+        );
+        
         if (isTwitchError) {
           console.warn('Twitch video requires authentication - returning basic info');
           // Try to extract Twitch video ID for fallback thumbnail
@@ -756,6 +1077,27 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
             duration: 0,
             thumbnails: fallbackThumbnail ? [{ url: fallbackThumbnail }] : [],
             requiresAuth: true
+          });
+          return;
+        }
+        
+        if (isDailymotionError) {
+          console.warn('Dailymotion video info fetch failed, but download may still work');
+          // Try to extract Dailymotion video ID for fallback thumbnail
+          const dmMatch = url.match(/dailymotion\.com\/video\/([^\/\?]+)|dai\.ly\/([^\/\?]+)/);
+          let fallbackThumbnail = '';
+          if (dmMatch) {
+            const videoId = dmMatch[1] || dmMatch[2];
+            fallbackThumbnail = `https://s1.dmcdn.net/v/${videoId}_x1080`;
+          }
+          
+          // For Dailymotion videos, return basic info - download may still work
+          resolve({ 
+            title: 'Dailymotion Video', 
+            thumbnail: fallbackThumbnail, 
+            filename: 'dailymotion_video', 
+            duration: 0,
+            thumbnails: fallbackThumbnail ? [{ url: fallbackThumbnail }] : []
           });
           return;
         }
@@ -792,7 +1134,7 @@ let downloadProcess = null;
 const activeDownloads = {};
 
 const startDownload = async (event, options) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       if (downloadProcess) {
         event.sender.send('download-progress', { status: 'A download is already in progress!' });
@@ -808,6 +1150,14 @@ console.log("options",options);
 
       if (activeDownloads[downloadId]) {
         return reject(new Error('Download already in progress.'));
+      }
+
+      // Update cookies before starting download (important for Dailymotion and other platforms)
+      try {
+        await updateCookiesFile();
+      } catch (cookieError) {
+        console.warn('Failed to update cookies before download:', cookieError.message);
+        // Continue anyway - old cookies might still work
       }
       
       let baseDir;
@@ -1027,19 +1377,30 @@ console.log("options",options);
           });
         }
 
+        // Detect if this is a Dailymotion URL
+        const isDailymotion = url.includes('dailymotion.com') || url.includes('dai.ly');
+        
         const args = [
           '--continue',
           '--ffmpeg-location', ffmpegPath,
           '-o', downloadPath,
           '--cookies', cookiesPath,
+          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           '--newline',
           '--ignore-errors',
           '--progress',
           '--extractor-retries', '3',
-          ...formatSpecifier.split(' '),
-          url,
-          isPlaylist ? '--yes-playlist' : '--no-playlist',
         ];
+
+        // Add Dailymotion-specific options for better compatibility
+        if (isDailymotion) {
+          args.push('--referer', 'https://www.dailymotion.com/');
+          args.push('--sleep-requests', '1'); // Add small delay between requests
+        }
+
+        args.push(...formatSpecifier.split(' '));
+        args.push(url);
+        args.push(isPlaylist ? '--yes-playlist' : '--no-playlist');
 
         console.log('Downloading with args:', args);
 
@@ -1086,9 +1447,22 @@ console.log("options",options);
             errorMessage.includes('OAuth token')
           );
           
+          // Check if this is a Dailymotion error
+          const isDailymotionError = errorMessage.includes('[dailymotion]') && (
+            errorMessage.includes('403') || 
+            errorMessage.includes('Forbidden') ||
+            errorMessage.includes('No video formats found') ||
+            errorMessage.includes('Failed to download m3u8')
+          );
+          
           if (isTwitchError) {
             event.sender.send('download-progress', { 
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
+              isAuthError: true
+            });
+          } else if (isDailymotionError) {
+            event.sender.send('download-progress', { 
+              error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
               isAuthError: true
             });
           } else {
@@ -1630,6 +2004,37 @@ ipcMain.handle('proxy-image', async (event, imageUrl) => {
         if (cookieString) {
           headers['Cookie'] = cookieString;
         }
+      } else if (parsedUrl.hostname.includes('hdslb.com')) {
+        // Bilibili specific headers
+        headers['Referer'] = 'https://www.bilibili.com/';
+        headers['Origin'] = 'https://www.bilibili.com';
+        headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+        headers['Accept'] = 'image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8';
+        headers['Accept-Language'] = 'zh-CN,zh;q=0.9,en;q=0.8';
+        headers['Accept-Encoding'] = 'gzip, deflate, br';
+        headers['Sec-Fetch-Dest'] = 'image';
+        headers['Sec-Fetch-Mode'] = 'no-cors';
+        headers['Sec-Fetch-Site'] = 'cross-site';
+        
+        // Try to get Bilibili cookies from the session
+        let cookieString = null;
+        try {
+          const cookies = await session.defaultSession.cookies.get({ domain: '.bilibili.com' });
+          if (cookies && cookies.length > 0) {
+            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+          }
+        } catch (cookieError) {
+          // Silently continue to try cookies.txt
+        }
+        
+        // Fallback to cookies.txt if session cookies aren't available
+        if (!cookieString) {
+          cookieString = await parseCookiesFromFile('bilibili.com');
+        }
+        
+        if (cookieString) {
+          headers['Cookie'] = cookieString;
+        }
       }
 
       // Try using Node's fetch if available, otherwise fall back to http module
@@ -1714,8 +2119,8 @@ ipcMain.handle('proxy-image', async (event, imageUrl) => {
       
       // If this is the last attempt, return fallback
       if (attempt === maxRetries) {
-        // Return a fallback placeholder image for Instagram/Facebook/Twitter CDN failures
-        if (imageUrl.includes('instagram.com') || imageUrl.includes('fbcdn.net') || imageUrl.includes('twimg.com')) {
+        // Return a fallback placeholder image for protected CDN failures
+        if (imageUrl.includes('instagram.com') || imageUrl.includes('fbcdn.net') || imageUrl.includes('twimg.com') || imageUrl.includes('hdslb.com')) {
           // Simple 1x1 transparent PNG as fallback
           const fallbackImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
           return fallbackImage;

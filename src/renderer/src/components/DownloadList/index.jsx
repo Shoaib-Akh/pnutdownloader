@@ -45,13 +45,14 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     }
   }, [])
 
-  // Helper function to check if URL is Instagram/Facebook/Twitter CDN (needs proxying)
-  const isInstagramFacebookCDN = (url) => {
+  // Helper function to check if URL is from protected CDN (needs proxying)
+  const isProtectedCDN = (url) => {
     if (!url) return false
     return url.includes('instagram.com') || 
            url.includes('fbcdn.net') || 
            url.includes('scontent.') ||
-           url.includes('twimg.com')
+           url.includes('twimg.com') ||
+           url.includes('hdslb.com')
   }
 
   // Function to get proxied thumbnail URL
@@ -63,9 +64,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
 
     // Check if API is available
     if (!window.api || !window.api.proxyImage) {
-      // For Instagram/Facebook/Twitter CDN, return null to prevent direct loading
-      if (isInstagramFacebookCDN(thumbnailUrl)) {
-        console.warn('proxyImage API not available, cannot load Instagram/Facebook/Twitter image')
+      // For protected CDN images, return null to prevent direct loading
+      if (isProtectedCDN(thumbnailUrl)) {
+        console.warn('proxyImage API not available, cannot load protected CDN image')
         return null
       }
       // For other platforms, use original URL
@@ -91,7 +92,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       }))
       return proxiedUrl
     } catch (error) {
-      // Suppress console errors for 403/Forbidden errors as they're expected for Instagram/Facebook CDN
+      // Suppress console errors for 403/Forbidden errors as they're expected for protected CDN images
       // The fallback UI will handle these cases gracefully
       const isExpectedError = error.message?.includes('403') || 
                               error.message?.includes('Forbidden') ||
@@ -123,9 +124,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     
     const cachedResult = proxiedThumbnails[item.thumbnail]
     
-    // For Instagram/Facebook/Twitter CDN images, never return original URL
+    // For protected CDN images, never return original URL
     // Only return proxied version or null (to show placeholder)
-    if (isInstagramFacebookCDN(item.thumbnail)) {
+    if (isProtectedCDN(item.thumbnail)) {
       if (cachedResult === 'FAILED' || cachedResult === 'LOADING' || !cachedResult) {
         return null // Show fallback UI if proxying failed, loading, or not started
       }
@@ -149,7 +150,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     const platform = detectPlatform(item.url)
     const isYouTube = isYouTubePlatform(platform)
     
-    // For Instagram/Facebook, always proxy (don't wait for completion)
+    // For protected CDN images, always proxy (don't wait for completion)
     // For other non-YouTube, also proxy
     if (!isYouTube && !proxiedThumbnails[item.thumbnail] && window.api && window.api.proxyImage) {
       // Trigger proxying but don't wait - it will update state when done
@@ -647,8 +648,8 @@ const handleThumbnailClick = async (item) => {
                         const thumbnailUrl = getThumbnailUrl(item)
                         
                         // Show thumbnail if available
-                        // Never show Instagram/Facebook/Twitter CDN URLs directly - only proxied versions
-                        if (thumbnailUrl && (!isInstagramFacebookCDN(item.thumbnail) || thumbnailUrl.startsWith('data:'))) {
+                        // Never show protected CDN URLs directly - only proxied versions
+                        if (thumbnailUrl && (!isProtectedCDN(item.thumbnail) || thumbnailUrl.startsWith('data:'))) {
                           return (
                             <>
                               <img

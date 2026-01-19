@@ -12,6 +12,7 @@ export const PLATFORMS = {
   TWITTER: 'twitter',
   TWITCH: 'twitch',
   DAILYMOTION: 'dailymotion',
+  BILIBILI: 'bilibili',
   UNKNOWN: 'unknown'
 }
 
@@ -62,6 +63,11 @@ export const detectPlatform = (url) => {
     return PLATFORMS.DAILYMOTION
   }
 
+  // Bilibili
+  if (urlLower.includes('bilibili.com')) {
+    return PLATFORMS.BILIBILI
+  }
+
   return PLATFORMS.UNKNOWN
 }
 
@@ -102,6 +108,7 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.TWITTER]: 'Twitter',
     [PLATFORMS.TWITCH]: 'Twitch',
     [PLATFORMS.DAILYMOTION]: 'Dailymotion',
+    [PLATFORMS.BILIBILI]: 'Bilibili',
     [PLATFORMS.UNKNOWN]: 'Unknown'
   }
   return names[platform] || 'Unknown'
@@ -122,7 +129,8 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.TIKTOK]: 'https://www.tiktok.com',
     [PLATFORMS.TWITTER]: 'https://twitter.com',
     [PLATFORMS.TWITCH]: 'https://www.twitch.tv',
-    [PLATFORMS.DAILYMOTION]: 'https://www.dailymotion.com'
+    [PLATFORMS.DAILYMOTION]: 'https://www.dailymotion.com',
+    [PLATFORMS.BILIBILI]: 'https://www.bilibili.com'
   }
   return urls[platform] || null
 }

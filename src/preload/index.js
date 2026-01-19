@@ -74,6 +74,9 @@ openPath: (path) => ipcRenderer.invoke('openPath', path),
   // Image proxy for external CDN images
   proxyImage: (imageUrl) => ipcRenderer.invoke('proxy-image', imageUrl),
 
+  // Show notification when downloadable video URL is detected
+  showVideoUrlNotification: (url) => ipcRenderer.invoke('show-video-url-notification', url),
+
 }
 
 // Expose API to renderer process
