@@ -77,6 +77,16 @@ openPath: (path) => ipcRenderer.invoke('openPath', path),
   // Show notification when downloadable video URL is detected
   showVideoUrlNotification: (url) => ipcRenderer.invoke('show-video-url-notification', url),
 
+  // Listen for video URL detection events from main process
+  onVideoUrlDetected: (callback) => {
+    ipcRenderer.on('video-url-detected', (_event, url) => callback(url))
+  },
+
+  // Remove listener for video URL detection
+  removeVideoUrlDetectedListener: () => {
+    ipcRenderer.removeAllListeners('video-url-detected')
+  },
+
 }
 
 // Expose API to renderer process

@@ -786,6 +786,11 @@ function createWindow() {
                   console.warn('Failed to track clipboard notification event:', trackError);
                 }
               }
+              
+              // Send IPC event to renderer to open modal
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('video-url-detected', clipboardText);
+              }
             }
           }
         }

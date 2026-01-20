@@ -3,6 +3,7 @@ import Navbar from './components/Navbar'
 import BodySection from './components/BodySection'
 import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'
+import UrlDetectionModal from './components/UrlDetectionModal'
 import { FaRegLightbulb } from 'react-icons/fa'
 import { MdFeedback } from 'react-icons/md'
 
@@ -24,10 +25,21 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [aboutUs, setAboutUs] = useState(false)
+  const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
+  const [detectedUrl, setDetectedUrl] = useState('')
+  const [isUrlDownloading, setIsUrlDownloading] = useState(false)
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Wait for window.api to be available
+        let retries = 0
+        const maxRetries = 10
+        while (!window.api && retries < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          retries++
+        }
+
         if (window.api) {
           const checkDependencies = async () => {
             try {
@@ -45,29 +57,50 @@ function App() {
           checkDependencies()
 
           // Check for updates
-          window.api.checkForUpdates()
+          if (window.api.checkForUpdates) {
+            window.api.checkForUpdates()
+          }
 
-          window.api.onUpdateAvailable((info) => {
-            console.log('Update available:', info)
-            setUpdateAvailable(true)
-            setUpdateInfo(info)
-          })
+          if (window.api.onUpdateAvailable) {
+            window.api.onUpdateAvailable((info) => {
+              console.log('Update available:', info)
+              setUpdateAvailable(true)
+              setUpdateInfo(info)
+            })
+          }
 
-          window.api.onUpdateDownloaded((info) => {
-            console.log('Update downloaded:', info)
-            setUpdateDownloaded(true)
-            setUpdateInfo(info)
-          })
+          if (window.api.onUpdateDownloaded) {
+            window.api.onUpdateDownloaded((info) => {
+              console.log('Update downloaded:', info)
+              setUpdateDownloaded(true)
+              setUpdateInfo(info)
+            })
+          }
 
-          window.api.onUpdateDownloadedProgress((progress) => {
-            setDownloadProgress(progress.percent)
-          })
+          if (window.api.onUpdateDownloadedProgress) {
+            window.api.onUpdateDownloadedProgress((progress) => {
+              setDownloadProgress(progress.percent)
+            })
+          }
 
-          window.api.onUpdateError((err) => {
-            console.error('Update error:', err)
-          })
+          if (window.api.onUpdateError) {
+            window.api.onUpdateError((err) => {
+              console.error('Update error:', err)
+            })
+          }
+
+          // Listen for video URL detection from clipboard
+          if (window.api.onVideoUrlDetected && typeof window.api.onVideoUrlDetected === 'function') {
+            window.api.onVideoUrlDetected((url) => {
+              console.log('Video URL detected:', url)
+              setDetectedUrl(url)
+              setUrlDetectionModalOpen(true)
+            })
+          } else {
+            console.warn('onVideoUrlDetected is not available. Please restart the app for URL detection to work.')
+          }
         } else {
-          console.error('window.api is not defined')
+          console.error('window.api is not defined after retries')
           setIsLoading(false)
         }
       } catch (error) {
@@ -77,6 +110,13 @@ function App() {
     }
 
     initializeApp()
+
+    // Cleanup listener on unmount
+    return () => {
+      if (window.api && typeof window.api.removeVideoUrlDetectedListener === 'function') {
+        window.api.removeVideoUrlDetectedListener()
+      }
+    }
   }, [])
 
   const handleInstallUpdate = () => {
@@ -152,6 +192,30 @@ function App() {
   const feedbackUrl =
     'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform'
 
+  const handleUrlDetectionClose = () => {
+    setUrlDetectionModalOpen(false)
+    setDetectedUrl('')
+    setIsUrlDownloading(false)
+  }
+
+  const handleUrlDetectionDownload = async () => {
+    if (!detectedUrl || !window.api) return
+    
+    setIsUrlDownloading(true)
+    try {
+      // Set the detected URL to pastLinkUrl so BodySection can handle it
+      setPastLinkUrl(detectedUrl)
+      // Close the modal
+      setUrlDetectionModalOpen(false)
+      // Optionally trigger download automatically
+      // You can add auto-download logic here if needed
+    } catch (error) {
+      console.error('Error handling URL detection download:', error)
+    } finally {
+      setIsUrlDownloading(false)
+    }
+  }
+
   return (
     <div className="vh-100" style={{
       background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
@@ -165,6 +229,14 @@ function App() {
           downloadProgress={downloadProgress}
         />
       )}
+
+      <UrlDetectionModal
+        isOpen={urlDetectionModalOpen}
+        onClose={handleUrlDetectionClose}
+        onDownload={handleUrlDetectionDownload}
+        url={detectedUrl}
+        isLoading={isUrlDownloading}
+      />
 
       <div className="d-flex" style={{ 
         paddingTop: '0', 
