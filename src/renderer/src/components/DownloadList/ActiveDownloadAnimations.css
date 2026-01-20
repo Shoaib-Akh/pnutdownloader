@@ -1,0 +1,110 @@
+/* Active Download Animations */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0.3;
+  }
+}
+
+/* Enhanced skeleton loading */
+.skeleton-enhanced {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton-enhanced::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Active download card glow effect */
+.active-download-glow {
+  box-shadow: 
+    0 4px 12px rgba(14, 165, 233, 0.15),
+    0 0 0 1px rgba(14, 165, 233, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Progress bar enhancement for active downloads */
+.progress-enhanced {
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-enhanced::-webkit-progress-bar {
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 100%);
+}
+
+.progress-enhanced::-webkit-progress-value {
+  background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+  transition: width 0.3s ease;
+}
+
+/* Thumbnail loading state */
+.thumbnail-loading {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.thumbnail-loading::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.6),
+    transparent
+  );
+  animation: thumbnail-shimmer 2s infinite;
+}
+
+@keyframes thumbnail-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}

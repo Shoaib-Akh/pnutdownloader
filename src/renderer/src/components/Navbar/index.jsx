@@ -287,6 +287,13 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           onSelect={handleDownloadTypeChange}
         />
 
+        <CustomDropdown
+          label="Format"
+          options={formatOptions[downloadType] || []}
+          selected={format}
+          onSelect={handleFormatChange}
+        />
+
         {downloadType === 'Video' && (
           <CustomDropdown
             label="Quality"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -7,11 +7,14 @@ import '../common.css'
 import { convertISODurationToSeconds, formatTime } from '../convertISODurationToSeconds'
 import MediaThumbnail from './MediaThumbnail'
 import { detectPlatform, isYouTubePlatform } from '../platformUtils'
+import './ActiveDownloadAnimations.css'
 
-function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen,onRetry}) {
+function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen,onRetry,activeDownloads }) {
   const [openDropdown, setOpenDropdown] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [proxiedThumbnails, setProxiedThumbnails] = useState({})
+  const [isSelectMode, setIsSelectMode] = useState(false)
+  const [selectedItems, setSelectedItems] = useState(new Set())
 
   // Listen for download progress events to capture thumbnail data
   useEffect(() => {
@@ -219,6 +222,63 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     window.api.pauseDownload(items.id)
   }
 
+  // Handle select mode toggle
+  const handleSelectModeToggle = () => {
+    setIsSelectMode(!isSelectMode)
+    if (isSelectMode) {
+      setSelectedItems(new Set()) // Clear selections when exiting select mode
+    }
+  }
+
+  // Handle item selection
+  const handleItemSelect = (itemId) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId)
+      } else {
+        newSet.add(itemId)
+      }
+      return newSet
+    })
+  }
+
+  // Handle select all - will be defined after searchFilteredList
+  const handleSelectAll = () => {
+    const currentList = searchQuery
+      ? filteredList.filter(item =>
+          item.title.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : filteredList
+    
+    if (selectedItems.size === currentList.length && currentList.length > 0) {
+      // Deselect all
+      setSelectedItems(new Set())
+    } else {
+      // Select all
+      const allIds = new Set(currentList.map(item => item.id))
+      setSelectedItems(allIds)
+    }
+  }
+
+  // Handle delete selected items
+  const handleDeleteSelected = () => {
+    if (selectedItems.size === 0) return
+    
+    const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    const updatedList = storedDownloads.filter((item) => !selectedItems.has(item.id))
+    localStorage.setItem('downloadList', JSON.stringify(updatedList))
+    
+    // Pause all selected downloads
+    selectedItems.forEach(id => {
+      window.api.pauseDownload(id)
+    })
+    
+    // Clear selections and exit select mode
+    setSelectedItems(new Set())
+    setIsSelectMode(false)
+  }
+
   // New handler functions for context menu
   const handleAddToFolder = (item) => {
     // TODO: Implement add to folder functionality
@@ -272,6 +332,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   let downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
+  console.log('downloadListData', downloadListData)
   const filteredList = (downloadListData )
     .filter((item) => {
       const isPlaylist =
@@ -574,6 +635,80 @@ const handleThumbnailClick = async (item) => {
         <span style={{ fontSize: '14px', color: '#666' }}>
           Total: {filteredList?.length || 0}
         </span>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          {isSelectMode && (
+            <>
+              <button
+                onClick={handleSelectAll}
+                style={{
+                  padding: '6px 12px',
+                  border: '1px solid #ddd',
+                  borderRadius: '5px',
+                  background: 'white',
+                  color: '#333',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                {(() => {
+                  const currentList = searchQuery
+                    ? filteredList.filter(item =>
+                        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      )
+                    : filteredList
+                  return selectedItems.size === currentList.length && currentList.length > 0 ? (
+                    <>
+                      <FaCheckSquare /> Deselect All
+                    </>
+                  ) : (
+                    <>
+                      <FaSquare /> Select All
+                    </>
+                  )
+                })()}
+              </button>
+              {selectedItems.size > 0 && (
+                <button
+                  onClick={handleDeleteSelected}
+                  style={{
+                    padding: '6px 12px',
+                    border: '1px solid #dc3545',
+                    borderRadius: '5px',
+                    background: '#dc3545',
+                    color: 'white',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <FaTrash /> Delete Selected ({selectedItems.size})
+                </button>
+              )}
+            </>
+          )}
+          <button
+            onClick={handleSelectModeToggle}
+            style={{
+              padding: '6px 12px',
+              border: isSelectMode ? '1px solid #0ea5e9' : '1px solid #ddd',
+              borderRadius: '5px',
+              background: isSelectMode ? '#0ea5e9' : 'white',
+              color: isSelectMode ? 'white' : '#333',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+          >
+            {isSelectMode ? 'Cancel' : 'Select'}
+          </button>
+        </div>
       </div>
 
       {/* Download List - Card Layout */}
@@ -613,33 +748,101 @@ const handleThumbnailClick = async (item) => {
                   alignItems: 'center',
                   gap: '18px',
                   padding: '20px',
-                  background: 'white',
+                  background: activeDownloads?.has(item.id) ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : selectedItems.has(item.id) ? '#e3f2fd' : 'white',
                   borderRadius: '10px',
-                  border: '1px solid #e0e0e0',
-                  transition: 'box-shadow 0.2s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                  border: activeDownloads?.has(item.id) ? '2px solid #0ea5e9' : selectedItems.has(item.id) ? '2px solid #2196f3' : '1px solid #e0e0e0',
+                  transition: 'all 0.3s ease',
+                  boxShadow: activeDownloads?.has(item.id) ? '0 4px 12px rgba(14, 165, 233, 0.15)' : selectedItems.has(item.id) ? '0 4px 12px rgba(33, 150, 243, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) 
+                    ? '0 6px 16px rgba(14, 165, 233, 0.25)' 
+                    : '0 2px 8px rgba(0,0,0,0.1)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) 
+                    ? '0 4px 12px rgba(14, 165, 233, 0.15)' 
+                    : '0 1px 3px rgba(0,0,0,0.05)';
                 }}
               >
+                {/* Active Download Indicator */}
+                {activeDownloads?.has(item.id) && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    right: '8px',
+                    background: '#0ea5e9',
+                    color: 'white',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '10px',
+                    fontWeight: '600',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    animation: 'pulse 2s infinite'
+                  }}>
+                    <div style={{
+                      width: '6px',
+                      height: '6px',
+                      background: 'white',
+                      borderRadius: '50%',
+                      animation: 'blink 1.5s infinite'
+                    }}></div>
+                    ACTIVE
+                  </div>
+                )}
+                {/* Checkbox for select mode */}
+                {isSelectMode && (
+                  <div
+                    onClick={() => handleItemSelect(item.id)}
+                    style={{
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '24px',
+                      height: '24px'
+                    }}
+                  >
+                    {selectedItems.has(item.id) ? (
+                      <FaCheckSquare style={{ fontSize: '20px', color: '#2196f3' }} />
+                    ) : (
+                      <FaSquare style={{ fontSize: '20px', color: '#999' }} />
+                    )}
+                  </div>
+                )}
                 {/* Number */}
-                <span style={{ 
-                  fontSize: '16px', 
-                  fontWeight: '600', 
-                  color: '#666',
-                  minWidth: '30px'
-                }}>
-                  {index + 1}.
-                </span>
+                {!isSelectMode && (
+                  <span style={{ 
+                    fontSize: '16px', 
+                    fontWeight: '600', 
+                    color: '#666',
+                    minWidth: '30px'
+                  }}>
+                    {index + 1}.
+                  </span>
+                )}
 
                 {/* Thumbnail with Duration Overlay */}
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
-                    <Skeleton width={120} height={70} />
+                    <div style={{ position: 'relative' }}>
+                      <Skeleton width={120} height={70} />
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '12px',
+                        color: '#666',
+                        fontWeight: '600',
+                        textAlign: 'center'
+                      }}>
+                        {item.status === 'Fetching Info...' ? 'Loading...' : 'Queued'}
+                      </div>
+                    </div>
                   ) : (
                     <>
                       {(() => {
@@ -877,79 +1080,81 @@ const handleThumbnailClick = async (item) => {
                 </div>
 
                 {/* Action Buttons */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => handleOpenFolder(item)}
-                    title="Open folder"
-                    style={{
-                      background: 'transparent',
-                      border: '1px solid #ddd',
-                      borderRadius: '5px',
-                      padding: '6px 10px',
-                      color: '#666',
-                      fontSize: '14px'
-                    }}
-                  >
-                    <FaFolderOpen />
-                  </button>
-                  <Dropdown
-                    show={openDropdown === item.id}
-                    onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
-                  >
-                    <Dropdown.Toggle 
-                      as="button" 
+                {!isSelectMode && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => handleOpenFolder(item)}
+                      title="Open folder"
                       style={{
                         background: 'transparent',
-                        border: 'none',
+                        border: '1px solid #ddd',
+                        borderRadius: '5px',
+                        padding: '6px 10px',
                         color: '#666',
-                        fontSize: '16px',
-                        padding: '6px',
-                        cursor: 'pointer'
+                        fontSize: '14px'
                       }}
                     >
-                      <FaEllipsisV />
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu className="dropdown-menu">
-                      <Dropdown.Item
-                        onClick={() => {
-                          handleAddToFolder(item);
+                      <FaFolderOpen />
+                    </button>
+                    <Dropdown
+                      show={openDropdown === item.id}
+                      onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
+                    >
+                      <Dropdown.Toggle 
+                        as="button" 
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#666',
+                          fontSize: '16px',
+                          padding: '6px',
+                          cursor: 'pointer'
                         }}
                       >
-                        Add to Folder <FaFolderOpen className="me-2" />
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        onClick={() => {
-                          handleCopyUrl(item);
-                        }}
-                      >
-                        Copy Url <FaCopy className="me-2" />
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        onClick={() => {
-                          handleShowInFinder(item);
-                        }}
-                      >
-                        Show in Finder <FaExternalLinkAlt className="me-2" />
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        onClick={() => {
-                          handleDelete(item);
-                        }}
-                      >
-                        Delete <FaTrash className="me-2" />
-                      </Dropdown.Item>
-                      <Dropdown.Item
-                        onClick={() => {
-                          handleShare(item);
-                        }}
-                      >
-                        Share <FaShare className="me-2" />
-                      </Dropdown.Item>
-                    </Dropdown.Menu>
-                  </Dropdown>
-                </div>
+                        <FaEllipsisV />
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu className="dropdown-menu">
+                        <Dropdown.Item
+                          onClick={() => {
+                            handleAddToFolder(item);
+                          }}
+                        >
+                          Add to Folder <FaFolderOpen className="me-2" />
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          onClick={() => {
+                            handleCopyUrl(item);
+                          }}
+                        >
+                          Copy Url <FaCopy className="me-2" />
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          onClick={() => {
+                            handleShowInFinder(item);
+                          }}
+                        >
+                          Show in Finder <FaExternalLinkAlt className="me-2" />
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          onClick={() => {
+                            handleDelete(item);
+                          }}
+                        >
+                          Delete <FaTrash className="me-2" />
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                          onClick={() => {
+                            handleShare(item);
+                          }}
+                        >
+                          Share <FaShare className="me-2" />
+                        </Dropdown.Item>
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </div>
+                )}
               </div>
             );
           })

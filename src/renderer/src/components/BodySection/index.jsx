@@ -23,6 +23,8 @@ import { detectPlatform, isYouTubePlatform, PLATFORMS } from '../platformUtils'
 import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
 import DonationModal from '../DonationModal'
+import { youtubeAPI } from '../YouTubeAPIManager'
+import { nonYouTubeExtractor } from '../NonYouTubeMetadataExtractor'
 
 function BodySection({
   downloadType,
@@ -63,6 +65,7 @@ const [canGoForward, setCanGoForward] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1.0)
   const [progressMap, setProgressMap] = useState(new Map())
   const [videoInfo, setVideoInfo] = useState([])
+  const [activeDownloads, setActiveDownloads] = useState(new Set())
   const currentFileTypes = useRef(new Map())
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
@@ -359,124 +362,33 @@ const formatDurationToISO = (duration) => {
 const getVideoInfo = async (url) => {
   const platform = detectPlatform(url);
   
-  // For non-YouTube platforms, use yt-dlp via IPC
-  if (!isYouTubePlatform(platform)) {
-    try {
-      const info = await window.api.fetchVideoInfo(url);
-      if (!info) return null;
-      
-      // Extract thumbnail from yt-dlp response
-      let thumbnail = '';
-      if (Array.isArray(info.thumbnails) && info.thumbnails.length > 0) {
-        thumbnail = info.thumbnails[info.thumbnails.length - 1].url;
-      } else if (info.thumbnail) {
-        thumbnail = info.thumbnail;
+  try {
+    if (isYouTubePlatform(platform)) {
+      // Use enhanced YouTube API manager
+      const videoId = extractVideoId(url);
+      const playlistId = extractPlaylistId(url);
+
+      if (videoId && !playlistId) {
+        return await youtubeAPI.extractVideoInfo(url);
+      } else if (playlistId) {
+        return await youtubeAPI.extractPlaylistInfo(url);
       }
-      
-      // Format duration from seconds to ISO format
-      const duration = info.duration ? formatDurationToISO(info.duration) : 'PT0S';
-      
-      return {
-        videoUrl: url,
-        title: customSanitize(info.title || 'Unknown'),
-        thumbnail: thumbnail,
-        duration: duration,
-        isPlaylist: false,
-      };
-    } catch (error) {
-      console.error(`Failed to fetch video info for ${platform}:`, error);
-      return null;
+    } else {
+      // Use non-YouTube metadata extractor
+      return await nonYouTubeExtractor.extractMetadata(url);
     }
-  }
-  
-  // YouTube-specific logic (keep existing)
-  const videoId = extractVideoId(url);
-  const playlistId = extractPlaylistId(url);
-
-  if (!videoId && !playlistId) return null;
-
-  const API_KEY = getNextApiKey(); // Get the next API key for this request
-
-  if (url.includes('watch') || videoId) {
-    try {
-      const response = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${API_KEY}`
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (data.items.length === 0) return null;
-      const { snippet, contentDetails } = data.items[0];
-
-      return {
-        videoUrl: url,
-        title: customSanitize(snippet.title),
-        thumbnail:
-          snippet?.thumbnails?.standard?.url ||
-          snippet?.thumbnails?.default?.url ||
-          snippet?.thumbnails?.high?.url,
-        duration: contentDetails.duration,
-        isPlaylist: false,
-      };
-    } catch (error) {
-      console.error(`Video fetch failed with key ${API_KEY}: ${error.message}`);
-      return null;
-    }
-  }
-
-  if (!url.includes('watch') && playlistId) {
-    try {
-      const playlistResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${API_KEY}`
-      );
-      if (!playlistResponse.ok) {
-        throw new Error(`HTTP error! status: ${playlistResponse.status}`);
-      }
-      const playlistData = await playlistResponse.json();
-
-      if (playlistData.items.length === 0) return null;
-      const { snippet } = playlistData.items[0];
-
-      const itemsResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=2&key=${API_KEY}`
-      );
-      if (!itemsResponse.ok) {
-        throw new Error(`HTTP error! status: ${itemsResponse.status}`);
-      }
-      const itemsData = await itemsResponse.json();
-
-      const isYouTubeMusic = new URL(url).hostname === 'music.youtube.com';
-      const videos = itemsData.items.map((item) => ({
-        videoUrl: `https://www.youtube.com/watch?v=${item.snippet.resourceId.videoId}`,
-        videoId: item.snippet.resourceId.videoId,
-        title: item.snippet.title,
-        thumbnail: isYouTubeMusic
-          ? snippet.thumbnails?.standard?.url ||
-            snippet.thumbnails?.default?.url ||
-            snippet.thumbnails?.high?.url
-          : snippet.thumbnails?.standard?.url ||
-            snippet.thumbnails?.default?.url ||
-            snippet.thumbnails?.high?.url,
-      }));
-
-      return {
-        playlistUrl: url,
-        playlistTitle: customSanitize(snippet.title),
-        thumbnail: isYouTubeMusic
-          ? snippet.thumbnails?.standard?.url ||
-            snippet.thumbnails?.default?.url ||
-            snippet.thumbnails?.high?.url
-          : snippet.thumbnails?.standard?.url ||
-            snippet.thumbnails?.default?.url ||
-            snippet.thumbnails?.high?.url,
-        videos,
-        isPlaylist: true,
-      };
-    } catch (error) {
-      console.error(`Playlist fetch failed with key ${API_KEY}: ${error.message}`);
-      return null;
-    }
+  } catch (error) {
+    console.error('Failed to fetch video info:', error);
+    
+    // Fallback to basic metadata
+    return {
+      videoUrl: url,
+      title: `${platform} Video`,
+      thumbnail: '',
+      duration: 'PT0S',
+      isPlaylist: false,
+      platform: platform
+    };
   }
 };
 
@@ -495,6 +407,10 @@ const getVideoInfo = async (url) => {
   const addToQueue = async (url) => {
     if (!url) return
     const newId = uuidv4()
+    
+    // Add to active downloads immediately for highlighting
+    setActiveDownloads(prev => new Set(prev).add(newId))
+    
     const videoInfo = await getVideoInfo(url)
 
     const newDownload = {
@@ -573,6 +489,18 @@ const getVideoInfo = async (url) => {
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
         const itemIdx = stored.findIndex((i) => i.id === currentId);
         if (itemIdx === -1) return;
+      
+        // Handle video info updates (title, thumbnail, duration) for non-YouTube videos
+        if (progressData.title || progressData.sanitizedTitle || progressData.thumbnail || progressData.duration) {
+          stored[itemIdx] = {
+            ...stored[itemIdx],
+            // Prefer title over sanitizedTitle if both are present
+            ...(progressData.title ? { title: progressData.title } : (progressData.sanitizedTitle && { title: progressData.sanitizedTitle })),
+            ...(progressData.thumbnail && { thumbnail: progressData.thumbnail }),
+            ...(progressData.duration && { duration: progressData.duration })
+          };
+          localStorage.setItem('downloadList', JSON.stringify(stored));
+        }
       
         // Only process message if it exists and is a string
         if (typeof progressData.message === 'string') {
@@ -713,6 +641,14 @@ const getVideoInfo = async (url) => {
             return newMap;
           });
           localStorage.setItem('downloadList', JSON.stringify(stored));
+          
+          // Remove from active downloads when completed
+          setActiveDownloads(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(currentId);
+            return newSet;
+          });
+          
           setShowDonationModal(true)
         }
         if (
@@ -745,6 +681,13 @@ const getVideoInfo = async (url) => {
         storedDownloads[completedIndex].status = 'Completed';
         storedDownloads[completedIndex].isCompleted = true;
       
+        // Remove from active downloads when completed
+        setActiveDownloads(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(currentId);
+          return newSet;
+        });
+      
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
       }
     } catch (error) {
@@ -756,6 +699,13 @@ const getVideoInfo = async (url) => {
         storedDownloads[failedIndex].status = 'Failed';
         storedDownloads[failedIndex].isFailed = true;
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+  
+        // Remove from active downloads when failed
+        setActiveDownloads(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(currentId);
+          return newSet;
+        });
   
         setProgressMap((prev) => {
           const newMap = new Map(prev);
@@ -858,6 +808,7 @@ const handleRetry = (id) => {
                 videoInfo={videoInfo}
                 bitrate={bitrate}
                 onRetry={handleRetry}
+                activeDownloads={activeDownloads}
               />
               <OverlayTrigger
                 placement="top"
