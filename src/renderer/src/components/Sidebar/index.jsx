@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'; 
+import React, { useEffect } from 'react';
 import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar } from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
@@ -15,7 +15,8 @@ function Sidebar({
   setDownload,
   setShowWebView,
   setDownloadListOpen,
-  setAboutUs
+  setAboutUs,
+  setFeedbackModalOpen
 }) {
   // Set Home as auto-selected on load
   useEffect(() => {
@@ -34,8 +35,8 @@ function Sidebar({
   ];
 
   const systemItems = [
-    { 
-      icon: FaCommentDots, 
+    {
+      icon: FaCommentDots,
       label: 'Feedback',
       badge: 'NEW',
       color: '#10b981',
@@ -45,19 +46,19 @@ function Sidebar({
     { icon: FaInfoCircle, label: 'About us' },
   ];
 
- 
+
 
   const handleClick = () => {
-         window.api.trackEvent('Support us')
+    window.api.trackEvent('Support us')
     window.api.openExternal('https://ko-fi.com/pnutdownloader');
   };
 
   return (
     <div className="sidebar">
-       <div className="navbar-logo-container">
-        <img 
-          src={Logo} 
-          alt="PNUT Logo" 
+      <div className="navbar-logo-container">
+        <img
+          src={Logo}
+          alt="PNUT Logo"
           className="navbar-logo"
         />
       </div>
@@ -69,9 +70,8 @@ function Sidebar({
           {myFilesItems.map((item, index) => (
             <div
               key={index}
-              className={`sidebar__menu-item ${
-                selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
-              }`}
+              className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
+                }`}
               onClick={() => {
                 setSelectedItem(item.label);
                 setDownload(false);
@@ -99,11 +99,9 @@ function Sidebar({
           {systemItems.map((item, index) => (
             <div
               key={index}
-              className={`sidebar__menu-item ${
-                selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
-              } ${
-                item.isHighlighted ? 'sidebar__menu-item--highlighted' : ''
-              }`}
+              className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
+                } ${item.isHighlighted ? 'sidebar__menu-item--highlighted' : ''
+                }`}
               onClick={() => {
                 setSelectedItem(item.label);
                 setDownload(false);
@@ -112,15 +110,15 @@ function Sidebar({
                 if (item.label === 'Feedback') {
                   setAboutUs(false);
                   window.api.trackEvent('Feedback Clicked');
-                  window.api.openExternal('https://your-feedback-url.com');
+                  setFeedbackModalOpen(true);
+                  // window.api.openExternal('https://your-feedback-url.com');
                 } else {
                   setAboutUs(true);
                 }
               }}
             >
-              <div className={`sidebar__icon-container ${
-                item.isHighlighted ? 'sidebar__icon-container--green' : ''
-              }`}>
+              <div className={`sidebar__icon-container ${item.isHighlighted ? 'sidebar__icon-container--green' : ''
+                }`}>
                 <item.icon className="sidebar__icon" />
                 {item.badge && (
                   <span className="sidebar__badge">{item.badge}</span>

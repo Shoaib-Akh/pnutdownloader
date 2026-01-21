@@ -1518,10 +1518,18 @@ console.log("options",options);
       const title = fetchAndSanitizeTitle();
 
       const setupDownloadPath = async () => {
-        const sanitizedTitle = await title; // Single sanitized title
+        let sanitizedTitle = 'Unknown';
+        try {
+          sanitizedTitle = await title; // Single sanitized title
+        } catch (e) {
+          console.error(`[${downloadId}] Title promise rejected:`, e);
+        }
+        
         const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
         const sanitizedBitrate = customSanitize(selectBitrate) || 'Unknown'; // Sanitize bitrate
       
+        console.log(`[${downloadId}] Setup path vars:`, { sanitizedTitle, isAudioOnly, sanitizedQuality, sanitizedBitrate });
+
         // Create title with quality for display and filenames
         // Use the extracted title if available, otherwise create fallback
         let titleWithQuality;
@@ -1530,7 +1538,7 @@ console.log("options",options);
             ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
             : `${sanitizedTitle}_${sanitizedQuality}`;
         
-          console.log(`[${downloadId}] Title with quality:`, titleWithQuality); // Debug log
+          console.log(`[${downloadId}] Title with quality (from sanitized):`, titleWithQuality);
         
           // Send progress update with title including quality
           event.sender.send('download-progress', { 
@@ -1539,15 +1547,24 @@ console.log("options",options);
             message: `Using sanitized title: ${titleWithQuality}`
           });
         } else {
-          // If we still have "Unknown", create a fallback title for the file path
-          // But don't send it as progress update - the video info extraction should have sent the real title
-          const hostname = url.includes('://') ? new URL(url).hostname.replace('www.', '') : 'unknown';
-          titleWithQuality = isAudioOnly 
-            ? `Unknown Video - ${hostname}_${sanitizedBitrate}`
-            : `Unknown Video - ${hostname}_${sanitizedQuality}`;
+          // If we still have "Unknown", let yt-dlp handle the title substitution using output template
+          // This ensures we get the real title even if our pre-fetch failed
+          // We need to ensure we don't end up with "undefined" in the string
+          const safeBitrate = sanitizedBitrate || 'best';
+          const safeQuality = sanitizedQuality || 'best';
           
-          console.log(`[${downloadId}] Using fallback title with quality:`, titleWithQuality);
-          console.warn(`[${downloadId}] Warning: Could not extract proper title, using fallback. Video info extraction may have failed.`);
+          titleWithQuality = isAudioOnly 
+            ? `%(title)s_${safeBitrate}`
+            : `%(title)s_${safeQuality}`;
+          
+          console.log(`[${downloadId}] Using template title with quality:`, titleWithQuality);
+          console.warn(`[${downloadId}] Warning: Could not extract proper title during pre-fetch, relying on yt-dlp template.`);
+        }
+        
+        // FINAL SAFETY CHECK
+        if (!titleWithQuality) {
+           console.error(`[${downloadId}] CRITICAL: titleWithQuality is undefined! Forcing fallback.`);
+           titleWithQuality = `%(title)s_${isAudioOnly ? (sanitizedBitrate || 'audio') : (sanitizedQuality || 'video')}`;
         }
       
         let downloadPath;
@@ -1566,7 +1583,7 @@ console.log("options",options);
           }
           downloadPath = join(downloadDir, `${titleWithQuality}.%(ext)s`); // Use titleWithQuality for single file
         }
-        console.log('Download path:', downloadPath); // Debug log
+        console.log(`[${downloadId}] Final Download path:`, downloadPath); // Debug log
         return downloadPath;
       };
 
@@ -1638,8 +1655,32 @@ console.log("options",options);
         downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
         activeDownloads[downloadId] = true;
 
+        let resolvedDownloadPath = downloadPath;
+
         downloadProcess.stdout.on('data', (data) => {
           const line = data.toString().trim();
+          
+          // Capture actual filename from yt-dlp output if we used a template
+          // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
+          const destinationMatch = line.match(/Destination:\s+(.*)$/) || line.match(/\[download\]\s+(.*?)\s+has already been downloaded/);
+          if (destinationMatch && destinationMatch[1]) {
+            resolvedDownloadPath = destinationMatch[1].trim();
+            console.log(`[${downloadId}] Captured actual file path: ${resolvedDownloadPath}`);
+            // Also update the title in the frontend if we can extract it from the filename
+            try {
+              const basename = require('path').basename(resolvedDownloadPath);
+              // Send an update with the likely title (stripping extension)
+              const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
+              if (likelyTitle) {
+                 event.sender.send('download-progress', { 
+                   downloadId, 
+                   title: likelyTitle,
+                   message: `Title resolved: ${likelyTitle}`
+                 });
+              }
+            } catch (e) { /* ignore path parsing errors */ }
+          }
+          
           event.sender.send('download-progress', { downloadId, message: line });
         });
 
@@ -1683,7 +1724,7 @@ console.log("options",options);
           downloadProcess = null;
 
           if (code === 0) {
-            event.sender.send('download-progress', { downloadId, status: 'Download complete!', file: downloadPath });
+            event.sender.send('download-progress', { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
             resolve();
           } else {
             event.sender.send('download-progress', { downloadId, error: `Download failed with code ${code}` });

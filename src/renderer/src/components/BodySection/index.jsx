@@ -25,6 +25,7 @@ import LoginModal from '../LoginModal'
 import DonationModal from '../DonationModal'
 import { youtubeAPI } from '../YouTubeAPIManager'
 import { nonYouTubeExtractor } from '../NonYouTubeMetadataExtractor'
+import { saveDownload, saveDownloadError } from '../../utils/firestoreService'
 
 function BodySection({
   downloadType,
@@ -629,6 +630,7 @@ function BodySection({
               return newMap;
             });
             localStorage.setItem('downloadList', JSON.stringify(stored));
+            saveDownload(stored[itemIdx])
             setShowDonationModal(true)
           }
 
@@ -648,6 +650,7 @@ function BodySection({
             return newMap;
           });
           localStorage.setItem('downloadList', JSON.stringify(stored));
+          saveDownload(stored[itemIdx])
 
           // Remove from active downloads when completed
           setActiveDownloads(prev => {
@@ -696,6 +699,7 @@ function BodySection({
         });
 
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+        saveDownload(storedDownloads[completedIndex])
       }
     } catch (error) {
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
@@ -706,6 +710,7 @@ function BodySection({
         storedDownloads[failedIndex].status = 'Failed';
         storedDownloads[failedIndex].isFailed = true;
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+        saveDownloadError(storedDownloads[failedIndex], error.message || error.toString())
 
         // Remove from active downloads when failed
         setActiveDownloads(prev => {

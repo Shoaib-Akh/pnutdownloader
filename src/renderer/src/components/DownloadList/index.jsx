@@ -479,7 +479,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         .replace(/[^\p{L}\p{N}._-]/gu, ' ')
         .replace(/\s+/g, ' ')
         .trim()
-        .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, '');
+        .replace(/\.[a-z0-9]{2,5}$/i, ''); // Remove any extension-like suffix (e.g. .mp4, .f140, .avi)
       console.log(`Normalized title: ${normalizedTitle}`);
 
       let filePath = null;

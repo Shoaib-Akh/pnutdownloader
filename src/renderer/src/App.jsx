@@ -6,6 +6,12 @@ import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
 import { FaRegLightbulb } from 'react-icons/fa'
 import { MdFeedback } from 'react-icons/md'
+import FeedbackModal from './components/FeedbackModal'
+import { initializeUserTracking } from './utils/userTracking'
+import { initializeFirestore, getUserPreferences, saveUserPreferences } from './utils/firestoreService'
+import { initializeUserTrackingFirestore } from './utils/firestoreUtils'
+import { getDeviceId } from './utils/userTracking'
+
 
 function App() {
   const [downloadType, setDownloadType] = useState('Video')
@@ -28,6 +34,28 @@ function App() {
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+
+  // Save preferences to Firestore when they change
+  useEffect(() => {
+    const savePreferences = async () => {
+      try {
+        await saveUserPreferences({
+          defaultQuality: quality,
+          defaultFormat: format,
+          defaultBitrate: bitrate,
+          defaultSaveTo: saveTo,
+          defaultDownloadType: downloadType
+        })
+      } catch (error) {
+        console.error('Error saving preferences:', error)
+      }
+    }
+
+    // Debounce preference saves (only save after user stops changing for 2 seconds)
+    const timeoutId = setTimeout(savePreferences, 2000)
+    return () => clearTimeout(timeoutId)
+  }, [quality, format, bitrate, saveTo, downloadType])
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -111,6 +139,35 @@ function App() {
 
     initializeApp()
 
+    // Initialize user tracking (Realtime Database)
+    initializeUserTracking()
+
+    // Initialize Firestore
+    const initFirestore = async () => {
+      try {
+        const deviceId = getDeviceId()
+        // Initialize Firestore user tracking (may fail due to permissions, that's OK)
+        // Silently handle - function already handles errors internally
+        await initializeUserTrackingFirestore(deviceId)
+        // Initialize Firestore service
+        await initializeFirestore()
+
+        // Load user preferences from Firestore
+        const preferences = await getUserPreferences()
+        if (preferences) {
+          if (preferences.defaultQuality) setQuality(preferences.defaultQuality)
+          if (preferences.defaultFormat) setFormat(preferences.defaultFormat)
+          if (preferences.defaultBitrate) setBitrate(preferences.defaultBitrate)
+          if (preferences.defaultSaveTo) setSaveTo(preferences.defaultSaveTo)
+          if (preferences.defaultDownloadType) setDownloadType(preferences.defaultDownloadType)
+        }
+      } catch (error) {
+        console.error('Error initializing Firestore:', error)
+        // App continues to work with localStorage
+      }
+    }
+    initFirestore()
+
     // Cleanup listener on unmount
     return () => {
       if (window.api && typeof window.api.removeVideoUrlDetectedListener === 'function') {
@@ -135,16 +192,13 @@ function App() {
   }
 
   const handleFeedbackClick = () => {
+    setFeedbackModalOpen(true)
     if (window.api) {
       try {
         window.api.trackEvent('feedback_button_clicked')
-       
-        window.api.openExternal(feedbackUrl)
       } catch (error) {
         console.error('Failed to track feedback_button_clicked:', error)
       }
-    } else {
-      console.error('window.api is not defined')
     }
   }
 
@@ -200,7 +254,7 @@ function App() {
 
   const handleUrlDetectionDownload = async () => {
     if (!detectedUrl || !window.api) return
-    
+
     setIsUrlDownloading(true)
     try {
       // Set the detected URL to pastLinkUrl so BodySection can handle it
@@ -230,6 +284,11 @@ function App() {
         />
       )}
 
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+      />
+
       <UrlDetectionModal
         isOpen={urlDetectionModalOpen}
         onClose={handleUrlDetectionClose}
@@ -238,23 +297,24 @@ function App() {
         isLoading={isUrlDownloading}
       />
 
-      <div className="d-flex" style={{ 
-        paddingTop: '0', 
+      <div className="d-flex" style={{
+        paddingTop: '0',
         borderTop: '1px solid #e2e8f0',
         height: 'calc(100vh - 60px)',
         overflow: 'hidden'
       }}>
         <div style={{ width: '16%' }}>
           <Sidebar
-              setSelectedItem={setSelectedItem}
-              selectedItem={selectedItem}
-              setDownload={setDownload}
-              download={download}
-              setShowWebView={setShowWebView}
-              showWebView={showWebView}
-              setDownloadListOpen={setDownloadListOpen}
-              setAboutUs={setAboutUs}
-            />
+            setSelectedItem={setSelectedItem}
+            selectedItem={selectedItem}
+            setDownload={setDownload}
+            download={download}
+            setShowWebView={setShowWebView}
+            showWebView={showWebView}
+            setDownloadListOpen={setDownloadListOpen}
+            setAboutUs={setAboutUs}
+            setFeedbackModalOpen={setFeedbackModalOpen}
+          />
         </div>
 
         <button className="feedback-button" onClick={handleFeedbackClick}>
@@ -264,23 +324,23 @@ function App() {
         <div style={{ display: 'none' }}>
           <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
         </div>
- {!showWebView && <Navbar
-        bitrate={bitrate}
-        setBitrate={setBitrate}
-        downloadType={downloadType}
-        setDownloadType={setDownloadType}
-        quality={quality}
-        setQuality={setQuality}
-        format={format}
-        setFormat={setFormat}
-        saveTo={saveTo}
-        setSaveTo={setSaveTo}
-        isSidebarOpen={isSidebarOpen}
-        // setIsSidebarOpen={setIsSidebarOpen}
-        setPastLinkUrl={setPastLinkUrl}
-      />}
+        {!showWebView && <Navbar
+          bitrate={bitrate}
+          setBitrate={setBitrate}
+          downloadType={downloadType}
+          setDownloadType={setDownloadType}
+          quality={quality}
+          setQuality={setQuality}
+          format={format}
+          setFormat={setFormat}
+          saveTo={saveTo}
+          setSaveTo={setSaveTo}
+          isSidebarOpen={isSidebarOpen}
+          // setIsSidebarOpen={setIsSidebarOpen}
+          setPastLinkUrl={setPastLinkUrl}
+        />}
         <BodySection
-        setPastLinkUrl={setPastLinkUrl}
+          setPastLinkUrl={setPastLinkUrl}
           bitrate={bitrate}
           setBitrate={setBitrate}
           downloadType={downloadType}

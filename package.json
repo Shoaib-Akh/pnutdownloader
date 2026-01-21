@@ -25,6 +25,7 @@
     "bootstrap": "^5.3.3",
     "electron-dl": "^4.0.0",
     "electron-updater": "^6.3.9",
+    "firebase": "^12.8.0",
     "install": "^0.13.0",
     "npm": "^11.1.0",
     "react-bootstrap": "^2.10.9",
