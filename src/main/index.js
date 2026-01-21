@@ -1640,7 +1640,7 @@ console.log("options",options);
 
         downloadProcess.stdout.on('data', (data) => {
           const line = data.toString().trim();
-          event.sender.send('download-progress', { message: line });
+          event.sender.send('download-progress', { downloadId, message: line });
         });
 
         downloadProcess.stderr.on('data', (data) => {
@@ -1663,16 +1663,18 @@ console.log("options",options);
           
           if (isTwitchError) {
             event.sender.send('download-progress', { 
+              downloadId,
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
               isAuthError: true
             });
           } else if (isDailymotionError) {
             event.sender.send('download-progress', { 
+              downloadId,
               error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
               isAuthError: true
             });
           } else {
-            event.sender.send('download-progress', { error: errorMessage });
+            event.sender.send('download-progress', { downloadId, error: errorMessage });
           }
         });
 
@@ -1681,10 +1683,10 @@ console.log("options",options);
           downloadProcess = null;
 
           if (code === 0) {
-            event.sender.send('download-progress', { status: 'Download complete!', file: downloadPath });
+            event.sender.send('download-progress', { downloadId, status: 'Download complete!', file: downloadPath });
             resolve();
           } else {
-            event.sender.send('download-progress', { error: `Download failed with code ${code}` });
+            event.sender.send('download-progress', { downloadId, error: `Download failed with code ${code}` });
             reject(new Error(`Download failed with code ${code}`));
           }
         });
@@ -1695,11 +1697,11 @@ console.log("options",options);
           reject(err);
         });
       }).catch((err) => {
-        event.sender.send('download-progress', { error: err.message });
+        event.sender.send('download-progress', { downloadId, error: err.message });
         reject(err);
       });
     } catch (err) {
-      event.sender.send('download-progress', { error: err.message });
+      event.sender.send('download-progress', { downloadId: options?.id, error: err.message });
       reject(err);
     }
   });

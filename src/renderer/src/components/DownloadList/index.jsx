@@ -9,8 +9,9 @@ import MediaThumbnail from './MediaThumbnail'
 import { detectPlatform, isYouTubePlatform } from '../platformUtils'
 import './ActiveDownloadAnimations.css'
 
-function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadType,downloadListOpen,onRetry,activeDownloads }) {
+function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadType, downloadListOpen, onRetry, activeDownloads }) {
   const [openDropdown, setOpenDropdown] = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(Date.now())
   const [searchQuery, setSearchQuery] = useState('')
   const [proxiedThumbnails, setProxiedThumbnails] = useState({})
   const [isSelectMode, setIsSelectMode] = useState(false)
@@ -29,9 +30,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
           return item
         })
         localStorage.setItem('downloadList', JSON.stringify(updatedList))
-        
-        // Force re-render by updating a small state change
-        setSearchQuery(prev => prev)
+
+        // Force re-render and trigger effects by updating timestamp
+        setLastUpdated(Date.now())
       }
     }
 
@@ -51,11 +52,11 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   // Helper function to check if URL is from protected CDN (needs proxying)
   const isProtectedCDN = (url) => {
     if (!url) return false
-    return url.includes('instagram.com') || 
-           url.includes('fbcdn.net') || 
-           url.includes('scontent.') ||
-           url.includes('twimg.com') ||
-           url.includes('hdslb.com')
+    return url.includes('instagram.com') ||
+      url.includes('fbcdn.net') ||
+      url.includes('scontent.') ||
+      url.includes('twimg.com') ||
+      url.includes('hdslb.com')
   }
 
   // Function to get proxied thumbnail URL
@@ -97,14 +98,14 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     } catch (error) {
       // Suppress console errors for 403/Forbidden errors as they're expected for protected CDN images
       // The fallback UI will handle these cases gracefully
-      const isExpectedError = error.message?.includes('403') || 
-                              error.message?.includes('Forbidden') ||
-                              error.message?.includes('Failed to proxy image');
-      
+      const isExpectedError = error.message?.includes('403') ||
+        error.message?.includes('Forbidden') ||
+        error.message?.includes('Failed to proxy image');
+
       if (!isExpectedError) {
         console.warn('Error proxying thumbnail:', error.message || error);
       }
-      
+
       // Mark as failed to prevent repeated attempts
       setProxiedThumbnails(prev => ({
         ...prev,
@@ -117,16 +118,16 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   // Function to get correct thumbnail URL for an item
   const getThumbnailUrl = (item) => {
     if (!item.thumbnail) return null
-    
+
     const platform = detectPlatform(item.url)
     const isYouTube = isYouTubePlatform(platform)
-    
+
     if (isYouTube) {
       return item.thumbnail
     }
-    
+
     const cachedResult = proxiedThumbnails[item.thumbnail]
-    
+
     // For protected CDN images, never return original URL
     // Only return proxied version or null (to show placeholder)
     if (isProtectedCDN(item.thumbnail)) {
@@ -137,22 +138,22 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       // Don't return original URL to prevent CORS errors
       return cachedResult.startsWith('data:') ? cachedResult : null
     }
-    
+
     // For other platforms, return proxied version if available, otherwise original
     if (cachedResult === 'FAILED' || cachedResult === 'LOADING') {
       return null // Show fallback UI if proxying failed or is loading
     }
-    
+
     return cachedResult || item.thumbnail
   }
 
   // Function to trigger thumbnail proxying for an item
   const proxyThumbnailIfNeeded = async (item) => {
     if (!item.thumbnail) return
-    
+
     const platform = detectPlatform(item.url)
     const isYouTube = isYouTubePlatform(platform)
-    
+
     // For protected CDN images, always proxy (don't wait for completion)
     // For other non-YouTube, also proxy
     if (!isYouTube && !proxiedThumbnails[item.thumbnail] && window.api && window.api.proxyImage) {
@@ -163,22 +164,22 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
     }
   }
 
-  // Proxy thumbnails for items that need it
+  // Proxy thumbnails for items that need it - triggers on mount AND when download list changes
   useEffect(() => {
     const downloadListData = JSON.parse(localStorage.getItem('downloadList')) || []
-    
+
     // Proxy thumbnails for all items with thumbnails, not just completed ones
     downloadListData.forEach(item => {
       if (item.thumbnail) {
         proxyThumbnailIfNeeded(item)
       }
     })
-  }, [])
+  }, [lastUpdated]) // Re-run when lastUpdated changes (which is updated on progress events)
 
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value)
   }
-  
+
   // useEffect(() => {
   //   async function fetchDownloadedFiles() {
   //     try {
@@ -247,10 +248,10 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   const handleSelectAll = () => {
     const currentList = searchQuery
       ? filteredList.filter(item =>
-          item.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      )
       : filteredList
-    
+
     if (selectedItems.size === currentList.length && currentList.length > 0) {
       // Deselect all
       setSelectedItems(new Set())
@@ -264,16 +265,16 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   // Handle delete selected items
   const handleDeleteSelected = () => {
     if (selectedItems.size === 0) return
-    
+
     const storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
     const updatedList = storedDownloads.filter((item) => !selectedItems.has(item.id))
     localStorage.setItem('downloadList', JSON.stringify(updatedList))
-    
+
     // Pause all selected downloads
     selectedItems.forEach(id => {
       window.api.pauseDownload(id)
     })
-    
+
     // Clear selections and exit select mode
     setSelectedItems(new Set())
     setIsSelectMode(false)
@@ -333,7 +334,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   let downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
   console.log('downloadListData', downloadListData)
-  const filteredList = (downloadListData )
+  const filteredList = (downloadListData)
     .filter((item) => {
       const isPlaylist =
         item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=');
@@ -360,13 +361,13 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       }
       return 0; // No sorting for other cases
     })
-    // .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
+  // .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url));
 
   // Apply search filter
   const searchFilteredList = searchQuery
     ? filteredList.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-      )
+      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
     : filteredList
 
   const calculateRemainingTime = (duration, progress) => {
@@ -424,148 +425,148 @@ function DownloadList({ selectedItem, progressMap, videoInfo ,bitrate,downloadTy
       alert('Failed to open folder. Please check the console for details.')
     }
   }
-const handleThumbnailClick = async (item) => {
-  window.api.trackEvent('play', { playUrl: item.url });
-  if (!item.isCompleted || item.status !== 'Completed') {
-    console.log('Thumbnail click ignored: Item not completed or status not Completed', {
-      id: item.id,
-      title: item.title,
-      isCompleted: item.isCompleted,
-      status: item.status,
-    });
-    return;
-  }
-
-  console.log(`Starting handleThumbnailClick: title=${item.title}, fileType=${item.downloadType}, saveTo=${item.saveTo}`);
-
-  try {
-    const videoExtensions = ['mp4', 'webm', 'mkv', 'avi'];
-    const audioExtensions = ['mp3', 'flac', 'wav', 'aac'];
-    const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
-    console.log(`Possible extensions: ${possibleExtensions}`);
-
-    let allPathsToSearch = [];
-    if (item.saveTo && typeof item.saveTo === 'string') {
-      try {
-        await window.api.readDirectory(item.saveTo);
-        allPathsToSearch.push(item.saveTo);
-        console.log(`Valid saveTo path added: ${item.saveTo}`);
-      } catch (err) {
-        console.warn(`saveTo path not accessible: ${item.saveTo}`, err);
-      }
+  const handleThumbnailClick = async (item) => {
+    window.api.trackEvent('play', { playUrl: item.url });
+    if (!item.isCompleted || item.status !== 'Completed') {
+      console.log('Thumbnail click ignored: Item not completed or status not Completed', {
+        id: item.id,
+        title: item.title,
+        isCompleted: item.isCompleted,
+        status: item.status,
+      });
+      return;
     }
 
-    const fallbackFolders = [
-      await window.api.getPath('downloads'),
-      await window.api.getPath('desktop'),
-    ];
-    console.log(`Fallback folders: ${fallbackFolders}`);
+    console.log(`Starting handleThumbnailClick: title=${item.title}, fileType=${item.downloadType}, saveTo=${item.saveTo}`);
 
-    fallbackFolders.forEach((path) => {
-      if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path);
-    });
-    console.log(`All paths to search: ${allPathsToSearch}`);
+    try {
+      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi'];
+      const audioExtensions = ['mp3', 'flac', 'wav', 'aac'];
+      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
+      console.log(`Possible extensions: ${possibleExtensions}`);
 
-    const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
-    const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`);
-    console.log(`Search directories: ${directories}`);
-
-    const normalizedTitle = item.title
-      .normalize('NFC') // Normalize Unicode characters
-      .toLowerCase()
-      .replace(/[\|\:]/g, '_')
-      .replace(/’/g, "'")
-      .replace(/[^\p{L}\p{N}._-]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, '');
-    console.log(`Normalized title: ${normalizedTitle}`);
-
-    let filePath = null;
-    for (const dir of directories) {
-      try {
-        // Create directory if it doesn't exist
-        await window.api.createDirectory(dir);
-        console.log(`Reading directory: ${dir}`);
-        const files = await window.api.readDirectory(dir);
-        console.log(`Files found in ${dir}: ${files.join(', ')}`);
-
-        filePath = files.find((file) => {
-          const fileName = file.toLowerCase();
-          const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
-          const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
-          const normalizedFileTitle = titlePart
-            .normalize('NFC')
-            .replace(/[\|\:]/g, '_')
-            .replace(/[^\p{L}\p{N}._-]/gu, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          const isExactMatch = normalizedFileTitle === normalizedTitle;
-          const isPartialMatch = normalizedFileTitle.includes(
-            normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
-          );
-
-          console.log(
-            `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
-          );
-
-          return hasValidExtension && (isExactMatch || isPartialMatch);
-        });
-
-        if (filePath) {
-          filePath = `${dir}/${filePath}`;
-          console.log(`File found: ${filePath}`);
-          break;
-        } else {
-          console.log(`No matching file found in ${dir}`);
+      let allPathsToSearch = [];
+      if (item.saveTo && typeof item.saveTo === 'string') {
+        try {
+          await window.api.readDirectory(item.saveTo);
+          allPathsToSearch.push(item.saveTo);
+          console.log(`Valid saveTo path added: ${item.saveTo}`);
+        } catch (err) {
+          console.warn(`saveTo path not accessible: ${item.saveTo}`, err);
         }
-      } catch (dirError) {
-        console.error(`Error reading directory ${dir}:`, dirError);
-      }
-    }
-
-    if (filePath) {
-      console.log(`Attempting to open file: ${filePath}`);
-      // Verify file existence before attempting to open
-      try {
-        await window.api.accessFile(filePath); // Assumes an API to check file existence
-        console.log(`File exists at: ${filePath}`);
-      } catch (accessError) {
-        console.error(`File is not accessible: ${filePath}`, accessError);
-        alert(`Cannot access file: ${filePath}. It may have been moved or deleted.`);
-        return;
       }
 
-      try {
-        // Prefer openPath for local files
-        if (window.api.openPath) {
-          console.log(`Using openPath for: ${filePath}`);
-          await window.api.openPath(filePath);
-          console.log('File opened successfully with openPath');
-        } else {
-          console.warn('window.api.openPath not available, falling back to openExternal');
-          // Encode the file path for file:// URL
-          const encodedPath = encodeURI(filePath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25');
-          const fileUrl = `file:///${encodedPath}`;
-          console.log(`Attempting to open file URL: ${fileUrl}`);
-          await window.api.openExternal(fileUrl);
-          console.log('File opened successfully with openExternal');
+      const fallbackFolders = [
+        await window.api.getPath('downloads'),
+        await window.api.getPath('desktop'),
+      ];
+      console.log(`Fallback folders: ${fallbackFolders}`);
+
+      fallbackFolders.forEach((path) => {
+        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path);
+      });
+      console.log(`All paths to search: ${allPathsToSearch}`);
+
+      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
+      const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`);
+      console.log(`Search directories: ${directories}`);
+
+      const normalizedTitle = item.title
+        .normalize('NFC') // Normalize Unicode characters
+        .toLowerCase()
+        .replace(/[\|\:]/g, '_')
+        .replace(/’/g, "'")
+        .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/\.(mp3|mp4|webm|mkv|avi|flac|wav|aac)$/i, '');
+      console.log(`Normalized title: ${normalizedTitle}`);
+
+      let filePath = null;
+      for (const dir of directories) {
+        try {
+          // Create directory if it doesn't exist
+          await window.api.createDirectory(dir);
+          console.log(`Reading directory: ${dir}`);
+          const files = await window.api.readDirectory(dir);
+          console.log(`Files found in ${dir}: ${files.join(', ')}`);
+
+          filePath = files.find((file) => {
+            const fileName = file.toLowerCase();
+            const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
+            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
+            const normalizedFileTitle = titlePart
+              .normalize('NFC')
+              .replace(/[\|\:]/g, '_')
+              .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            const isExactMatch = normalizedFileTitle === normalizedTitle;
+            const isPartialMatch = normalizedFileTitle.includes(
+              normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
+            );
+
+            console.log(
+              `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
+            );
+
+            return hasValidExtension && (isExactMatch || isPartialMatch);
+          });
+
+          if (filePath) {
+            filePath = `${dir}/${filePath}`;
+            console.log(`File found: ${filePath}`);
+            break;
+          } else {
+            console.log(`No matching file found in ${dir}`);
+          }
+        } catch (dirError) {
+          console.error(`Error reading directory ${dir}:`, dirError);
         }
-      } catch (openError) {
-        console.error(`Failed to open file ${filePath}:`, openError);
-        alert(`Failed to open file: ${openError.message}. Path: ${filePath}`);
       }
-    } else {
-      console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${item.downloadType}`);
-      alert(`File not found. It may have been moved, deleted, or saved with a different name. Expected path: ${filePath}`);
+
+      if (filePath) {
+        console.log(`Attempting to open file: ${filePath}`);
+        // Verify file existence before attempting to open
+        try {
+          await window.api.accessFile(filePath); // Assumes an API to check file existence
+          console.log(`File exists at: ${filePath}`);
+        } catch (accessError) {
+          console.error(`File is not accessible: ${filePath}`, accessError);
+          alert(`Cannot access file: ${filePath}. It may have been moved or deleted.`);
+          return;
+        }
+
+        try {
+          // Prefer openPath for local files
+          if (window.api.openPath) {
+            console.log(`Using openPath for: ${filePath}`);
+            await window.api.openPath(filePath);
+            console.log('File opened successfully with openPath');
+          } else {
+            console.warn('window.api.openPath not available, falling back to openExternal');
+            // Encode the file path for file:// URL
+            const encodedPath = encodeURI(filePath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25');
+            const fileUrl = `file:///${encodedPath}`;
+            console.log(`Attempting to open file URL: ${fileUrl}`);
+            await window.api.openExternal(fileUrl);
+            console.log('File opened successfully with openExternal');
+          }
+        } catch (openError) {
+          console.error(`Failed to open file ${filePath}:`, openError);
+          alert(`Failed to open file: ${openError.message}. Path: ${filePath}`);
+        }
+      } else {
+        console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${item.downloadType}`);
+        alert(`File not found. It may have been moved, deleted, or saved with a different name. Expected path: ${filePath}`);
+      }
+    } catch (error) {
+      console.error('Error in handleThumbnailClick:', error);
+      alert('Failed to process file. Please check the console for details.');
     }
-  } catch (error) {
-    console.error('Error in handleThumbnailClick:', error);
-    alert('Failed to process file. Please check the console for details.');
-  }
-};
-  
+  };
+
 
   const getFormattedDate = (item) => {
     // If item has a date, use it; otherwise use current date
@@ -580,16 +581,16 @@ const handleThumbnailClick = async (item) => {
   return (
     <div className="container-fluid p-0" style={{ padding: '30px 20px 20px 20px' }}>
       {/* Header Section */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '30px',
         paddingTop: '20px'
       }}>
-        <h2 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
           color: '#333',
           margin: 0
         }}>
@@ -626,9 +627,9 @@ const handleThumbnailClick = async (item) => {
       </div>
 
       {/* Total and Select Button */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px'
       }}>
@@ -656,8 +657,8 @@ const handleThumbnailClick = async (item) => {
                 {(() => {
                   const currentList = searchQuery
                     ? filteredList.filter(item =>
-                        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-                      )
+                      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
                     : filteredList
                   return selectedItems.size === currentList.length && currentList.length > 0 ? (
                     <>
@@ -712,9 +713,9 @@ const handleThumbnailClick = async (item) => {
       </div>
 
       {/* Download List - Card Layout */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
         gap: '20px',
         height: 'calc(100vh - 200px)',
         overflowY: 'auto',
@@ -756,13 +757,13 @@ const handleThumbnailClick = async (item) => {
                   position: 'relative'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) 
-                    ? '0 6px 16px rgba(14, 165, 233, 0.25)' 
+                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id)
+                    ? '0 6px 16px rgba(14, 165, 233, 0.25)'
                     : '0 2px 8px rgba(0,0,0,0.1)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) 
-                    ? '0 4px 12px rgba(14, 165, 233, 0.15)' 
+                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id)
+                    ? '0 4px 12px rgba(14, 165, 233, 0.15)'
                     : '0 1px 3px rgba(0,0,0,0.05)';
                 }}
               >
@@ -815,9 +816,9 @@ const handleThumbnailClick = async (item) => {
                 )}
                 {/* Number */}
                 {!isSelectMode && (
-                  <span style={{ 
-                    fontSize: '16px', 
-                    fontWeight: '600', 
+                  <span style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
                     color: '#666',
                     minWidth: '30px'
                   }}>
@@ -849,7 +850,7 @@ const handleThumbnailClick = async (item) => {
                         const platform = detectPlatform(item.url)
                         const isYouTube = isYouTubePlatform(platform)
                         const thumbnailUrl = getThumbnailUrl(item)
-                        
+
                         // Show thumbnail if available
                         // Never show protected CDN URLs directly - only proxied versions
                         if (thumbnailUrl && (!isProtectedCDN(item.thumbnail) || thumbnailUrl.startsWith('data:'))) {
@@ -1102,8 +1103,8 @@ const handleThumbnailClick = async (item) => {
                       show={openDropdown === item.id}
                       onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
                     >
-                      <Dropdown.Toggle 
-                        as="button" 
+                      <Dropdown.Toggle
+                        as="button"
                         style={{
                           background: 'transparent',
                           border: 'none',

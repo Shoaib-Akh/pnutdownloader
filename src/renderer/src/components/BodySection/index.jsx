@@ -9,7 +9,7 @@ import {
   FaUndo,
   FaPlus,
   FaMinus,
-  FaCopy, 
+  FaCopy,
   FaArrowCircleRight
 } from 'react-icons/fa'
 import '../common.css'
@@ -44,7 +44,7 @@ function BodySection({
   setDownloadListOpen,
   downloadListOpen,
   pastLinkUrl,
-  
+
   aboutUs,
   setAboutUs,
   updateInfo
@@ -54,9 +54,9 @@ function BodySection({
   const [showDonationModal, setShowDonationModal] = useState(false)
   const [isWebViewReady, setIsWebViewReady] = useState(false);
   // console.log("isWebViewReadyisWebViewReady",isWebViewReady);
- 
+
   const [canGoBack, setCanGoBack] = useState(false);
-const [canGoForward, setCanGoForward] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
@@ -70,19 +70,19 @@ const [canGoForward, setCanGoForward] = useState(false);
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
-const customSanitize = (str) => {
-  if (!str) return 'Unknown';
-  return str
-    .replace(/[<>:"/\\|?*]+/g, ' ') 
-    .replace(/\s+/g, ' ') 
-    .replace(/[^\p{L}\p{N}._-]/gu, ' ') 
-    .substring(0, 200); 
-};
+  const customSanitize = (str) => {
+    if (!str) return 'Unknown';
+    return str
+      .replace(/[<>:"/\\|?*]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+      .substring(0, 200);
+  };
   const handleCopyUrl = () => {
     navigator.clipboard
       .writeText(currentWebViewUrl)
       .then(() => {
-        
+
         alert('URL copied to clipboard!')
       })
       .catch((err) => {
@@ -114,7 +114,7 @@ const customSanitize = (str) => {
           setDownloadListOpen(true)
           setShowWebView(false)
           setIsSidebarOpen(true)
-          setSelectedItem('All File')
+          setSelectedItem('All Files')
           setDownload(true)
         }
         // Clear pastLinkUrl after processing to prevent re-triggering
@@ -135,7 +135,7 @@ const customSanitize = (str) => {
   useEffect(() => {
     if (webviewRef.current && showWebView) {
       const webview = webviewRef.current;
-  
+
       const onDomReady = () => {
         setIsWebViewReady(true);
         setCanGoBack(webview.canGoBack());
@@ -148,10 +148,10 @@ const customSanitize = (str) => {
         setCanGoBack(webview.canGoBack());
         setCanGoForward(webview.canGoForward());
       };
-  
+
       webview.addEventListener('did-navigate', handleNavigation);
       webview.addEventListener('did-navigate-in-page', handleNavigation);
-  
+
       return () => {
         webview.removeEventListener('dom-ready', onDomReady);
         webview.removeEventListener('did-navigate', handleNavigation);
@@ -160,7 +160,7 @@ const customSanitize = (str) => {
     }
     setIsWebViewReady(true);
 
-  }, [showWebView,isWebViewReady]);
+  }, [showWebView, isWebViewReady]);
 
   useEffect(() => {
     if (currentWebViewUrl) window.api.getYoutubeCookies()
@@ -171,7 +171,7 @@ const customSanitize = (str) => {
   const DONATION_URL = "https://ko-fi.com/pnutdownloader'"
 
   const handlePlatformClick = (platformUrl) => {
-      window.api.trackEvent('platformUrl',{platformUrl})
+    window.api.trackEvent('platformUrl', { platformUrl })
     setUrl(platformUrl)
     setShowWebView(true)
     setIsDownloadable(false)
@@ -202,7 +202,7 @@ const customSanitize = (str) => {
       setIsDownloadable(false);
       return;
     }
-    
+
     // Check against all video patterns from all.json
     const isDownloadable = alljson?.videoPatterns?.some((pattern) => {
       try {
@@ -213,13 +213,13 @@ const customSanitize = (str) => {
         return false;
       }
     });
-    
+
     setIsDownloadable(isDownloadable || false);
   }
 
   const handleDownloadClick = () => {
 
-     if (window.api) {
+    if (window.api) {
       try {
         window.api.trackEvent('download_button_clicked', {
           url: pastLinkUrl || currentWebViewUrl,
@@ -239,7 +239,7 @@ const customSanitize = (str) => {
     setAboutUs(false);
     const urlToDownload = pastLinkUrl || currentWebViewUrl;
     if (!urlToDownload) return;
-  
+
     // Check if the URL with the same format, quality, and saveTo exists in storedDownloads
     const isDuplicate = storedDownloads.some(
       (item) =>
@@ -248,9 +248,9 @@ const customSanitize = (str) => {
         item.quality.toLowerCase() === quality.toLowerCase() &&
         item.saveTo.toLowerCase() === saveTo.toLowerCase() &&
         item.downloadType.toLowerCase() === downloadType.toLowerCase() &&
-item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
+        item.bitrate?.toLowerCase() === bitrate?.toLowerCase()
     );
-  
+
     if (isDuplicate) {
       if (!window.alertShown) {
         window.api.showMessageBox({
@@ -263,12 +263,12 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
       }
       return;
     }
-  
+
     setUrl(urlToDownload);
     setDownloadListOpen(true);
     setShowWebView(false);
     setIsSidebarOpen(true);
-    setSelectedItem('All File');
+    setSelectedItem('All Files');
     setDownload(true);
     addToQueue(urlToDownload);
   };
@@ -281,7 +281,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
   }
 
   const handleLogin = () => {
-             window.api.trackEvent('youtube-login')
+    window.api.trackEvent('youtube-login')
     const youtubeLoginUrl = 'https://accounts.google.com/ServiceLogin?service=youtube';
     setCurrentWebViewUrl(youtubeLoginUrl);
     setUrl(youtubeLoginUrl);
@@ -290,7 +290,7 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
     setIsSidebarOpen(false);
     setShowLoginPopup(false);
     setIsWebViewReady(false); // Reset readiness
-  
+
     if (webviewRef.current) {
       const onDomReady = () => {
         webviewRef.current.src = youtubeLoginUrl;
@@ -299,101 +299,101 @@ item.bitrate?.toLowerCase()===bitrate?.toLowerCase()
         setCanGoForward(webviewRef.current.canGoForward());
         webviewRef.current.removeEventListener('dom-ready', onDomReady);
       };
-  
+
       webviewRef.current.addEventListener('dom-ready', onDomReady);
     }
   };
-// Array of API keys from environment variables
-// apiKeys.js
+  // Array of API keys from environment variables
+  // apiKeys.js
 
 
-let currentApiKeyIndex = typeof window !== 'undefined' 
-  ? parseInt(localStorage.getItem('ytKeyIndex')) || 0
-  : 0;
+  let currentApiKeyIndex = typeof window !== 'undefined'
+    ? parseInt(localStorage.getItem('ytKeyIndex')) || 0
+    : 0;
 
-const API_KEYS = [
-  import.meta.env.VITE_YOUTUBE_API_KEY1,
-  import.meta.env.VITE_YOUTUBE_API_KEY2,
-  import.meta.env.VITE_YOUTUBE_API_KEY3,
-  import.meta.env.VITE_YOUTUBE_API_KEY4,
-  import.meta.env.VITE_YOUTUBE_API_KEY5,
-  // ... other keys
-].filter(key => {
-  const isValid = key && key.startsWith('AIza');
-  if (!isValid) console.warn('Invalid YouTube API key detected');
-  return isValid;
-});
+  const API_KEYS = [
+    import.meta.env.VITE_YOUTUBE_API_KEY1,
+    import.meta.env.VITE_YOUTUBE_API_KEY2,
+    import.meta.env.VITE_YOUTUBE_API_KEY3,
+    import.meta.env.VITE_YOUTUBE_API_KEY4,
+    import.meta.env.VITE_YOUTUBE_API_KEY5,
+    // ... other keys
+  ].filter(key => {
+    const isValid = key && key.startsWith('AIza');
+    if (!isValid) console.warn('Invalid YouTube API key detected');
+    return isValid;
+  });
 
-const getNextApiKey = () => {
-  if (API_KEYS.length === 0) throw new Error("No valid YouTube API keys available");
-  
-  const key = API_KEYS[currentApiKeyIndex];
-  currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
-  
-  // Persist in browser storage (remove if using Node.js)
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('ytKeyIndex', currentApiKeyIndex.toString());
-  }
-  
-  return key;
-};
+  const getNextApiKey = () => {
+    if (API_KEYS.length === 0) throw new Error("No valid YouTube API keys available");
 
-// Helper function to format duration from seconds to ISO format
-const formatDurationToISO = (duration) => {
-  if (typeof duration === 'string' && duration.includes('PT')) {
-    // Already in ISO format
-    return duration;
-  }
-  if (typeof duration === 'number') {
-    // Convert seconds to ISO format (PT1H2M3S)
-    const hours = Math.floor(duration / 3600);
-    const minutes = Math.floor((duration % 3600) / 60);
-    const seconds = Math.floor(duration % 60);
-    
-    let isoDuration = 'PT';
-    if (hours > 0) isoDuration += `${hours}H`;
-    if (minutes > 0) isoDuration += `${minutes}M`;
-    if (seconds > 0) isoDuration += `${seconds}S`;
-    return isoDuration || 'PT0S';
-  }
-  return duration || 'PT0S';
-};
+    const key = API_KEYS[currentApiKeyIndex];
+    currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
 
-const getVideoInfo = async (url) => {
-  const platform = detectPlatform(url);
-  
-  try {
-    if (isYouTubePlatform(platform)) {
-      // Use enhanced YouTube API manager
-      const videoId = extractVideoId(url);
-      const playlistId = extractPlaylistId(url);
-
-      if (videoId && !playlistId) {
-        return await youtubeAPI.extractVideoInfo(url);
-      } else if (playlistId) {
-        return await youtubeAPI.extractPlaylistInfo(url);
-      }
-    } else {
-      // Use non-YouTube metadata extractor
-      return await nonYouTubeExtractor.extractMetadata(url);
+    // Persist in browser storage (remove if using Node.js)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('ytKeyIndex', currentApiKeyIndex.toString());
     }
-  } catch (error) {
-    console.error('Failed to fetch video info:', error);
-    
-    // Fallback to basic metadata
-    return {
-      videoUrl: url,
-      title: `${platform} Video`,
-      thumbnail: '',
-      duration: 'PT0S',
-      isPlaylist: false,
-      platform: platform
-    };
-  }
-};
+
+    return key;
+  };
+
+  // Helper function to format duration from seconds to ISO format
+  const formatDurationToISO = (duration) => {
+    if (typeof duration === 'string' && duration.includes('PT')) {
+      // Already in ISO format
+      return duration;
+    }
+    if (typeof duration === 'number') {
+      // Convert seconds to ISO format (PT1H2M3S)
+      const hours = Math.floor(duration / 3600);
+      const minutes = Math.floor((duration % 3600) / 60);
+      const seconds = Math.floor(duration % 60);
+
+      let isoDuration = 'PT';
+      if (hours > 0) isoDuration += `${hours}H`;
+      if (minutes > 0) isoDuration += `${minutes}M`;
+      if (seconds > 0) isoDuration += `${seconds}S`;
+      return isoDuration || 'PT0S';
+    }
+    return duration || 'PT0S';
+  };
+
+  const getVideoInfo = async (url) => {
+    const platform = detectPlatform(url);
+
+    try {
+      if (isYouTubePlatform(platform)) {
+        // Use enhanced YouTube API manager
+        const videoId = extractVideoId(url);
+        const playlistId = extractPlaylistId(url);
+
+        if (videoId && !playlistId) {
+          return await youtubeAPI.extractVideoInfo(url);
+        } else if (playlistId) {
+          return await youtubeAPI.extractPlaylistInfo(url);
+        }
+      } else {
+        // Use non-YouTube metadata extractor
+        return await nonYouTubeExtractor.extractMetadata(url);
+      }
+    } catch (error) {
+      console.error('Failed to fetch video info:', error);
+
+      // Fallback to basic metadata
+      return {
+        videoUrl: url,
+        title: `${platform} Video`,
+        thumbnail: '',
+        duration: 'PT0S',
+        isPlaylist: false,
+        platform: platform
+      };
+    }
+  };
 
   const isAnyDownloadInProgress = () => {
-     
+
     return storedDownloads.some(
       (item) =>
         !item.isCompleted &&
@@ -407,10 +407,10 @@ const getVideoInfo = async (url) => {
   const addToQueue = async (url) => {
     if (!url) return
     const newId = uuidv4()
-    
+
     // Add to active downloads immediately for highlighting
     setActiveDownloads(prev => new Set(prev).add(newId))
-    
+
     const videoInfo = await getVideoInfo(url)
 
     const newDownload = {
@@ -420,12 +420,12 @@ const getVideoInfo = async (url) => {
       playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null,
       thumbnail: videoInfo?.thumbnail || '',
       filename: '',
-      quality :quality.toLowerCase(),
-      saveTo:saveTo.toLowerCase(),
-      downloadType:downloadType.toLowerCase(),
-      format:format.toLowerCase(),
+      quality: quality.toLowerCase(),
+      saveTo: saveTo.toLowerCase(),
+      downloadType: downloadType.toLowerCase(),
+      format: format.toLowerCase(),
       duration: videoInfo?.duration || 'Unknown',
-      bitrate:bitrate,
+      bitrate: bitrate,
       progress: 0,
       fileSize: 'Unknown',
       speed: 'Unknown',
@@ -437,7 +437,7 @@ const getVideoInfo = async (url) => {
       isPlaylist: videoInfo?.isPlaylist || false,
       currentItem: 0
     }
-     
+
 
     localStorage.setItem('downloadList', JSON.stringify([newDownload, ...storedDownloads]))
     downloadQueue.current.push(newId)
@@ -449,25 +449,25 @@ const getVideoInfo = async (url) => {
 
   const processQueue = useCallback(async () => {
     if (downloadQueue.current.length === 0 || isProcessing.current) return;
-  
+
     isProcessing.current = true;
     const currentId = downloadQueue.current[0];
-  
+
     try {
       let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
       const itemIndex = storedDownloads.findIndex((item) => item.id === currentId);
-  
+
       if (itemIndex === -1) {
         downloadQueue.current.shift();
         isProcessing.current = false;
         return processQueue();
       }
-  
+
       const item = storedDownloads[itemIndex];
-  
+
       storedDownloads[itemIndex].status = 'Fetching Info...';
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  
+
       // Update item with default values instead of fetching from getVideoInfo
       storedDownloads[itemIndex] = {
         ...storedDownloads[itemIndex],
@@ -482,14 +482,21 @@ const getVideoInfo = async (url) => {
       };
       setVideoInfo([]); // Clear videoInfo since no metadata is fetched
       localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  
+
       const handleProgress = (progressData) => {
         console.log('progressData', progressData);
-      
+
         const stored = JSON.parse(localStorage.getItem('downloadList') || '[]');
         const itemIdx = stored.findIndex((i) => i.id === currentId);
         if (itemIdx === -1) return;
-      
+
+        // CRITICAL FIX: Only process progress data if it belongs to THIS download
+        // Without this check, progress data from one download overwrites other downloads' metadata
+        if (progressData.downloadId && progressData.downloadId !== currentId) {
+          console.log(`[IGNORED] Progress data for ${progressData.downloadId}, but current download is ${currentId}`);
+          return;
+        }
+
         // Handle video info updates (title, thumbnail, duration) for non-YouTube videos
         if (progressData.title || progressData.sanitizedTitle || progressData.thumbnail || progressData.duration) {
           stored[itemIdx] = {
@@ -501,15 +508,15 @@ const getVideoInfo = async (url) => {
           };
           localStorage.setItem('downloadList', JSON.stringify(stored));
         }
-      
+
         // Only process message if it exists and is a string
         if (typeof progressData.message === 'string') {
           if (
             progressData.message.match(
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-            )&& stored[itemIdx].isPlaylist
+            ) && stored[itemIdx].isPlaylist
           ) {
-           const match = progressData.message.match(
+            const match = progressData.message.match(
               /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
             )
             const youtubeUrl = match[0]
@@ -525,12 +532,12 @@ const getVideoInfo = async (url) => {
               }
               localStorage.setItem('downloadList', JSON.stringify(stored))
             })
-          
+
           }
-        
+
           // Check for authentication error
-       
-      
+
+
           if (progressData.message.includes('Destination:')) {
             if (progressData.message.includes('.mp4')) {
               currentFileTypes.current.set(currentId, 'video');
@@ -543,7 +550,7 @@ const getVideoInfo = async (url) => {
             }
             return;
           }
-  
+
           const progressMatch = progressData.message.match(
             /(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+|Unknown)/
           );
@@ -552,9 +559,9 @@ const getVideoInfo = async (url) => {
             const rawProgress = parseFloat(progress);
             let totalProgress = 0;
             const currentFileType = currentFileTypes.current.get(currentId);
-            
+
             console.log('Progress matched:', { progress, fileSize, speed, eta, rawProgress, currentFileType });
-      
+
             if (currentFileType === 'video') {
               totalProgress = rawProgress * 0.9;
             } else if (currentFileType === 'audio') {
@@ -566,7 +573,7 @@ const getVideoInfo = async (url) => {
                 `No valid file type for ${currentId}, totalProgress remains ${totalProgress}`
               );
             }
-      
+
             setProgressMap((prev) => {
               const newMap = new Map(prev);
               newMap.set(currentId, { progress: totalProgress, fileSize, speed, eta });
@@ -582,9 +589,9 @@ const getVideoInfo = async (url) => {
               const rawProgress = parseFloat(progress);
               let totalProgress = 0;
               const currentFileType = currentFileTypes.current.get(currentId);
-              
+
               console.log('Simple progress matched:', { progress, fileSize, rawProgress, currentFileType });
-              
+
               if (currentFileType === 'video') {
                 totalProgress = rawProgress * 0.9;
               } else if (currentFileType === 'audio') {
@@ -594,7 +601,7 @@ const getVideoInfo = async (url) => {
               } else {
                 totalProgress = rawProgress; // Default to raw progress if no file type detected
               }
-              
+
               setProgressMap((prev) => {
                 const newMap = new Map(prev);
                 newMap.set(currentId, { progress: totalProgress, fileSize, speed: 'N/A', eta: 'N/A' });
@@ -602,7 +609,7 @@ const getVideoInfo = async (url) => {
               });
             }
           }
-      
+
           const itemCountMatch = progressData.message.match(
             /\[download\] Downloading item (\d+) of (\d+)/
           );
@@ -612,7 +619,7 @@ const getVideoInfo = async (url) => {
             stored[itemIdx].totalItems = parseInt(totalItems);
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
-      
+
           if (progressData.message.includes('has already been downloaded')) {
             stored[itemIdx].status = 'Completed';
             stored[itemIdx].isCompleted = true;
@@ -624,13 +631,13 @@ const getVideoInfo = async (url) => {
             localStorage.setItem('downloadList', JSON.stringify(stored));
             setShowDonationModal(true)
           }
-      
+
           if (progressData.message.includes('Finished downloading playlist:')) {
             stored[itemIdx].isPlaylistCompleted = true;
             localStorage.setItem('downloadList', JSON.stringify(stored));
           }
         }
-      
+
         // Handle status updates (e.g., completion) even if message is missing
         if (progressData?.status?.includes('Download complete!')) {
           stored[itemIdx].status = 'Completed';
@@ -641,14 +648,14 @@ const getVideoInfo = async (url) => {
             return newMap;
           });
           localStorage.setItem('downloadList', JSON.stringify(stored));
-          
+
           // Remove from active downloads when completed
           setActiveDownloads(prev => {
             const newSet = new Set(prev);
             newSet.delete(currentId);
             return newSet;
           });
-          
+
           setShowDonationModal(true)
         }
         if (
@@ -656,13 +663,13 @@ const getVideoInfo = async (url) => {
           progressData?.error?.includes('exporting YouTube cookies')
         ) {
           setShowLoginPopup(true); // Trigger the modal to open
-         
-          
+
+
         }
       };
-  
+
       window.api.onDownloadProgress(handleProgress);
-  
+
       await window.api.downloadVideo({
         id: currentId,
         url: item.url,
@@ -670,24 +677,24 @@ const getVideoInfo = async (url) => {
         selectedFormat: item.format,
         selectedQuality: item.quality,
         selectBitrate: item.downloadType === 'audio' ? item.bitrate : null,
-         title: customSanitize (item.title),
+        title: customSanitize(item.title),
         saveTo,
-       
+
       });
-  
+
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
       const completedIndex = storedDownloads.findIndex((i) => i.id === currentId);
       if (completedIndex !== -1) {
         storedDownloads[completedIndex].status = 'Completed';
         storedDownloads[completedIndex].isCompleted = true;
-      
+
         // Remove from active downloads when completed
         setActiveDownloads(prev => {
           const newSet = new Set(prev);
           newSet.delete(currentId);
           return newSet;
         });
-      
+
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
       }
     } catch (error) {
@@ -699,14 +706,14 @@ const getVideoInfo = async (url) => {
         storedDownloads[failedIndex].status = 'Failed';
         storedDownloads[failedIndex].isFailed = true;
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-  
+
         // Remove from active downloads when failed
         setActiveDownloads(prev => {
           const newSet = new Set(prev);
           newSet.delete(currentId);
           return newSet;
         });
-  
+
         setProgressMap((prev) => {
           const newMap = new Map(prev);
           newMap.set(currentId, {
@@ -751,40 +758,40 @@ const getVideoInfo = async (url) => {
       }
     }
   }, [])
-const handleRetry = (id) => {
-  if (isProcessing.current) return;
-  window.api.trackEvent('handleRetry')
-  let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
-  const itemIndex = storedDownloads.findIndex((item) => item.id === id);
+  const handleRetry = (id) => {
+    if (isProcessing.current) return;
+    window.api.trackEvent('handleRetry')
+    let storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');
+    const itemIndex = storedDownloads.findIndex((item) => item.id === id);
 
-  if (itemIndex === -1) return;
+    if (itemIndex === -1) return;
 
-  const item = storedDownloads[itemIndex];
+    const item = storedDownloads[itemIndex];
 
-  // Only retry if the item has failed
-  if (item.status !== 'Failed') return;
+    // Only retry if the item has failed
+    if (item.status !== 'Failed') return;
 
-  // Reset the item's status and progress
-  storedDownloads[itemIndex] = {
-    ...item,
-    status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
-    isFailed: false,
-    progress: 0,
-    fileSize: 'Unknown',
-    speed: 'Unknown',
-    eta: 'Unknown',
+    // Reset the item's status and progress
+    storedDownloads[itemIndex] = {
+      ...item,
+      status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
+      isFailed: false,
+      progress: 0,
+      fileSize: 'Unknown',
+      speed: 'Unknown',
+      eta: 'Unknown',
+    };
+
+    localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
+
+    // Add the item back to the queue
+    downloadQueue.current.push(id);
+
+    // Trigger queue processing if not already in progress
+    if (!isProcessing.current) {
+      processQueue();
+    }
   };
-
-  localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
-
-  // Add the item back to the queue
-  downloadQueue.current.push(id);
-
-  // Trigger queue processing if not already in progress
-  if (!isProcessing.current) {
-    processQueue();
-  }
-};
   return (
     <div style={{ width: !showWebView ? '90%' : '100%' }}>
       {aboutUs ? (
@@ -874,7 +881,7 @@ const handleRetry = (id) => {
               </button>
               <button className="nav-btn" onClick={() => webviewRef.current?.reload()}
                 disabled={!isWebViewReady}
-                >
+              >
                 <FaSync size={16} />
               </button>
             </div>
@@ -944,12 +951,12 @@ const handleRetry = (id) => {
             </OverlayTrigger>
           </div>
           <div className="webview-height">
-          {isWebViewReady?
-            <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
-          :<p>sdfsdf</p>
-        }
-          
-          
+            {isWebViewReady ?
+              <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
+              : <p>sdfsdf</p>
+            }
+
+
           </div>
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
