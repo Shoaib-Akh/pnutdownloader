@@ -11,6 +11,7 @@ import { initializeUserTracking } from './utils/userTracking'
 import { initializeFirestore, getUserPreferences, saveUserPreferences } from './utils/firestoreService'
 import { initializeUserTrackingFirestore } from './utils/firestoreUtils'
 import { getDeviceId } from './utils/userTracking'
+import { isDuplicateDownload } from './components/commonFunction'
 
 
 function App() {
@@ -255,14 +256,37 @@ function App() {
   const handleUrlDetectionDownload = async () => {
     if (!detectedUrl || !window.api) return
 
+    const list = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    const isDuplicate = isDuplicateDownload(
+      list,
+      detectedUrl,
+      format,
+      quality,
+      saveTo,
+      downloadType,
+      bitrate
+    )
+    if (isDuplicate) {
+      try {
+        await window.api.showMessageBox({
+          type: 'warning',
+          title: 'Duplicate Download',
+          message:
+            'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+        })
+      } catch {
+        alert(
+          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+        )
+      }
+      return
+    }
+
     setIsUrlDownloading(true)
     try {
-      // Set the detected URL to pastLinkUrl so BodySection can handle it
       setPastLinkUrl(detectedUrl)
-      // Close the modal
       setUrlDetectionModalOpen(false)
-      // Optionally trigger download automatically
-      // You can add auto-download logic here if needed
+      setDetectedUrl('')
     } catch (error) {
       console.error('Error handling URL detection download:', error)
     } finally {
@@ -317,9 +341,9 @@ function App() {
           />
         </div>
 
-        <button className="feedback-button" onClick={handleFeedbackClick}>
+        {/* <button className="feedback-button" onClick={handleFeedbackClick}>
           <MdFeedback /> Feedback
-        </button>
+        </button> */}
 
         <div style={{ display: 'none' }}>
           <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />

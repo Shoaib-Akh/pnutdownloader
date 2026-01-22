@@ -568,6 +568,19 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
   };
 
 
+  // Function to clean title by removing unwanted suffixes
+  const cleanTitle = (title) => {
+    if (!title) return title
+    
+    // Remove common quality and format suffixes
+    return title
+      .replace(/_\d+p\.\w+$/g, '') // Remove _720p.f140, _1080p.f137, etc.
+      .replace(/_\d+K$/g, '') // Remove _320K, _128K, etc.
+      .replace(/_\w+$/g, '') // Remove other underscore suffixes
+      .replace(/\s+/g, ' ') // Normalize whitespace
+      .trim()
+  }
+
   const getFormattedDate = (item) => {
     // If item has a date, use it; otherwise use current date
     if (item.downloadDate) {
@@ -717,10 +730,11 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
-        height: 'calc(100vh - 200px)',
+        height: 'calc(100vh - 250px)',
         overflowY: 'auto',
         paddingRight: '15px',
         paddingLeft: '5px',
+        paddingBottom: '20px',
         overflowX: 'hidden'
       }}>
         {filteredList?.length > 0 ? (
@@ -968,7 +982,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
                     {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
                       <Skeleton width={300} />
                     ) : (
-                      item.title || 'Untitled'
+                      cleanTitle(item.title) || 'Untitled'
                     )}
                   </h3>
 

@@ -13,6 +13,10 @@ export const PLATFORMS = {
   TWITCH: 'twitch',
   DAILYMOTION: 'dailymotion',
   BILIBILI: 'bilibili',
+  REDDIT: 'reddit',
+  PINTEREST: 'pinterest',
+  LINKEDIN: 'linkedin',
+  SOUNDCLOUD: 'soundcloud',
   UNKNOWN: 'unknown'
 }
 
@@ -68,6 +72,26 @@ export const detectPlatform = (url) => {
     return PLATFORMS.BILIBILI
   }
 
+  // Reddit
+  if (urlLower.includes('reddit.com')) {
+    return PLATFORMS.REDDIT
+  }
+
+  // Pinterest
+  if (urlLower.includes('pinterest.com') || urlLower.includes('pin.it')) {
+    return PLATFORMS.PINTEREST
+  }
+
+  // LinkedIn
+  if (urlLower.includes('linkedin.com')) {
+    return PLATFORMS.LINKEDIN
+  }
+
+  // SoundCloud
+  if (urlLower.includes('soundcloud.com')) {
+    return PLATFORMS.SOUNDCLOUD
+  }
+
   return PLATFORMS.UNKNOWN
 }
 
@@ -109,6 +133,10 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.TWITCH]: 'Twitch',
     [PLATFORMS.DAILYMOTION]: 'Dailymotion',
     [PLATFORMS.BILIBILI]: 'Bilibili',
+    [PLATFORMS.REDDIT]: 'Reddit',
+    [PLATFORMS.PINTEREST]: 'Pinterest',
+    [PLATFORMS.LINKEDIN]: 'LinkedIn',
+    [PLATFORMS.SOUNDCLOUD]: 'SoundCloud',
     [PLATFORMS.UNKNOWN]: 'Unknown'
   }
   return names[platform] || 'Unknown'
@@ -130,7 +158,11 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.TWITTER]: 'https://twitter.com',
     [PLATFORMS.TWITCH]: 'https://www.twitch.tv',
     [PLATFORMS.DAILYMOTION]: 'https://www.dailymotion.com',
-    [PLATFORMS.BILIBILI]: 'https://www.bilibili.com'
+    [PLATFORMS.BILIBILI]: 'https://www.bilibili.com',
+    [PLATFORMS.REDDIT]: 'https://www.reddit.com',
+    [PLATFORMS.PINTEREST]: 'https://www.pinterest.com',
+    [PLATFORMS.LINKEDIN]: 'https://www.linkedin.com',
+    [PLATFORMS.SOUNDCLOUD]: 'https://soundcloud.com'
   }
   return urls[platform] || null
 }

@@ -1,4 +1,44 @@
- export const extractVideoId = (url) => {
+/** Normalize URL for comparison (strip tracking params). */
+export const normalizeUrl = (url) => {
+  if (!url || typeof url !== 'string') return '';
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('si');
+    u.searchParams.delete('feature');
+    u.searchParams.delete('ab_channel');
+    return u.toString();
+  } catch {
+    return url;
+  }
+};
+
+/** True if both URLs refer to the same video. YouTube: by video/playlist ID; others: normalized URL. */
+export const isSameVideo = (urlA, urlB) => {
+  const a = extractYotubePastLink(urlA);
+  const b = extractYotubePastLink(urlB);
+  if (a && b) return a === b;
+  return normalizeUrl(urlA) === normalizeUrl(urlB);
+};
+
+/**
+ * True if list has an item with same video AND same format, quality, saveTo, downloadType, bitrate.
+ * Only then count as duplicate; different settings = allow new download.
+ */
+export const isDuplicateDownload = (list, url, format, quality, saveTo, downloadType, bitrate) => {
+  const f = (v) => (v ?? '').toString().toLowerCase();
+  const b = (v) => (v ? f(v) : 'null');
+  return list.some(
+    (item) =>
+      isSameVideo(item.url, url) &&
+      f(item.format) === f(format) &&
+      f(item.quality) === f(quality) &&
+      f(item.saveTo) === f(saveTo) &&
+      f(item.downloadType) === f(downloadType) &&
+      b(item.bitrate) === b(bitrate)
+  );
+};
+
+export const extractVideoId = (url) => {
     const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
     if (fullUrlMatch) return fullUrlMatch[1]
     const shortUrlMatch = url.match(/youtu\.be\/([^?]+)/)

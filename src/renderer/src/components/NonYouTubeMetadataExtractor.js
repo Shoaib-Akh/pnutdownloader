@@ -49,6 +49,36 @@ class NonYouTubeMetadataExtractor {
           /dailymotion\.com\/video\/([^\/]+)/
         ],
         metadataExtractor: this.extractDailymotionMetadata.bind(this)
+      },
+      reddit: {
+        name: 'Reddit',
+        patterns: [
+          /reddit\.com\/r\/[^\/]+\/comments\/([^\/]+)/
+        ],
+        metadataExtractor: this.extractRedditMetadata.bind(this)
+      },
+      twitch: {
+        name: 'Twitch',
+        patterns: [
+          /twitch\.tv\/videos\/([^\/]+)/,
+          /twitch\.tv\/[^\/]+\/clip\/([^\/]+)/,
+          /twitch\.tv\/[^\/]+\/v\/([^\/]+)/
+        ],
+        metadataExtractor: this.extractTwitchMetadata.bind(this)
+      },
+      soundcloud: {
+        name: 'SoundCloud',
+        patterns: [
+          /soundcloud\.com\/[^\/]+\/([^\/?#]+)/
+        ],
+        metadataExtractor: this.extractSoundCloudMetadata.bind(this)
+      },
+      bilibili: {
+        name: 'Bilibili',
+        patterns: [
+          /bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/
+        ],
+        metadataExtractor: this.extractBilibiliMetadata.bind(this)
       }
     };
   }
@@ -124,6 +154,7 @@ class NonYouTubeMetadataExtractor {
         thumbnail: thumbnail,
         duration: duration || 'PT0S',
         platform: platform || 'Unknown',
+        resourceId: info.id || this.extractResourceId(url)?.id || null,
         metadata: {
           uploader: info.uploader || 'Unknown User',
           description: info.description || '',
@@ -151,6 +182,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('instagram'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'Instagram',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown User',
             description: info.description || '',
@@ -172,6 +204,7 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('instagram'),
       duration: 'PT0S',
       platform: 'Instagram',
+      resourceId: postId,
       metadata: {
         postId,
         extractedAt: new Date().toISOString()
@@ -189,6 +222,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('facebook'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'Facebook',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown',
             description: info.description || '',
@@ -209,6 +243,7 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('facebook'),
       duration: 'PT0S',
       platform: 'Facebook',
+      resourceId: videoId,
       metadata: {
         videoId,
         extractedAt: new Date().toISOString()
@@ -226,6 +261,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('twitter'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'Twitter/X',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown User',
             description: info.description || '',
@@ -246,6 +282,7 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('twitter'),
       duration: 'PT0S',
       platform: 'Twitter/X',
+      resourceId: statusId,
       metadata: {
         statusId,
         extractedAt: new Date().toISOString()
@@ -263,6 +300,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('tiktok'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'TikTok',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown Creator',
             description: info.description || '',
@@ -283,6 +321,7 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('tiktok'),
       duration: 'PT0S',
       platform: 'TikTok',
+      resourceId: videoId,
       metadata: {
         videoId,
         extractedAt: new Date().toISOString()
@@ -300,6 +339,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('vimeo'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'Vimeo',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown Creator',
             description: info.description || '',
@@ -320,6 +360,7 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('vimeo'),
       duration: 'PT0S',
       platform: 'Vimeo',
+      resourceId: videoId,
       metadata: {
         videoId,
         extractedAt: new Date().toISOString()
@@ -337,6 +378,7 @@ class NonYouTubeMetadataExtractor {
           thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('dailymotion'),
           duration: this.formatDuration(info.duration) || 'PT0S',
           platform: 'Dailymotion',
+          resourceId: this.extractResourceId(url)?.id || null,
           metadata: {
             uploader: info.uploader || 'Unknown Uploader',
             description: info.description || '',
@@ -357,6 +399,164 @@ class NonYouTubeMetadataExtractor {
       thumbnail: this.generatePlaceholderThumbnail('dailymotion'),
       duration: 'PT0S',
       platform: 'Dailymotion',
+      resourceId: videoId,
+      metadata: {
+        videoId,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async extractRedditMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'Reddit Video',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('generic'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'Reddit',
+          resourceId: this.extractResourceId(url)?.id || null,
+          metadata: {
+            uploader: info.uploader || 'Unknown',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for Reddit:', error);
+    }
+
+    const match = url.match(/reddit\.com\/r\/[^\/]+\/comments\/([^\/]+)/);
+    const postId = match ? match[1] : 'unknown';
+    
+    return {
+      videoUrl: url,
+      title: `Reddit Post - ${postId.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('generic'),
+      duration: 'PT0S',
+      platform: 'Reddit',
+      resourceId: postId,
+      metadata: {
+        postId,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async extractTwitchMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'Twitch Video',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('generic'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'Twitch',
+          resourceId: this.extractResourceId(url)?.id || null,
+          metadata: {
+            uploader: info.uploader || 'Unknown',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for Twitch:', error);
+    }
+
+    let match = url.match(/twitch\.tv\/videos\/([^\/]+)/);
+    if (!match) match = url.match(/twitch\.tv\/[^\/]+\/clip\/([^\/]+)/);
+    const videoId = match ? match[1] : 'unknown';
+    
+    return {
+      videoUrl: url,
+      title: `Twitch Video - ${videoId.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('generic'),
+      duration: 'PT0S',
+      platform: 'Twitch',
+      resourceId: videoId,
+      metadata: {
+        videoId,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async extractSoundCloudMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'SoundCloud Track',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('generic'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'SoundCloud',
+          resourceId: this.extractResourceId(url)?.id || null,
+          metadata: {
+            uploader: info.uploader || 'Unknown',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for SoundCloud:', error);
+    }
+
+    const match = url.match(/soundcloud\.com\/[^\/]+\/([^\/?#]+)/);
+    const trackSlug = match ? match[1] : 'unknown';
+    
+    return {
+      videoUrl: url,
+      title: `SoundCloud Track - ${trackSlug.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('generic'),
+      duration: 'PT0S',
+      platform: 'SoundCloud',
+      resourceId: trackSlug,
+      metadata: {
+        trackSlug,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async extractBilibiliMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'Bilibili Video',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('generic'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'Bilibili',
+          resourceId: this.extractResourceId(url)?.id || null,
+          metadata: {
+            uploader: info.uploader || 'Unknown',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for Bilibili:', error);
+    }
+
+    const match = url.match(/bilibili\.com\/video\/(BV[a-zA-Z0-9]+)/);
+    const videoId = match ? match[1] : 'unknown';
+    
+    return {
+      videoUrl: url,
+      title: `Bilibili Video - ${videoId.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('generic'),
+      duration: 'PT0S',
+      platform: 'Bilibili',
+      resourceId: videoId,
       metadata: {
         videoId,
         extractedAt: new Date().toISOString()
@@ -430,6 +630,20 @@ class NonYouTubeMetadataExtractor {
       hash = hash & hash; // Convert to 32-bit integer
     }
     return Math.abs(hash).toString(16);
+  }
+
+  extractResourceId(url) {
+    const platform = this.detectPlatformFromUrl(url);
+    if (!platform || !this.platformConfigs[platform]) return null;
+
+    const config = this.platformConfigs[platform];
+    for (const pattern of config.patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return { platform, id: match[1] };
+      }
+    }
+    return null;
   }
 }
 

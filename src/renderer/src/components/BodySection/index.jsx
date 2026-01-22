@@ -18,7 +18,7 @@ import DownloadList from '../DownloadList'
 import { v4 as uuidv4 } from 'uuid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../../../../public/all.json'
-import { extractVideoId } from '../commonFunction'
+import { extractVideoId, isDuplicateDownload } from '../commonFunction'
 import { detectPlatform, isYouTubePlatform, PLATFORMS } from '../platformUtils'
 import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
@@ -54,6 +54,10 @@ function BodySection({
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [showDonationModal, setShowDonationModal] = useState(false)
   const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const [downloadCount, setDownloadCount] = useState(() => {
+    const saved = localStorage.getItem('downloadCount');
+    return saved ? parseInt(saved, 10) : 0;
+  });
   // console.log("isWebViewReadyisWebViewReady",isWebViewReady);
 
   const [canGoBack, setCanGoBack] = useState(false);
@@ -109,6 +113,32 @@ function BodySection({
   useEffect(() => {
     if (pastLinkUrl) {
       const fetchAndDownload = async () => {
+        const list = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        const isDuplicate = isDuplicateDownload(
+          list,
+          pastLinkUrl,
+          format,
+          quality,
+          saveTo,
+          downloadType,
+          bitrate
+        )
+        if (isDuplicate) {
+          if (window.api?.showMessageBox) {
+            window.api.showMessageBox({
+              type: 'warning',
+              title: 'Duplicate Download',
+              message:
+                'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+            })
+          } else {
+            alert(
+              'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
+            )
+          }
+          setPastLinkUrl('')
+          return
+        }
         const videoInfo = await getVideoInfo(pastLinkUrl)
         if (videoInfo) {
           addToQueue(pastLinkUrl)
@@ -118,8 +148,7 @@ function BodySection({
           setSelectedItem('All Files')
           setDownload(true)
         }
-        // Clear pastLinkUrl after processing to prevent re-triggering
-        setPastLinkUrl("")
+        setPastLinkUrl('')
       }
       fetchAndDownload()
     }
@@ -241,28 +270,31 @@ function BodySection({
     const urlToDownload = pastLinkUrl || currentWebViewUrl;
     if (!urlToDownload) return;
 
-    // Check if the URL with the same format, quality, and saveTo exists in storedDownloads
-    const isDuplicate = storedDownloads.some(
-      (item) =>
-        item.url === urlToDownload &&
-        item.format.toLowerCase() === format.toLowerCase() &&
-        item.quality.toLowerCase() === quality.toLowerCase() &&
-        item.saveTo.toLowerCase() === saveTo.toLowerCase() &&
-        item.downloadType.toLowerCase() === downloadType.toLowerCase() &&
-        item.bitrate?.toLowerCase() === bitrate?.toLowerCase()
-    );
+    // Duplicate only when same video + same format, quality, saveTo, audio/video, bitrate
+    const isDuplicate = isDuplicateDownload(
+      storedDownloads,
+      urlToDownload,
+      format,
+      quality,
+      saveTo,
+      downloadType,
+      bitrate
+    )
 
     if (isDuplicate) {
-      if (!window.alertShown) {
+      if (window.api?.showMessageBox) {
         window.api.showMessageBox({
           type: 'warning',
           title: 'Duplicate Download',
-          message: 'This URL with the same format, quality, and save location is already in the download list.',
-        });
-        window.alertShown = true;
-        setTimeout(() => (window.alertShown = false), 1000);
+          message:
+            'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+        })
+      } else {
+        alert(
+          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
+        )
       }
-      return;
+      return
     }
 
     setUrl(urlToDownload);
@@ -631,7 +663,16 @@ function BodySection({
             });
             localStorage.setItem('downloadList', JSON.stringify(stored));
             saveDownload(stored[itemIdx])
-            setShowDonationModal(true)
+            
+            // Increment download count and check if we should show donation modal
+            const newCount = downloadCount + 1;
+            setDownloadCount(newCount);
+            localStorage.setItem('downloadCount', newCount.toString());
+            
+            // Show donation modal every 2 downloads
+            if (newCount % 2 === 0) {
+              setShowDonationModal(true)
+            }
           }
 
           if (progressData.message.includes('Finished downloading playlist:')) {
@@ -652,6 +693,16 @@ function BodySection({
           localStorage.setItem('downloadList', JSON.stringify(stored));
           saveDownload(stored[itemIdx])
 
+          // Increment download count and check if we should show donation modal
+          const newCount = downloadCount + 1;
+          setDownloadCount(newCount);
+          localStorage.setItem('downloadCount', newCount.toString());
+          
+          // Show donation modal every 2 downloads
+          if (newCount % 2 === 0) {
+            setShowDonationModal(true)
+          }
+
           // Remove from active downloads when completed
           setActiveDownloads(prev => {
             const newSet = new Set(prev);
@@ -659,7 +710,6 @@ function BodySection({
             return newSet;
           });
 
-          setShowDonationModal(true)
         }
         if (
           progressData?.error?.includes('Sign in to confirm') ||
@@ -700,6 +750,16 @@ function BodySection({
 
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
         saveDownload(storedDownloads[completedIndex])
+        
+        // Increment download count and check if we should show donation modal
+        const newCount = downloadCount + 1;
+        setDownloadCount(newCount);
+        localStorage.setItem('downloadCount', newCount.toString());
+        
+        // Show donation modal every 2 downloads
+        if (newCount % 2 === 0) {
+          setShowDonationModal(true)
+        }
       }
     } catch (error) {
       storedDownloads = JSON.parse(localStorage.getItem('downloadList') || '[]');

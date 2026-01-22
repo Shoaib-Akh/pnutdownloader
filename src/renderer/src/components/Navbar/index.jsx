@@ -4,7 +4,7 @@ import Logo from '../../assets/Images/logo.png';
 import '../common.css';
 import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';
-import { extractYotubePastLink } from '../commonFunction';
+import { extractYotubePastLink, isDuplicateDownload } from '../commonFunction';
 
 function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick }) {
   const [urlInput, setUrlInput] = useState('');
@@ -170,6 +170,25 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     </div>
   );
 
+  const checkDuplicateAndWarn = (url) => {
+    const list = JSON.parse(localStorage.getItem('downloadList') || '[]');
+    const isDuplicate = isDuplicateDownload(list, url, format, quality, saveTo, downloadType, bitrate);
+    if (!isDuplicate) return false;
+    if (window.api?.showMessageBox) {
+      window.api.showMessageBox({
+        type: 'warning',
+        title: 'Duplicate Download',
+        message:
+          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+      });
+    } else {
+      alert(
+        'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+      );
+    }
+    return true;
+  };
+
   const handlePasteClick = async () => {
     try {
       if (window.api && window.api.trackEvent) {
@@ -183,8 +202,9 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           alert('The URL does not contain a valid video or playlist');
           return;
         }
-        
-        // Show notification if downloadable video URL is detected
+
+        if (checkDuplicateAndWarn(clipboardText)) return;
+
         if (window.api && window.api.showVideoUrlNotification) {
           try {
             await window.api.showVideoUrlNotification(clipboardText);
@@ -192,27 +212,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             console.warn('Failed to show notification:', notifError);
           }
         }
-        
-        let storedDownloads = JSON.parse(localStorage.getItem('downloadList')) || [];
-        const existingDownload = storedDownloads.some(
-          (item) => extractYotubePastLink(item.url) === videoId
-        );
-        if (existingDownload) {
-          if (!window.alertShown) {
-            if (window.api && window.api.showMessageBox) {
-              window.api.showMessageBox({
-                type: 'warning',
-                title: 'Duplicate Download',
-                message: 'This video is already in the download list.',
-              });
-            } else {
-              alert('This video is already in the download list.');
-            }
-            window.alertShown = true;
-            setTimeout(() => (window.alertShown = false), 1000);
-          }
-          return;
-        }
+
         if (setPastLinkUrl) {
           setPastLinkUrl(clipboardText);
         }
@@ -231,6 +231,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   const handleInputKeyPress = (e) => {
     if (e.key === 'Enter' && urlInput) {
       if (urlInput.startsWith('http://') || urlInput.startsWith('https://')) {
+        if (checkDuplicateAndWarn(urlInput)) return;
         setPastLinkUrl(urlInput);
       }
     }
@@ -238,6 +239,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
 
   const handleDownloadButtonClick = () => {
     if (urlInput && (urlInput.startsWith('http://') || urlInput.startsWith('https://'))) {
+      if (checkDuplicateAndWarn(urlInput)) return;
       setPastLinkUrl(urlInput);
     } else if (onDownloadClick) {
       onDownloadClick();
