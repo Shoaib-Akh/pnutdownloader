@@ -20,6 +20,29 @@ class YouTubeAPIManager {
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
   }
 
+  async fetchJsonWithKeyRotation(urlBuilder) {
+    const maxRetries = this.apiKeys.length;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const apiKey = this.getNextApiKey();
+
+      const url = urlBuilder(apiKey);
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        if (response.status === 403) {
+          console.warn(`API key quota exceeded, trying next key...`);
+          continue;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    throw new Error('All YouTube API keys exhausted');
+  }
+
   getNextApiKey() {
     if (this.apiKeys.length === 0) throw new Error("No valid YouTube API keys available");
     
@@ -105,44 +128,43 @@ class YouTubeAPIManager {
     const cached = this.getCachedData(cacheKey);
     if (cached) return cached;
 
-    const apiKey = this.getNextApiKey();
-    
     try {
-      // Fetch playlist details
-      const playlistResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlists?part=snippet&id=${playlistId}&key=${apiKey}`
+      const playlistData = await this.fetchJsonWithKeyRotation((apiKey) =>
+        `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`
       );
-      
-      if (!playlistResponse.ok) {
-        throw new Error(`Failed to fetch playlist: ${playlistResponse.status}`);
-      }
-      
-      const playlistData = await playlistResponse.json();
       
       if (playlistData.items.length === 0) {
         throw new Error('Playlist not found');
       }
-
-      // Fetch first few videos to get preview
-      const itemsResponse = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=5&key=${apiKey}`
-      );
-      
-      const itemsData = await itemsResponse.json();
       const playlist = playlistData.items[0];
+
+      let pageToken;
+      const videos = [];
+
+      do {
+        const itemsData = await this.fetchJsonWithKeyRotation((apiKey) => {
+          const base = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${playlistId}&maxResults=50&key=${apiKey}`;
+          return pageToken ? `${base}&pageToken=${pageToken}` : base;
+        });
+
+        const pageVideos = (itemsData.items || []).map(item => ({
+          videoId: item.snippet?.resourceId?.videoId,
+          title: item.snippet?.title,
+          thumbnail: this.getBestThumbnail(item.snippet?.thumbnails),
+          position: item.snippet?.position
+        })).filter(v => v.videoId);
+
+        videos.push(...pageVideos);
+        pageToken = itemsData.nextPageToken;
+      } while (pageToken);
       
       const metadata = {
         playlistId,
         title: playlist.snippet.title,
         description: playlist.snippet.description,
         thumbnail: this.getBestThumbnail(playlist.snippet.thumbnails),
-        videoCount: playlist.contentDetails?.itemCount || itemsData.pageInfo?.totalResults,
-        videos: itemsData.items.map(item => ({
-          videoId: item.snippet.resourceId.videoId,
-          title: item.snippet.title,
-          thumbnail: this.getBestThumbnail(item.snippet.thumbnails),
-          position: item.snippet.position
-        })),
+        videoCount: playlist.contentDetails?.itemCount || videos.length,
+        videos,
         publishedAt: playlist.snippet.publishedAt,
         channelTitle: playlist.snippet.channelTitle
       };

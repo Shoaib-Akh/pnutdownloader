@@ -445,6 +445,37 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
       const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions;
       console.log(`Possible extensions: ${possibleExtensions}`);
 
+      const customSanitize = (str) => {
+        if (!str) return 'Unknown'
+        return str
+          .replace(/[<>:"/\\|?*]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .replace(/[^a-zA-Z0-9._-]/g, ' ')
+          .replace(/^[.-]+|[.-]+$/g, ' ')
+          .substring(0, 200)
+      }
+
+      const normalizeForMatch = (value) => {
+        if (!value) return ''
+        return value
+          .toString()
+          .normalize('NFC')
+          .toLowerCase()
+          .replace(/’/g, "'")
+          .replace(/\s+/g, ' ')
+          .trim()
+          // remove common quality/bitrate suffixes used in saved filenames
+          .replace(/[_\-\s]+\d+p(\.[a-z0-9]+)?$/i, '')
+          .replace(/[_\-\s]+\d+k$/i, '')
+          // remove leftover extension fragments
+          .replace(/\.[a-z0-9]{2,5}$/i, '')
+          // normalize punctuation/emoji
+          .replace(/[\|\:]/g, '_')
+          .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+
       let allPathsToSearch = [];
       if (item.saveTo && typeof item.saveTo === 'string') {
         try {
@@ -468,18 +499,15 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
       console.log(`All paths to search: ${allPathsToSearch}`);
 
       const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video';
-      const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`);
+      const baseDirectories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`);
+
+      const playlistSubDir = item.playlistTitle ? customSanitize(item.playlistTitle) : null
+      const directories = playlistSubDir
+        ? [...baseDirectories.map((d) => `${d}/${playlistSubDir}`), ...baseDirectories]
+        : baseDirectories
       console.log(`Search directories: ${directories}`);
 
-      const normalizedTitle = item.title
-        .normalize('NFC') // Normalize Unicode characters
-        .toLowerCase()
-        .replace(/[\|\:]/g, '_')
-        .replace(/’/g, "'")
-        .replace(/[^\p{L}\p{N}._-]/gu, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/\.[a-z0-9]{2,5}$/i, ''); // Remove any extension-like suffix (e.g. .mp4, .f140, .avi)
+      const normalizedTitle = normalizeForMatch(item.filename || item.title)
       console.log(`Normalized title: ${normalizedTitle}`);
 
       let filePath = null;
@@ -493,19 +521,15 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
 
           filePath = files.find((file) => {
             const fileName = file.toLowerCase();
+            if (fileName.endsWith('.part')) return false
             const titlePart = fileName.split('.').slice(0, -1).join('.').trim();
             const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`));
-            const normalizedFileTitle = titlePart
-              .normalize('NFC')
-              .replace(/[\|\:]/g, '_')
-              .replace(/[^\p{L}\p{N}._-]/gu, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
+            const normalizedFileTitle = normalizeForMatch(titlePart)
 
             const isExactMatch = normalizedFileTitle === normalizedTitle;
-            const isPartialMatch = normalizedFileTitle.includes(
-              normalizedTitle.slice(0, Math.min(40, normalizedTitle.length))
-            );
+            const a = normalizedFileTitle
+            const b = normalizedTitle
+            const isPartialMatch = (a && b) ? (a.includes(b) || b.includes(a)) : false
 
             console.log(
               `Checking file: ${fileName}, Normalized file title: ${normalizedFileTitle}, Has valid extension: ${hasValidExtension}, Exact match: ${isExactMatch}, Partial match: ${isPartialMatch}`
@@ -559,7 +583,25 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         }
       } else {
         console.error(`File not found for title: ${item.title}, Normalized: ${normalizedTitle}, fileType: ${item.downloadType}`);
-        alert(`File not found. It may have been moved, deleted, or saved with a different name. Expected path: ${filePath}`);
+
+        // If file wasn't found, still open the download folder so user can locate it manually.
+        for (const dir of directories) {
+          try {
+            await window.api.createDirectory(dir)
+            if (window.api.openPath) {
+              await window.api.openPath(dir)
+            } else {
+              const encodedPath = encodeURI(dir.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25')
+              const folderUrl = `file:///${encodedPath}`
+              await window.api.openExternal(folderUrl)
+            }
+            break
+          } catch (openDirError) {
+            console.warn('Failed to open folder fallback:', openDirError)
+          }
+        }
+
+        alert('File not found. Folder opened so you can locate it manually. It may have been renamed, moved, or saved in a playlist folder.')
       }
     } catch (error) {
       console.error('Error in handleThumbnailClick:', error);

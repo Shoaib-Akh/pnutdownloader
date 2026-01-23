@@ -1353,6 +1353,100 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
   });
 });
 
+ipcMain.handle('fetch-playlist-entries', async (event, url) => {
+  if (!url || typeof url !== 'string') {
+    throw new Error('Invalid URL.')
+  }
+
+  // Update cookies before fetching playlist info
+  try {
+    await updateCookiesFile()
+  } catch (cookieError) {
+    console.warn('Failed to update cookies before fetching playlist info:', cookieError.message)
+  }
+
+  const getYtdlpPath = () => {
+    if (app.isPackaged) {
+      return join(process.resourcesPath, getYtdlpExecutableName())
+    }
+    return join(__dirname, '../../public', getYtdlpExecutableName())
+  }
+
+  const currentYtdlpPath = getYtdlpPath()
+  const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {}
+
+  return new Promise((resolve, reject) => {
+    const args = [
+      '-J',
+      '--yes-playlist',
+      '--cookies', cookiesPath,
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--extractor-retries', '3',
+      url,
+    ]
+
+    const proc = spawn(currentYtdlpPath, args, spawnOptions)
+
+    let stdout = ''
+    let stderr = ''
+
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString()
+    })
+
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString()
+    })
+
+    proc.on('close', (code) => {
+      if (code !== 0) {
+        return reject(new Error(`yt-dlp exited with code ${code}. Error:\n${stderr}`))
+      }
+
+      try {
+        const json = JSON.parse(stdout)
+        const entries = Array.isArray(json.entries) ? json.entries : []
+
+        const playlistTitle = json.playlist_title || json.title || 'Playlist'
+        const playlistThumbnail = (Array.isArray(json.thumbnails) && json.thumbnails.length > 0)
+          ? json.thumbnails[json.thumbnails.length - 1].url
+          : (json.thumbnail || '')
+
+        const videos = entries
+          .map((entry, index) => {
+            const videoId = entry?.id || entry?.display_id
+            const thumbs = entry?.thumbnails
+            const thumbnail = (Array.isArray(thumbs) && thumbs.length > 0)
+              ? thumbs[thumbs.length - 1].url
+              : (entry?.thumbnail || '')
+
+            return {
+              videoId,
+              title: entry?.title || 'Untitled',
+              thumbnail,
+              position: typeof entry?.playlist_index === 'number' ? entry.playlist_index : index,
+            }
+          })
+          .filter((v) => v.videoId)
+
+        resolve({
+          isPlaylist: true,
+          playlistTitle,
+          thumbnail: playlistThumbnail,
+          videoCount: videos.length,
+          videos,
+        })
+      } catch (err) {
+        reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`))
+      }
+    })
+
+    proc.on('error', (err) => {
+      reject(new Error(`Failed to spawn yt-dlp: ${err.message}`))
+    })
+  })
+})
+
 let downloadProcess = null;
 const activeDownloads = {};
 
@@ -1364,7 +1458,7 @@ const startDownload = async (event, options) => {
         return reject(new Error('A download is already in progress.'));
       }
 
-      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions } = options;
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
 console.log("options",options);
 
       if (!url || typeof url !== 'string') {
@@ -1401,7 +1495,14 @@ console.log("options",options);
         return reject(new Error(`Failed to create directory: ${dirError.message}`));
       }
 
-      const isPlaylist = (url.includes("playlist") || url.includes("&list=") || url.includes("?list=")) && !url.includes('watch');
+      const isPlaylist = Boolean(
+        playlistTitleFromOptions ||
+        url.includes("playlist") ||
+        url.includes("&list=") ||
+        url.includes("?list=")
+      );
+
+      const shouldDownloadPlaylist = isPlaylist && !forceSingle;
 
       const finalQualityVideo = selectedQuality.replace(/[pP]$/, '');
       const format = selectedFormat ? selectedFormat.toLowerCase() : 'mp4';
@@ -1426,12 +1527,24 @@ console.log("options",options);
 
       const sanitize = customSanitize;
 
+      const playlistTitleSanitized = playlistTitleFromOptions ? sanitize(playlistTitleFromOptions) : null;
+      if (isPlaylist && playlistTitleSanitized) {
+        try {
+          const playlistDir = join(baseDir, playlistTitleSanitized);
+          if (!existsSync(playlistDir)) {
+            mkdirSync(playlistDir, { recursive: true });
+          }
+        } catch (dirError) {
+          console.warn(`[${downloadId}] Failed to pre-create playlist directory: ${dirError.message}`);
+        }
+      }
+
       const getTitle = () => {
         return new Promise((titleResolve, titleReject) => {
           const titleArgs = [
-            isPlaylist ? '--get-filename' : '--get-title',
-            '-o', isPlaylist ? '%(playlist_title)s' : '%(title)s',
-            isPlaylist ? '--yes-playlist' : '--no-playlist',
+            shouldDownloadPlaylist ? '--get-filename' : '--get-title',
+            '-o', shouldDownloadPlaylist ? '%(playlist_title)s' : '%(title)s',
+            shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist',
             url,
           ];
           
@@ -1762,7 +1875,7 @@ console.log("options",options);
       
         let downloadPath;
         if (isPlaylist) {
-          const playlistDir = join(baseDir, '%(playlist_title)s');
+          const playlistDir = join(baseDir, playlistTitleSanitized || '%(playlist_title)s');
           downloadPath = join(playlistDir, `%(title)s.%(ext)s`);         
         } else {
           const formatDir = isAudioOnly ? 'Audio' : 'Video';
@@ -1816,7 +1929,7 @@ console.log("options",options);
 
         args.push(...formatSpecifier.split(' '));
         args.push(url);
-        args.push(isPlaylist ? '--yes-playlist' : '--no-playlist');
+        args.push(shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist');
 
         console.log('Downloading with args:', args);
 

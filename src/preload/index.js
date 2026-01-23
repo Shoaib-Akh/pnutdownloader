@@ -6,11 +6,12 @@ const api = {
   openWebview: (url) => ipcRenderer.send('open-webview', url),
   getYoutubeCookies: () => ipcRenderer.invoke('getYoutubeCookies'),
   fetchVideoInfo: (url) => ipcRenderer.invoke('fetch-video-info', url),
+  fetchPlaylistEntries: (url) => ipcRenderer.invoke('fetch-playlist-entries', url),
   getYoutubeInfo: (url) => ipcRenderer.invoke('get-youtube-info', url),
 
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 trackEvent: (eventName, props) => trackEvent(eventName, props),
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id,selectBitrate ,title}) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, playlistTitle, forceSingle }) =>
     ipcRenderer.invoke('downloadVideo', {
       url,
       isAudioOnly,
@@ -19,7 +20,9 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
       saveTo,
       selectBitrate,
       id,
-      title
+      title,
+      playlistTitle,
+      forceSingle
     }),
     getAppVersion: () => ipcRenderer.invoke('get-app-version'),
 

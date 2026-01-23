@@ -23,6 +23,7 @@ import { detectPlatform, isYouTubePlatform, PLATFORMS } from '../platformUtils'
 import AboutUs from '../AboutUs'
 import LoginModal from '../LoginModal'
 import DonationModal from '../DonationModal'
+import PlaylistSelectionModal from '../PlaylistSelectionModal'
 import { youtubeAPI } from '../YouTubeAPIManager'
 import { nonYouTubeExtractor } from '../NonYouTubeMetadataExtractor'
 import { saveDownload, saveDownloadError } from '../../utils/firestoreService'
@@ -71,6 +72,9 @@ function BodySection({
   const [progressMap, setProgressMap] = useState(new Map())
   const [videoInfo, setVideoInfo] = useState([])
   const [activeDownloads, setActiveDownloads] = useState(new Set())
+  const [playlistModalOpen, setPlaylistModalOpen] = useState(false)
+  const [playlistModalLoading, setPlaylistModalLoading] = useState(false)
+  const [playlistData, setPlaylistData] = useState(null)
   const currentFileTypes = useRef(new Map())
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
@@ -141,12 +145,19 @@ function BodySection({
         }
         const videoInfo = await getVideoInfo(pastLinkUrl)
         if (videoInfo) {
-          addToQueue(pastLinkUrl)
-          setDownloadListOpen(true)
-          setShowWebView(false)
-          setIsSidebarOpen(true)
-          setSelectedItem('All Files')
-          setDownload(true)
+          if (videoInfo.isPlaylist) {
+            setPlaylistModalLoading(true)
+            setPlaylistData(videoInfo)
+            setPlaylistModalOpen(true)
+            setPlaylistModalLoading(false)
+          } else {
+            addToQueue(pastLinkUrl)
+            setDownloadListOpen(true)
+            setShowWebView(false)
+            setIsSidebarOpen(true)
+            setSelectedItem('All Files')
+            setDownload(true)
+          }
         }
         setPastLinkUrl('')
       }
@@ -247,7 +258,7 @@ function BodySection({
     setIsDownloadable(isDownloadable || false);
   }
 
-  const handleDownloadClick = () => {
+  const handleDownloadClick = async () => {
 
     if (window.api) {
       try {
@@ -295,6 +306,19 @@ function BodySection({
         )
       }
       return
+    }
+
+    try {
+      const videoInfo = await getVideoInfo(urlToDownload)
+      if (videoInfo?.isPlaylist) {
+        setPlaylistModalLoading(true)
+        setPlaylistData(videoInfo)
+        setPlaylistModalOpen(true)
+        setPlaylistModalLoading(false)
+        return
+      }
+    } catch (error) {
+      console.error('Failed to determine if URL is playlist:', error)
     }
 
     setUrl(urlToDownload);
@@ -401,10 +425,23 @@ function BodySection({
         const videoId = extractVideoId(url);
         const playlistId = extractPlaylistId(url);
 
+        // YouTube Mix/Radio playlists (list=RD...) frequently don't work with Data API.
+        // Fallback to yt-dlp playlist extraction via main process.
+        if (playlistId && playlistId.startsWith('RD') && window.api?.fetchPlaylistEntries) {
+          return await window.api.fetchPlaylistEntries(url)
+        }
+
         if (videoId && !playlistId) {
           return await youtubeAPI.extractVideoInfo(url);
         } else if (playlistId) {
-          return await youtubeAPI.extractPlaylistInfo(url);
+          const apiPlaylist = await youtubeAPI.extractPlaylistInfo(url);
+          if (apiPlaylist && Array.isArray(apiPlaylist.videos) && apiPlaylist.videos.length > 0) {
+            return apiPlaylist
+          }
+          if (window.api?.fetchPlaylistEntries) {
+            return await window.api.fetchPlaylistEntries(url)
+          }
+          return apiPlaylist
         }
       } else {
         // Use non-YouTube metadata extractor
@@ -412,6 +449,18 @@ function BodySection({
       }
     } catch (error) {
       console.error('Failed to fetch video info:', error);
+
+      // If YouTube playlist fetch failed (quota / RD Mix / etc), try yt-dlp fallback via main process
+      try {
+        if (isYouTubePlatform(platform)) {
+          const playlistId = extractPlaylistId(url)
+          if (playlistId && window.api?.fetchPlaylistEntries) {
+            return await window.api.fetchPlaylistEntries(url)
+          }
+        }
+      } catch (fallbackError) {
+        console.warn('Playlist fallback via yt-dlp failed:', fallbackError)
+      }
 
       // Fallback to basic metadata
       return {
@@ -474,6 +523,59 @@ function BodySection({
 
     localStorage.setItem('downloadList', JSON.stringify([newDownload, ...storedDownloads]))
     downloadQueue.current.push(newId)
+
+    if (!isProcessing.current) {
+      processQueue()
+    }
+  }
+
+  const addSelectedPlaylistVideosToQueue = async (selectedVideos, playlistTitle) => {
+    if (!Array.isArray(selectedVideos) || selectedVideos.length === 0) return
+
+    const downloadsToAdd = selectedVideos.map((video) => {
+      const newId = uuidv4()
+      const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`
+      return {
+        id: newId,
+        url: videoUrl,
+        title: video?.title || 'Pending...',
+        playlistTitle: playlistTitle || null,
+        thumbnail: video?.thumbnail || '',
+        filename: '',
+        quality: quality.toLowerCase(),
+        saveTo: saveTo.toLowerCase(),
+        downloadType: downloadType.toLowerCase(),
+        format: format.toLowerCase(),
+        duration: 'Unknown',
+        bitrate: bitrate,
+        progress: 0,
+        fileSize: 'Unknown',
+        speed: 'Unknown',
+        eta: 'Unknown',
+        status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
+        isCompleted: false,
+        isFailed: false,
+        isPlaylist: false,
+        currentItem: 0,
+        forceSingle: true,
+      }
+    })
+
+    setActiveDownloads((prev) => {
+      const next = new Set(prev)
+      downloadsToAdd.forEach((d) => next.add(d.id))
+      return next
+    })
+
+    const stored = JSON.parse(localStorage.getItem('downloadList') || '[]')
+    localStorage.setItem('downloadList', JSON.stringify([...downloadsToAdd, ...stored]))
+    downloadsToAdd.forEach((d) => downloadQueue.current.push(d.id))
+
+    setDownloadListOpen(true)
+    setShowWebView(false)
+    setIsSidebarOpen(true)
+    setSelectedItem('All Files')
+    setDownload(true)
 
     if (!isProcessing.current) {
       processQueue()
@@ -731,6 +833,8 @@ function BodySection({
         selectedQuality: item.quality,
         selectBitrate: item.downloadType === 'audio' ? item.bitrate : null,
         title: customSanitize(item.title),
+        playlistTitle: item.playlistTitle ? customSanitize(item.playlistTitle) : null,
+        forceSingle: Boolean(item.forceSingle),
         saveTo,
 
       });
@@ -1048,6 +1152,24 @@ function BodySection({
           isOpen={showDonationModal}
           onClose={() => setShowDonationModal(false)}
           onDonate={handleDonate}
+        />
+      )}
+
+      {playlistModalOpen && (
+        <PlaylistSelectionModal
+          isOpen={playlistModalOpen}
+          onClose={() => {
+            setPlaylistModalOpen(false)
+            setPlaylistData(null)
+          }}
+          onConfirm={(selected) => {
+            const title = playlistData?.playlistTitle || playlistData?.title || null
+            setPlaylistModalOpen(false)
+            addSelectedPlaylistVideosToQueue(selected, title)
+            setPlaylistData(null)
+          }}
+          playlist={playlistData}
+          isLoading={playlistModalLoading}
         />
       )}
 
