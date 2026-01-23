@@ -54,41 +54,36 @@
   },
   "build": {
     "appId": "com.shoaibakh.pnutdownloader",
+    "asar": true,
+    "files": [
+      "out/**/*",
+      "dist/**/*",
+      "!**/*.map",
+      "!**/*.d.ts",
+      "!**/node_modules/**/*.md",
+      "!**/node_modules/**/*.txt",
+      "!**/node_modules/**/test",
+      "!**/node_modules/**/tests",
+      "!**/node_modules/**/*.test.js",
+      "!**/node_modules/**/*.spec.js",
+      "!**/node_modules/**/examples",
+      "!**/node_modules/**/example",
+      "!**/.vscode",
+      "!**/.idea",
+      "!**/src",
+      "!**/electron.vite.config.*.mjs"
+    ],
     "win": {
-      "icon": "public/icon.ico"
+      "icon": "public/icon.ico",
+      "target": "nsis",
+      "compression": "maximum"
     },
     "linux": {
       "icon": "resources/icon.png"
     },
     "mac": {
       "icon": "resources/icon.icns"
-    },
-    "extraResources": [
-      {
-        "from": "public/yt-dlp.exe",
-        "to": "yt-dlp.exe"
-      },
-      {
-        "from": "public/yt-dlp_macos",
-        "to": "yt-dlp_macos"
-      },
-      {
-        "from": "public/ffmpeg.exe",
-        "to": "ffmpeg.exe"
-      },
-      {
-        "from": "public/cookies.txt",
-        "to": "cookies.txt"
-      },
-      {
-        "from": "public/all.josn",
-        "to": "all.josn"
-      },
-      {
-        "from": ".env",
-        "to": ".env"
-      }
-    ]
+    }
   },
   "repository": {
     "type": "git",

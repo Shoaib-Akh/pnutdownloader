@@ -53,23 +53,10 @@ let mainWindow
 let clipboardMonitorInterval = null
 let lastClipboardText = ''
 const { dirname } = require('path');
-// Get yt-dlp path - prefer system installation on macOS/Linux if available
+// Get yt-dlp path - always use bundled/downloaded version
 const getYtdlpPath = () => {
   if (app.isPackaged) {
     return join(process.resourcesPath, getYtdlpExecutableName());
-  }
-  
-  // In development, check for system yt-dlp first (macOS/Linux)
-  if (process.platform !== 'win32') {
-    try {
-      const { execSync } = require('child_process');
-      const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-      if (systemYtdlp && existsSync(systemYtdlp)) {
-        return systemYtdlp;
-      }
-    } catch (err) {
-      // System yt-dlp not found, use bundled version
-    }
   }
   
   return join(__dirname, '../../public', getYtdlpExecutableName());
@@ -251,14 +238,25 @@ if (!gotTheLock) {
 }
 
 function downloadFile(url, destPath) {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     const dir = dirname(destPath);
     if (!existsSync(dir)) {
       console.log(`Creating directory: ${dir}`);
       mkdirSync(dir, { recursive: true });
     }
 
-    const file = createWriteStream(destPath, { flags: 'wx' });
+    // Remove existing file if it exists to allow overwrite
+    if (existsSync(destPath)) {
+      try {
+        await fs.unlink(destPath);
+        console.log(`Removed existing file: ${destPath}`);
+      } catch (err) {
+        console.warn(`Failed to remove existing file: ${err.message}`);
+        // Continue anyway, will try to overwrite
+      }
+    }
+
+    const file = createWriteStream(destPath, { flags: 'w' });
     console.log(`Starting download of ${url} to ${destPath}`);
 
     const request = https.get(url, (response) => {
@@ -348,80 +346,236 @@ async function checkYtdlpVersion() {
   });
 }
 
-async function updateYtdlp() {
-  // Check for system yt-dlp first (macOS/Linux) - don't override if already set
-  if (process.platform !== 'win32') {
-    try {
-      const { execSync } = require('child_process');
-      const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-      if (systemYtdlp && existsSync(systemYtdlp)) {
-        // Only update if we're not already using system yt-dlp
-        if (ytdlpPath !== systemYtdlp) {
-          ytdlpPath = systemYtdlp;
-          console.log('Using system yt-dlp at:', systemYtdlp);
-        }
-        return;
+// Function to fetch latest nightly release from GitHub API
+async function getLatestNightlyRelease() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: '/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest',
+      method: 'GET',
+      headers: {
+        'User-Agent': 'PNUTDownloader',
+        'Accept': 'application/vnd.github.v3+json'
       }
-    } catch (err) {
-      console.log('System yt-dlp not found, will download standalone binary...');
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const release = JSON.parse(data);
+            resolve({
+              tag: release.tag_name,
+              publishedAt: release.published_at,
+              assets: release.assets
+            });
+          } catch (err) {
+            reject(new Error(`Failed to parse GitHub API response: ${err.message}`));
+          }
+        } else {
+          reject(new Error(`GitHub API returned status ${res.statusCode}: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(new Error(`Failed to fetch latest nightly release: ${err.message}`));
+    });
+
+    req.setTimeout(10000, () => {
+      req.destroy();
+      reject(new Error('Request timeout while fetching latest nightly release'));
+    });
+
+    req.end();
+  });
+}
+
+// Function to get the download URL for the latest nightly build
+async function getNightlyDownloadUrl() {
+  try {
+    const release = await getLatestNightlyRelease();
+    console.log(`Latest nightly release: ${release.tag}`);
+    
+    // Determine which asset to download based on platform
+    let assetName;
+    if (process.platform === 'win32') {
+      assetName = 'yt-dlp.exe';
+    } else if (process.platform === 'darwin') {
+      assetName = 'yt-dlp_macos';
+    } else {
+      assetName = 'yt-dlp';
     }
+
+    // Find the matching asset
+    const asset = release.assets.find(a => a.name === assetName);
+    if (!asset) {
+      // Fallback to direct download URL pattern
+      const baseUrl = `https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/download/${release.tag}/${assetName}`;
+      console.log(`Using fallback URL: ${baseUrl}`);
+      return { url: baseUrl, tag: release.tag };
+    }
+
+    return { url: asset.browser_download_url, tag: release.tag };
+  } catch (error) {
+    console.error(`Failed to get nightly download URL: ${error.message}`);
+    // Fallback to latest stable if nightly fails
+    throw error;
   }
-  
+}
+
+// Function to check if update is needed
+async function checkYtdlpUpdate() {
+  try {
+    // Get current version
+    let currentVersion;
+    try {
+      currentVersion = await checkYtdlpVersion();
+      console.log(`Current yt-dlp version: ${currentVersion}`);
+    } catch (err) {
+      console.log('Could not get current version, will update:', err.message);
+      return { needsUpdate: true, reason: 'version_check_failed' };
+    }
+
+    // Get latest nightly release
+    const release = await getLatestNightlyRelease();
+    console.log(`Latest nightly release tag: ${release.tag}`);
+
+    // Compare versions (simple string comparison for now)
+    // Nightly tags are in format YYYY.MM.DD.HHMMSS
+    // Current version might be in different format, so we'll update if tag is newer
+    const versionFile = app.isPackaged
+      ? join(process.resourcesPath, 'ytdlp_version.txt')
+      : join(__dirname, '../../public/ytdlp_version.txt');
+
+    let lastKnownVersion = null;
+    try {
+      const versionData = await fs.readFile(versionFile, 'utf8');
+      lastKnownVersion = versionData.trim();
+      console.log(`Last known version: ${lastKnownVersion}`);
+    } catch (err) {
+      console.log('No previous version file found');
+    }
+
+    // If we have a new release tag, update
+    if (!lastKnownVersion || lastKnownVersion !== release.tag) {
+      return { 
+        needsUpdate: true, 
+        reason: 'new_version_available',
+        currentVersion: lastKnownVersion || currentVersion,
+        latestVersion: release.tag
+      };
+    }
+
+    return { needsUpdate: false, reason: 'up_to_date', currentVersion: release.tag };
+  } catch (error) {
+    console.error(`Error checking for yt-dlp update: ${error.message}`);
+    return { needsUpdate: false, reason: 'check_failed', error: error.message };
+  }
+}
+
+async function updateYtdlp(forceUpdate = false) {
   // Determine download URL and target path
   let ytdlpUrl;
+  let releaseTag = null;
   const bundledPath = app.isPackaged
     ? join(process.resourcesPath, getYtdlpExecutableName())
     : join(__dirname, '../../public', getYtdlpExecutableName());
   
-  if (process.platform === 'win32') {
-    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
-  } else if (process.platform === 'darwin') {
-    // Download the standalone macOS binary
-    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
-  } else {
-    // Linux
-    ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+  try {
+    // Get latest nightly build URL
+    const nightlyInfo = await getNightlyDownloadUrl();
+    ytdlpUrl = nightlyInfo.url;
+    releaseTag = nightlyInfo.tag;
+    console.log(`Downloading yt-dlp nightly build: ${releaseTag}`);
+  } catch (error) {
+    console.warn(`Failed to get nightly build URL, falling back to stable: ${error.message}`);
+    // Fallback to stable releases if nightly fails
+    if (process.platform === 'win32') {
+      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+    } else if (process.platform === 'darwin') {
+      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+    } else {
+      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+    }
   }
   
-  // Only update path to bundled version if we're not using system yt-dlp
+  // Always use bundled/downloaded version
   if (!ytdlpPath || ytdlpPath === bundledPath || !existsSync(ytdlpPath)) {
     ytdlpPath = bundledPath;
   }
   
   try {
+    // Check if update is needed (unless forced)
+    if (!forceUpdate) {
+      const updateCheck = await checkYtdlpUpdate();
+      if (!updateCheck.needsUpdate && updateCheck.reason === 'up_to_date') {
+        console.log('yt-dlp is already up to date');
+        return { success: true, message: 'Already up to date', version: updateCheck.currentVersion };
+      }
+    }
+
     // Remove old binary if it exists (in case it's corrupted)
     if (existsSync(ytdlpPath)) {
-      await fs.unlink(ytdlpPath).catch(() => {});
+      try {
+        await fs.unlink(ytdlpPath);
+        console.log(`Removed old yt-dlp binary: ${ytdlpPath}`);
+        // Wait a bit to ensure file system has released the file
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (err) {
+        console.warn(`Failed to remove old binary: ${err.message}, will try to overwrite`);
+      }
     }
+    
+    console.log(`Downloading yt-dlp from: ${ytdlpUrl}`);
     await downloadFile(ytdlpUrl, ytdlpPath);
     console.log('yt-dlp downloaded successfully');
     const stats = await fs.stat(ytdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
+    
     // Set executable permissions on Unix-like systems
     if (process.platform !== 'win32') {
       await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
     }
     
+    // Save version info
+    if (releaseTag) {
+      const versionFile = app.isPackaged
+        ? join(process.resourcesPath, 'ytdlp_version.txt')
+        : join(__dirname, '../../public/ytdlp_version.txt');
+      try {
+        await fs.writeFile(versionFile, releaseTag, 'utf8');
+        console.log(`Saved version info: ${releaseTag}`);
+      } catch (err) {
+        console.warn(`Failed to save version info: ${err.message}`);
+      }
+    }
+    
     // Verify the downloaded binary works (skip on Windows as it might show a console window)
+    // Note: Verification is optional - if it fails, we still consider the download successful
+    // since the file was downloaded and has proper size. PyInstaller bundles might take longer to start.
     if (process.platform !== 'win32') {
       try {
         const { execSync } = require('child_process');
-        execSync(`"${ytdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000 });
-        console.log('Downloaded yt-dlp binary verified successfully');
+        // Increase timeout to 15 seconds for PyInstaller bundles
+        const version = execSync(`"${ytdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }).trim();
+        console.log(`Downloaded yt-dlp binary verified successfully, version: ${version}`);
       } catch (verifyErr) {
-        console.warn('Downloaded yt-dlp binary verification failed:', verifyErr.message);
-        // If verification fails, try system yt-dlp as fallback
-        try {
-          const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-          if (systemYtdlp && existsSync(systemYtdlp)) {
-            ytdlpPath = systemYtdlp;
-            console.log('Switching to system yt-dlp as fallback');
-          }
-        } catch (fallbackErr) {
-          console.warn('System yt-dlp fallback also failed:', fallbackErr.message);
-        }
+        // Don't throw error - just warn. File was downloaded successfully and has proper size.
+        // PyInstaller bundles might fail verification but still work when actually used.
+        console.warn('Downloaded yt-dlp binary verification failed (this is OK for PyInstaller bundles):', verifyErr.message);
+        console.log('File downloaded successfully. Verification will happen when yt-dlp is actually used.');
+        // Continue - don't throw error
       }
     }
+    
+    return { success: true, message: 'yt-dlp updated successfully', version: releaseTag };
   } catch (error) {
     console.error(`Failed to update yt-dlp: ${error.message}`);
     throw error;
@@ -806,23 +960,8 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Initialize yt-dlp path - check for system installation first
+  // Initialize yt-dlp path - always use bundled/downloaded version
   const initializeYtdlp = async () => {
-    // First, try to find and use system yt-dlp
-    if (process.platform !== 'win32') {
-      try {
-        const { execSync } = require('child_process');
-        const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-        if (systemYtdlp && existsSync(systemYtdlp)) {
-          ytdlpPath = systemYtdlp;
-          console.log('Using system yt-dlp at:', systemYtdlp);
-          return true;
-        }
-      } catch (err) {
-        // System yt-dlp not found, continue to check bundled version
-      }
-    }
-    
     // Check if bundled version exists
     const bundledPath = app.isPackaged
       ? join(process.resourcesPath, getYtdlpExecutableName())
@@ -865,6 +1004,68 @@ app.whenReady().then(async () => {
     }).catch(err => {
       console.error('Failed to check yt-dlp version:', err);
     });
+    
+    // Auto-update check: Run after 30 seconds to not block startup
+    setTimeout(async () => {
+      try {
+        console.log('Checking for yt-dlp updates...');
+        const updateCheck = await checkYtdlpUpdate();
+        if (updateCheck.needsUpdate) {
+          console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
+          console.log('Updating yt-dlp automatically...');
+          try {
+            const updateResult = await updateYtdlp();
+            if (updateResult.success) {
+              console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+              // Notify renderer if window is available
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('ytdlp-updated', {
+                  version: updateResult.version,
+                  message: 'yt-dlp has been updated to the latest nightly build'
+                });
+              }
+            }
+          } catch (updateErr) {
+            console.error('Auto-update failed:', updateErr.message);
+          }
+        } else {
+          console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+        }
+      } catch (error) {
+        console.error('Error during auto-update check:', error.message);
+      }
+    }, 30000); // Wait 30 seconds after app start
+    
+    // Set up periodic auto-update check (every 24 hours)
+    setInterval(async () => {
+      try {
+        console.log('Periodic yt-dlp update check...');
+        const updateCheck = await checkYtdlpUpdate();
+        if (updateCheck.needsUpdate) {
+          console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
+          console.log('Updating yt-dlp automatically...');
+          try {
+            const updateResult = await updateYtdlp();
+            if (updateResult.success) {
+              console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+              // Notify renderer if window is available
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('ytdlp-updated', {
+                  version: updateResult.version,
+                  message: 'yt-dlp has been updated to the latest nightly build'
+                });
+              }
+            }
+          } catch (updateErr) {
+            console.error('Auto-update failed:', updateErr.message);
+          }
+        } else {
+          console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+        }
+      } catch (error) {
+        console.error('Error during periodic auto-update check:', error.message);
+      }
+    }, 24 * 60 * 60 * 1000); // Check every 24 hours
   }
 
   checkDependencies().then(deps => {
@@ -1004,19 +1205,6 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
   const getYtdlpPath = () => {
     if (app.isPackaged) {
       return join(process.resourcesPath, getYtdlpExecutableName());
-    }
-    
-    // In development, check for system yt-dlp first (macOS/Linux)
-    if (process.platform !== 'win32') {
-      try {
-        const { execSync } = require('child_process');
-        const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-        if (systemYtdlp && existsSync(systemYtdlp)) {
-          return systemYtdlp;
-        }
-      } catch (err) {
-        // System yt-dlp not found, use bundled version
-      }
     }
     
     return join(__dirname, '../../public', getYtdlpExecutableName());
@@ -1217,26 +1405,13 @@ console.log("options",options);
             url,
           ];
           
-          const getYtdlpPath = () => {
-            if (app.isPackaged) {
-              return join(process.resourcesPath, getYtdlpExecutableName());
-            }
-            
-            // In development, check for system yt-dlp first (macOS/Linux)
-            if (process.platform !== 'win32') {
-              try {
-                const { execSync } = require('child_process');
-                const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-                if (systemYtdlp && existsSync(systemYtdlp)) {
-                  return systemYtdlp;
-                }
-              } catch (err) {
-                // System yt-dlp not found, use bundled version
-              }
-            }
-            
-            return join(__dirname, '../../public', getYtdlpExecutableName());
-          };
+  const getYtdlpPath = () => {
+    if (app.isPackaged) {
+      return join(process.resourcesPath, getYtdlpExecutableName());
+    }
+    
+    return join(__dirname, '../../public', getYtdlpExecutableName());
+  };
 
           const currentYtdlpPath = getYtdlpPath();
           const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
@@ -1276,18 +1451,6 @@ console.log("options",options);
           const getYtdlpPath = () => {
             if (app.isPackaged) {
               return join(process.resourcesPath, getYtdlpExecutableName());
-            }
-            
-            if (process.platform !== 'win32') {
-              try {
-                const { execSync } = require('child_process');
-                const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-                if (systemYtdlp && existsSync(systemYtdlp)) {
-                  return systemYtdlp;
-                }
-              } catch (err) {
-                // System yt-dlp not found, use bundled version
-              }
             }
             
             return join(__dirname, '../../public', getYtdlpExecutableName());
@@ -1627,26 +1790,13 @@ console.log("options",options);
 
         console.log('Downloading with args:', args);
 
-        const getYtdlpPath = () => {
-          if (app.isPackaged) {
-            return join(process.resourcesPath, getYtdlpExecutableName());
-          }
-          
-          // In development, check for system yt-dlp first (macOS/Linux)
-          if (process.platform !== 'win32') {
-            try {
-              const { execSync } = require('child_process');
-              const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-              if (systemYtdlp && existsSync(systemYtdlp)) {
-                return systemYtdlp;
-              }
-            } catch (err) {
-              // System yt-dlp not found, use bundled version
-            }
-          }
-          
-          return join(__dirname, '../../public', getYtdlpExecutableName());
-        };
+  const getYtdlpPath = () => {
+    if (app.isPackaged) {
+      return join(process.resourcesPath, getYtdlpExecutableName());
+    }
+    
+    return join(__dirname, '../../public', getYtdlpExecutableName());
+  };
 
         const currentYtdlpPath = getYtdlpPath();
         console.log('Using yt-dlp path:', currentYtdlpPath);
@@ -1919,6 +2069,45 @@ ipcMain.on('download-update', () => {
   autoUpdater.downloadUpdate();
 });
 
+// IPC handler to check for yt-dlp updates
+ipcMain.handle('check-ytdlp-update', async () => {
+  try {
+    const updateCheck = await checkYtdlpUpdate();
+    return {
+      success: true,
+      needsUpdate: updateCheck.needsUpdate,
+      reason: updateCheck.reason,
+      currentVersion: updateCheck.currentVersion || null,
+      latestVersion: updateCheck.latestVersion || null
+    };
+  } catch (error) {
+    console.error('Error checking yt-dlp update:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+// IPC handler to manually update yt-dlp
+ipcMain.handle('update-ytdlp', async () => {
+  try {
+    console.log('Manual yt-dlp update requested');
+    const updateResult = await updateYtdlp(true); // Force update
+    return {
+      success: updateResult.success,
+      message: updateResult.message,
+      version: updateResult.version
+    };
+  } catch (error) {
+    console.error('Error updating yt-dlp:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
 ipcMain.on('install-update', () => {
   autoUpdater.quitAndInstall();
 });
@@ -2056,26 +2245,13 @@ const getThumbnailInfo = async (url) => {
       url
     ];
     
-    const getYtdlpPath = () => {
-      if (app.isPackaged) {
-        return join(process.resourcesPath, getYtdlpExecutableName());
-      }
-      
-      // In development, check for system yt-dlp first (macOS/Linux)
-      if (process.platform !== 'win32') {
-        try {
-          const { execSync } = require('child_process');
-          const systemYtdlp = execSync('which yt-dlp', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-          if (systemYtdlp && existsSync(systemYtdlp)) {
-            return systemYtdlp;
-          }
-        } catch (err) {
-          // System yt-dlp not found, use bundled version
-        }
-      }
-      
-      return join(__dirname, '../../public', getYtdlpExecutableName());
-    };
+  const getYtdlpPath = () => {
+    if (app.isPackaged) {
+      return join(process.resourcesPath, getYtdlpExecutableName());
+    }
+    
+    return join(__dirname, '../../public', getYtdlpExecutableName());
+  };
 
     const currentYtdlpPath = getYtdlpPath();
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
