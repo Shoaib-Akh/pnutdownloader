@@ -586,22 +586,30 @@ async function downloadAndExtractFFmpeg() {
   let ffmpegUrl;
   let tempTarPath;
   let ffmpegFileName;
+  let isZip = false;
+  let isTarGz = false;
+  let isTarXz = false;
   
   if (process.platform === 'win32') {
-    ffmpegUrl = 'https://cdn.pnutdownloader.com/ffmpeg.exe.tar.gz';
-    tempTarPath = join(app.getPath('temp'), 'ffmpeg.exe.tar.gz');
+    // Windows: Use GitHub releases for reliable static builds
+    // Using BtbN FFmpeg builds which are reliable and widely used
+    ffmpegUrl = 'https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip';
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg-win.zip');
     ffmpegFileName = 'ffmpeg.exe';
+    isZip = true;
   } else if (process.platform === 'darwin') {
-    // For macOS, download from a source that provides macOS binaries
-    // Using a direct download approach for macOS FFmpeg
-    ffmpegUrl = 'https://evermeet.cx/ffmpeg/ffmpeg-6.1.zip';
-    tempTarPath = join(app.getPath('temp'), 'ffmpeg.zip');
+    // macOS: Use reliable static build source
+    // Using evermeet.cx which provides reliable macOS builds
+    ffmpegUrl = 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip';
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg-mac.zip');
     ffmpegFileName = 'ffmpeg';
+    isZip = true;
   } else {
-    // Linux - download static build
+    // Linux: Use reliable static build
     ffmpegUrl = 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz';
-    tempTarPath = join(app.getPath('temp'), 'ffmpeg.tar.xz');
+    tempTarPath = join(app.getPath('temp'), 'ffmpeg-linux.tar.xz');
     ffmpegFileName = 'ffmpeg';
+    isTarXz = true;
   }
   
   const extractPath = dirname(ffmpegPath);
@@ -619,70 +627,92 @@ async function downloadAndExtractFFmpeg() {
       mkdirSync(extractPath, { recursive: true });
     }
 
+    const { execSync } = require('child_process');
+    
     if (process.platform === 'win32') {
-      console.log('Downloading FFmpeg...');
+      console.log('Downloading FFmpeg for Windows...');
       await downloadFile(ffmpegUrl, tempTarPath);
       console.log('Extracting FFmpeg...');
-      await tar.x({
-        file: tempTarPath,
-        cwd: extractPath,
-        filter: (path) => path.endsWith('ffmpeg.exe')
-      });
-    } else if (process.platform === 'darwin') {
-      // For macOS, try to use system ffmpeg first, then download if needed
-      const { execSync } = require('child_process');
-      let ffmpegFound = false;
       
+      // Extract ZIP file for Windows using PowerShell
+      const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
+      mkdirSync(extractDir, { recursive: true });
+      
+      // Use PowerShell Expand-Archive (built into Windows 10+)
       try {
-        const systemFfmpeg = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
-        if (systemFfmpeg && existsSync(systemFfmpeg)) {
-          // Copy system ffmpeg to our resources
-          await fs.copyFile(systemFfmpeg, ffmpegPath);
-          console.log('Using system FFmpeg');
-          ffmpegFound = true;
-        }
+        const psCommand = `Expand-Archive -Path "${tempTarPath.replace(/\\/g, '/')}" -DestinationPath "${extractDir.replace(/\\/g, '/')}" -Force`;
+        execSync(`powershell -Command "${psCommand}"`, { stdio: 'inherit' });
       } catch (err) {
-        console.log('System FFmpeg not found, will download...');
+        console.error('PowerShell extraction failed, trying alternative method...', err.message);
+        // Alternative: Use tar if available (Windows 10 1903+)
+        try {
+          execSync(`tar -xf "${tempTarPath}" -C "${extractDir}"`, { stdio: 'inherit' });
+        } catch (tarErr) {
+          throw new Error(`Failed to extract FFmpeg: ${err.message}. Please ensure PowerShell or tar is available.`);
+        }
       }
       
-      if (!ffmpegFound) {
-        // System ffmpeg not found, download static binary
-        console.log('Downloading FFmpeg for macOS...');
-        const macFfmpegUrl = 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip';
-        await downloadFile(macFfmpegUrl, tempTarPath);
-        // Extract using unzip command
-        const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
-        mkdirSync(extractDir, { recursive: true });
-        execSync(`unzip -q -o "${tempTarPath}" -d "${extractDir}"`);
-        // Find ffmpeg binary in extracted files
-        const findFfmpeg = async (dir) => {
-          const files = await fs.readdir(dir, { withFileTypes: true });
-          for (const file of files) {
-            const fullPath = join(dir, file.name);
-            if (file.isDirectory()) {
-              const found = await findFfmpeg(fullPath);
-              if (found) return found;
-            } else if (file.name === 'ffmpeg') {
-              return fullPath;
-            }
+      // Find ffmpeg.exe in extracted files
+      const findFfmpeg = async (dir) => {
+        const files = await fs.readdir(dir, { withFileTypes: true });
+        for (const file of files) {
+          const fullPath = join(dir, file.name);
+          if (file.isDirectory()) {
+            const found = await findFfmpeg(fullPath);
+            if (found) return found;
+          } else if (file.name === 'ffmpeg.exe') {
+            return fullPath;
           }
-          return null;
-        };
-        const extractedFfmpeg = await findFfmpeg(extractDir);
-        if (extractedFfmpeg) {
-          await fs.copyFile(extractedFfmpeg, ffmpegPath);
-          // Clean up
-          await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
-        } else {
-          throw new Error('FFmpeg binary not found in extracted archive');
         }
+        return null;
+      };
+      
+      const extractedFfmpeg = await findFfmpeg(extractDir);
+      if (extractedFfmpeg) {
+        await fs.copyFile(extractedFfmpeg, ffmpegPath);
+        // Clean up
+        await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
+      } else {
+        throw new Error('FFmpeg.exe not found in extracted archive');
+      }
+    } else if (process.platform === 'darwin') {
+      // macOS: Always download bundled version (don't use system FFmpeg)
+      console.log('Downloading FFmpeg for macOS...');
+      await downloadFile(ffmpegUrl, tempTarPath);
+      
+      // Extract ZIP file
+      const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
+      mkdirSync(extractDir, { recursive: true });
+      execSync(`unzip -q -o "${tempTarPath}" -d "${extractDir}"`);
+      
+      // Find ffmpeg binary in extracted files
+      const findFfmpeg = async (dir) => {
+        const files = await fs.readdir(dir, { withFileTypes: true });
+        for (const file of files) {
+          const fullPath = join(dir, file.name);
+          if (file.isDirectory()) {
+            const found = await findFfmpeg(fullPath);
+            if (found) return found;
+          } else if (file.name === 'ffmpeg') {
+            return fullPath;
+          }
+        }
+        return null;
+      };
+      
+      const extractedFfmpeg = await findFfmpeg(extractDir);
+      if (extractedFfmpeg) {
+        await fs.copyFile(extractedFfmpeg, ffmpegPath);
+        // Clean up
+        await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
+      } else {
+        throw new Error('FFmpeg binary not found in extracted archive');
       }
     } else {
       // Linux - download and extract tar.xz
       console.log('Downloading FFmpeg for Linux...');
       await downloadFile(ffmpegUrl, tempTarPath);
-      const { execSync } = require('child_process');
-      execSync(`tar -xf ${tempTarPath} -C ${extractPath} --strip-components=1 --wildcards "*/ffmpeg"`);
+      execSync(`tar -xf "${tempTarPath}" -C "${extractPath}" --strip-components=1 --wildcards "*/ffmpeg"`);
       // Find and move ffmpeg to the correct location
       const extractedFiles = await fs.readdir(extractPath);
       const ffmpegFile = extractedFiles.find(f => f === 'ffmpeg');
