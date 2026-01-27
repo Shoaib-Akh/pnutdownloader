@@ -37,7 +37,7 @@ function App() {
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [versionInfo, setVersionInfo] = useState({ yt: '', ffmpeg: '' })
-console.log(versionInfo)
+
   // Save preferences to Firestore when they change
   useEffect(() => {
     const savePreferences = async () => {
@@ -211,80 +211,176 @@ console.log(versionInfo)
       try {
         window.api.trackEvent('feedback_button_clicked')
       } catch (error) {
-        console.error('Failed to track feedback_button_clicked:', error)
+
+  // Initialize user tracking (Realtime Database)
+  initializeUserTracking()
+
+  // Initialize Firestore
+  const initFirestore = async () => {
+    try {
+      const deviceId = getDeviceId()
+      // Initialize Firestore user tracking (may fail due to permissions, that's OK)
+      // Silently handle - function already handles errors internally
+      await initializeUserTrackingFirestore(deviceId)
+      // Initialize Firestore service
+      await initializeFirestore()
+
+      // Load user preferences from Firestore
+      const preferences = await getUserPreferences()
+      if (preferences) {
+        if (preferences.defaultQuality) setQuality(preferences.defaultQuality)
+        if (preferences.defaultFormat) setFormat(preferences.defaultFormat)
+        if (preferences.defaultBitrate) setBitrate(preferences.defaultBitrate)
+        if (preferences.defaultSaveTo) setSaveTo(preferences.defaultSaveTo)
+        if (preferences.defaultDownloadType) setDownloadType(preferences.defaultDownloadType)
       }
+    } catch (error) {
+      console.error('Error initializing Firestore:', error)
+      // App continues to work with localStorage
     }
   }
+  initFirestore()
 
-  if (isLoading) {
-    return (
+  // Cleanup listener on unmount
+  return () => {
+    if (window.api && typeof window.api.removeVideoUrlDetectedListener === 'function') {
+      window.api.removeVideoUrlDetectedListener()
+    }
+  }
+}, [])
+
+const handleInstallUpdate = () => {
+  if (window.api) {
+    try {
+      window.api.trackEvent('update_install_clicked', { version: updateInfo?.version })
+      console.log('Tracked event: update_install_clicked')
+      window.api.installUpdate()
+      setUpdateAvailable(false)
+      setUpdateDownloaded(false)
+      setUpdateInfo(null)
+    } catch (error) {
+      console.error('Failed to track update_install_clicked:', error)
+    }
+  }
+}
+
+const handleFeedbackClick = () => {
+  setFeedbackModalOpen(true)
+  if (window.api) {
+    try {
+      window.api.trackEvent('feedback_button_clicked')
+    } catch (error) {
+      console.error('Failed to track feedback_button_clicked:', error)
+    }
+  }
+}
+
+if (isLoading) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        backgroundColor: '#f0f0f0',
+        flexDirection: 'column',
+      }}
+    >
       <div
         style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          backgroundColor: '#f0f0f0',
-          flexDirection: 'column',
+          fontSize: '24px',
+          marginBottom: '20px',
+          color: '#333',
         }}
       >
+        Initializing Dependencies...
+      </div>
+      
+      {(versionInfo.yt || versionInfo.ffmpeg) && (
         <div
           style={{
-            fontSize: '24px',
+            fontSize: '14px',
             marginBottom: '20px',
-            color: '#333',
+            color: '#666',
+            textAlign: 'center',
+            fontFamily: 'monospace',
           }}
         >
-          Initializing Dependencies...
+          {versionInfo.yt && (
+            <div style={{ marginBottom: '5px' }}>
+              YouTube: {versionInfo.yt}
+            </div>
+          )}
+          {versionInfo.ffmpeg && (
+            <div>
+              FFmpeg: {versionInfo.ffmpeg}
+            </div>
+          )}
         </div>
-        
-        {(versionInfo.yt || versionInfo.ffmpeg) && (
-          <div
-            style={{
-              fontSize: '14px',
-              marginBottom: '20px',
-              color: '#666',
-              textAlign: 'center',
-              fontFamily: 'monospace',
-            }}
-          >
-            {versionInfo.yt && (
-              <div style={{ marginBottom: '5px' }}>
-                YouTube: {versionInfo.yt}
-              </div>
-            )}
-            {versionInfo.ffmpeg && (
-              <div>
-                FFmpeg: {versionInfo.ffmpeg}
-              </div>
-            )}
-          </div>
-        )}
-        
-        <div
-          style={{
-            width: '50px',
-            height: '50px',
-            border: '5px solid #ccc',
-            borderTop: '5px solid #BB4F28',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }}
-        ></div>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    )
+      )}
+      
+      <div
+        style={{
+          width: '50px',
+          height: '50px',
+          border: '5px solid #ccc',
+          borderTop: '5px solid #BB4F28',
+          borderRadius: '50%',
+          animation: 'spin 1s linear infinite',
+        }}
+      ></div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+const feedbackUrl =
+  'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform'
+
+const handleUrlDetectionClose = () => {
+  setUrlDetectionModalOpen(false)
+  setDetectedUrl('')
+  setIsUrlDownloading(false)
+}
+
+const handleUrlDetectionDownload = async () => {
+  if (!detectedUrl || !window.api) return
+
+  const list = JSON.parse(localStorage.getItem('downloadList') || '[]')
+  const isDuplicate = isDuplicateDownload(
+    list,
+    detectedUrl,
+    format,
+    quality,
+    saveTo,
+    downloadType,
+    bitrate
+  )
+  if (isDuplicate) {
+    try {
+      await window.api.showMessageBox({
+        type: 'warning',
+        title: 'Duplicate Download',
+        message:
+          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+      })
+    } catch {
+      alert(
+        'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+      )
+    }
+    return
   }
 
-  const feedbackUrl =
-    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform'
-
-  const handleUrlDetectionClose = () => {
+  setIsUrlDownloading(true)
+  try {
+    setPastLinkUrl(detectedUrl)
     setUrlDetectionModalOpen(false)
     setDetectedUrl('')
     setIsUrlDownloading(false)

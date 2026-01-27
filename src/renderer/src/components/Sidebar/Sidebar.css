@@ -10,7 +10,7 @@
     align-items: center;
     justify-content: flex-start;
     height: 100vh;
-    padding: 24px 0;
+    padding: 14px 0;
     border-right: 1px solid #e2e8f0;
     position: absolute;
     top: 0;
@@ -18,7 +18,7 @@
     box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
 }
  .navbar-logo {
-  max-width: 180px;
+  max-width: 150px;
   height: auto;
   cursor: default;
   filter: drop-shadow(0 4px 8px rgba(187, 79, 40, 0.15));

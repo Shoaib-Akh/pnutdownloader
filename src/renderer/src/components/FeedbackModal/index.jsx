@@ -7,6 +7,7 @@ import './FeedbackModal.css';
 const FeedbackModal = ({ isOpen, onClose }) => {
     const [rating, setRating] = useState(0);
     const [suggestion, setSuggestion] = useState('');
+    const [name, setName] = useState('');
     const [hover, setHover] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [message, setMessage] = useState('');
@@ -25,12 +26,14 @@ const FeedbackModal = ({ isOpen, onClose }) => {
             await saveFeedback({
                 rating,
                 suggestion,
+                name,
                 timestamp: new Date().toISOString()
             });
             setMessage('Thank you for your feedback!');
             setTimeout(() => {
                 setRating(0);
                 setSuggestion('');
+                setName('');
                 setMessage('');
                 setIsSubmitting(false);
                 onClose();
@@ -53,6 +56,14 @@ const FeedbackModal = ({ isOpen, onClose }) => {
                 <p className="feedback-modal-subtitle">
                     Please rate your experience and let us know how we can improve.
                 </p>
+
+                <input
+                    type="text"
+                    className="feedback-name-input"
+                    placeholder="Your name (Optional)"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                />
 
                 <div className="feedback-rating-container">
                     {[...Array(5)].map((star, index) => {

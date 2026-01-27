@@ -209,6 +209,14 @@ function BodySection({
     setDownload(false)
   }, [currentWebViewUrl])
 
+  // Set YouTube as default URL when Browser is clicked
+  useEffect(() => {
+    if (showWebView && !url && !currentWebViewUrl) {
+      setUrl('https://www.youtube.com');
+      setCurrentWebViewUrl('https://www.youtube.com');
+    }
+  }, [showWebView, url, currentWebViewUrl])
+
   const DONATION_URL = "https://ko-fi.com/pnutdownloader'"
 
   const handlePlatformClick = (platformUrl) => {

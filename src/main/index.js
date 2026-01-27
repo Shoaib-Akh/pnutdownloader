@@ -83,6 +83,55 @@ ipcMain.handle('get-app-version', () => {
   return app.getVersion();
 });
 
+// Get yt-dlp version
+ipcMain.handle('getYtVersion', async () => {
+  try {
+    const version = await checkYtdlpVersion();
+    return version;
+  } catch (error) {
+    console.error('Error getting yt-dlp version:', error);
+    return 'Error: ' + error.message;
+  }
+});
+
+// Get FFmpeg version
+ipcMain.handle('getFfmpegVersion', async () => {
+  return new Promise((resolve, reject) => {
+    const { spawn } = require('child_process');
+    const proc = spawn(ffmpegPath, ['-version'], { 
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    
+    let versionOutput = '';
+    let errorOutput = '';
+
+    proc.stdout.on('data', (data) => {
+      versionOutput += data.toString();
+    });
+
+    proc.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    proc.on('error', (err) => {
+      console.error('FFmpeg version check error:', err);
+      resolve('Error: ' + err.message);
+    });
+
+    proc.on('close', (code) => {
+      if (code === 0) {
+        // Extract version from first line
+        const firstLine = versionOutput.split('\n')[0];
+        resolve(firstLine.trim());
+      } else {
+        console.error('FFmpeg version check failed with code:', code);
+        resolve('Error: FFmpeg not available');
+      }
+    });
+  });
+});
+
 // Function to detect if URL is downloadable video URL
 const isDownloadableVideoUrl = (url) => {
   if (!url || typeof url !== 'string') return false;
@@ -760,8 +809,8 @@ function createWindow() {
 
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
-    minWidth: 800,
-    minHeight: 650,
+    minWidth: 1500,
+    minHeight: 850,
     icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {

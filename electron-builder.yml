@@ -3,80 +3,37 @@ publish:
   owner: Shoaib-Akh
   repo: pnutdownloader
 
-# Enable ASAR packing for better size optimization
-asar: true
-
-# File exclusions to reduce size
-files:
-  - "!**/*.map"
-  - "!**/*.d.ts"
-  - "!**/node_modules/**/*.md"
-  - "!**/node_modules/**/*.txt"
-  - "!**/node_modules/**/test"
-  - "!**/node_modules/**/tests"
-  - "!**/node_modules/**/*.test.js"
-  - "!**/node_modules/**/*.spec.js"
-  - "!**/node_modules/**/examples"
-  - "!**/node_modules/**/example"
-  - "!**/.vscode"
-  - "!**/.idea"
-  - "!src/**"
-  - "!**/dist"
-  - "!**/patches"
-  - "!**/scripts"
-  - "!**/resources"
-  - "!**/public"
-  - "!**/.git"
-  - "!**/.github"
-  - "!**/.gitignore"
-  - "!**/.eslintcache"
-  - "!**/electron.vite.config.*.mjs"
-  - "!**/dev-app-update.yml"
-  - "!**/README.md"
-  - "out/**"
-  - "node_modules/**"
-  - "package.json"
-
 win:
   target: nsis
   icon: public/icon.ico
-  # Maximum compression for NSIS installer
-  compression: maximum
-  # Platform-specific extraResources for Windows
-  extraResources:
-    - from: public/yt-dlp.exe
-      to: yt-dlp.exe
-    - from: public/ffmpeg.exe
-      to: ffmpeg.exe
-    - from: public/cookies.txt
-      to: cookies.txt
-    - from: public/all.json
-      to: all.json
+  signing: false
 
 linux:
   target: AppImage
   icon: resources/icon.png
-  # Platform-specific extraResources for Linux
-  extraResources:
-    - from: public/yt-dlp
-      to: yt-dlp
-    - from: public/ffmpeg
-      to: ffmpeg
-    - from: public/cookies.txt
-      to: cookies.txt
-    - from: public/all.json
-      to: all.json
 
 mac:
   target: dmg
   icon: resources/icon.icns
-  # Platform-specific extraResources for macOS
-  extraResources:
-    - from: public/yt-dlp_macos
-      to: yt-dlp_macos
-    - from: public/ffmpeg
-      to: ffmpeg
-    - from: public/cookies.txt
-      to: cookies.txt
-    - from: public/all.json
-      to: all.json
+
+extraResources:
+  - from: public/yt-dlp.exe
+    to: yt-dlp.exe
+  
+  - from: public/yt-dlp_macos
+    to: yt-dlp_macos
+ 
+  - from: public/ffmpeg.exe
+    to: ffmpeg.exe
+    
+  - from: public/ffmpeg
+    to: ffmpeg
+
+  - from: public/cookies.txt
+    to: cookies.txt
+    
+  - from: public/all.json
+    to: all.json
+    
+  - from: public/formats.json
+    to: formats.json

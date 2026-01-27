@@ -24,7 +24,9 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
       playlistTitle,
       forceSingle
     }),
-    getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  getYtVersion: () => ipcRenderer.invoke('getYtVersion'),
+  getFfmpegVersion: () => ipcRenderer.invoke('getFfmpegVersion'),
 
     
     pauseDownload: (downloadId) => ipcRenderer.invoke('pauseDownload', downloadId),
