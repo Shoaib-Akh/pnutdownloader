@@ -89,6 +89,10 @@
         "to": "formats.json"
       },
       {
+        "from": "public/ytdlp_version.txt",
+        "to": "ytdlp_version.txt"
+      },
+      {
         "from": ".env",
         "to": ".env"
       }

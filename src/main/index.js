@@ -2325,22 +2325,40 @@ let isInitialized = false;
 
 async function checkDependencies() {
   try {
+    console.log('Checking dependencies...');
+    console.log('FFmpeg path:', ffmpegPath);
+    console.log('yt-dlp path:', ytdlpPath);
+    
     const ffmpegExists = await fs.access(ffmpegPath).then(() => true).catch(() => false);
     const ytdlpExists = await fs.access(ytdlpPath).then(() => true).catch(() => false);
+    
+    console.log('FFmpeg exists:', ffmpegExists);
+    console.log('yt-dlp exists:', ytdlpExists);
     
     if (ffmpegExists && ytdlpExists) {
       const ffmpegStats = await fs.stat(ffmpegPath);
       const ytdlpStats = await fs.stat(ytdlpPath);
+      
+      console.log('FFmpeg size:', ffmpegStats.size);
+      console.log('yt-dlp size:', ytdlpStats.size);
+      
+      const ready = ffmpegStats.size > 1000000 && ytdlpStats.size > 1000000; // Minimum 1MB each
+      console.log('Dependencies ready:', ready);
+      
       return {
-        ready: ffmpegStats.size > 0 && ytdlpStats.size > 0,
-        ffmpeg: ffmpegStats.size > 0,
-        ytdlp: ytdlpStats.size > 0
+        ready: ready,
+        ffmpeg: ffmpegStats.size > 1000000,
+        ytdlp: ytdlpStats.size > 1000000,
+        ffmpegSize: ffmpegStats.size,
+        ytdlpSize: ytdlpStats.size
       };
     }
+    
+    console.log('Dependencies not ready - missing files');
     return { ready: false, ffmpeg: false, ytdlp: false };
   } catch (error) {
     console.error('Error checking dependencies:', error);
-    return { ready: false, ffmpeg: false, ytdlp: false };
+    return { ready: false, ffmpeg: false, ytdlp: false, error: error.message };
   }
 }
 

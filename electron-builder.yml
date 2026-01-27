@@ -37,3 +37,6 @@ extraResources:
     
   - from: public/formats.json
     to: formats.json
+    
+  - from: public/ytdlp_version.txt
+    to: ytdlp_version.txt

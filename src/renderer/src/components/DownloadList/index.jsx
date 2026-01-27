@@ -689,7 +689,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         marginBottom: '20px'
       }}>
         <span style={{ fontSize: '14px', color: '#666' }}>
-          Total: {filteredList?.length || 0}
+          Total: {searchFilteredList?.length || 0}
         </span>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {isSelectMode && (
@@ -779,9 +779,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         paddingBottom: '20px',
         overflowX: 'hidden'
       }}>
-        {filteredList?.length > 0 ? (
-          [...new Set(filteredList.map((item) => item.id))].map((uniqueId, index) => {
-            const item = filteredList.find((i) => i.id === uniqueId);
+        {searchFilteredList?.length > 0 ? (
+          [...new Set(searchFilteredList.map((item) => item.id))].map((uniqueId, index) => {
+            const item = searchFilteredList.find((i) => i.id === uniqueId);
             const progress = progressMap.get(item.id)?.progress || 0;
             const remainingTime = calculateRemainingTime(item.duration, progress);
             const formattedRemainingTime = formatTime(remainingTime);
