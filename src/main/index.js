@@ -598,9 +598,8 @@ async function downloadAndExtractFFmpeg() {
     ffmpegFileName = 'ffmpeg.exe';
     isZip = true;
   } else if (process.platform === 'darwin') {
-    // macOS: Use reliable static build source
-    // Using evermeet.cx which provides reliable macOS builds
-    ffmpegUrl = 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/zip';
+    // macOS: Use a direct download from evermeet.cx with full URL
+    ffmpegUrl = 'https://evermeet.cx/ffmpeg/ffmpeg-8.0.1.zip';
     tempTarPath = join(app.getPath('temp'), 'ffmpeg-mac.zip');
     ffmpegFileName = 'ffmpeg';
     isZip = true;
@@ -732,8 +731,19 @@ async function downloadAndExtractFFmpeg() {
 
     const stats = await fs.stat(ffmpegPath);
     console.log(`FFmpeg downloaded and extracted successfully. Size: ${stats.size} bytes`);
+    
+    // Verify the downloaded FFmpeg works
+    try {
+      const { execSync } = require('child_process');
+      const version = execSync(`"${ffmpegPath}" -version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 });
+      console.log(`FFmpeg verification successful. Version: ${version.split('\n')[0]}`);
+    } catch (verifyErr) {
+      console.error(`FFmpeg verification failed: ${verifyErr.message}`);
+      throw new Error(`Downloaded FFmpeg binary is not working: ${verifyErr.message}`);
+    }
   } catch (error) {
     console.error(`Failed to download/extract FFmpeg: ${error.message}`);
+    console.error(`Platform: ${process.platform}, FFmpeg path: ${ffmpegPath}`);
     throw error;
   }
 }
@@ -1019,7 +1029,14 @@ app.whenReady().then(async () => {
   const ytdlpInitialized = await initializeYtdlp();
   console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
   
-  downloadAndExtractFFmpeg();
+  try {
+    await downloadAndExtractFFmpeg();
+    console.log('FFmpeg initialization completed successfully');
+  } catch (ffmpegErr) {
+    console.error('FFmpeg initialization failed:', ffmpegErr.message);
+    // Don't crash the app, but log the error for debugging
+    // The app will still work but some features might not
+  }
   
   if (!ytdlpInitialized) {
     console.log('yt-dlp not found or not working, downloading...');

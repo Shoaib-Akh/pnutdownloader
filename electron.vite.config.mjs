@@ -42,22 +42,10 @@ export default defineConfig({
       target: 'chrome120',
       rollupOptions: {
         output: {
+          // Put all node_modules into a single vendor chunk to avoid circular
+          // chunk references (React must be available before other vendor code).
           manualChunks: (id) => {
-            // Split vendor chunks for better caching and size optimization
             if (id.includes('node_modules')) {
-              // React and React DOM should be together
-              if (id.includes('react') || id.includes('react-dom') || id.includes('scheduler')) {
-                return 'react-vendor'
-              }
-              // Firebase is large, keep it separate
-              if (id.includes('firebase') || id.includes('@firebase')) {
-                return 'firebase-vendor'
-              }
-              // Bootstrap and related
-              if (id.includes('bootstrap') || id.includes('react-bootstrap') || id.includes('@popperjs')) {
-                return 'bootstrap-vendor'
-              }
-              // Everything else goes to vendor
               return 'vendor'
             }
           }

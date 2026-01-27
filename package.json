@@ -1,6 +1,6 @@
 {
   "name": "PNUTDownloader",
-  "version": "1.0.46",
+  "version": "1.0.48",
   "description": "Your favorite video downloader",
   "main": "./out/main/index.js",
   "author": "PNUT Downloader",
@@ -39,6 +39,7 @@
     "@electron-toolkit/eslint-config": "^2.0.0",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "asar": "^3.2.0",
     "electron": "^34.2.0",
     "electron-builder": "^25.1.8",
     "electron-packager": "^17.1.2",
@@ -57,7 +58,8 @@
     "asar": true,
     "files": [
       "out/**/*",
-      "dist/**/*",
+      "node_modules/**/*",
+      "package.json",
       "!**/*.map",
       "!**/*.d.ts",
       "!**/node_modules/**/*.md",
@@ -70,7 +72,7 @@
       "!**/node_modules/**/example",
       "!**/.vscode",
       "!**/.idea",
-      "!**/src",
+      "!src/**",
       "!**/electron.vite.config.*.mjs"
     ],
     "win": {
