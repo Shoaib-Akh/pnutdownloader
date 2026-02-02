@@ -1172,14 +1172,22 @@ app.whenReady().then(async () => {
       console.error('Failed to initialize all dependencies');
     }
   });
+
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   electronApp.setAppUserModelId('com.electron');
+  
+  // Force update checks in development
+  if (is.dev) {
+    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.forceDevUpdateConfig = true;
+  }
+  
   autoUpdater.setFeedURL({
     provider: "github",
     owner: "Shoaib-Akh",
     repo: "pnutdownloader",
-    token: import.meta.env.GH_TOKEN,
+    token: process.env.GH_TOKEN,
   });
 
   autoUpdater.checkForUpdates();
@@ -1985,6 +1993,7 @@ console.log("options",options);
           '--ignore-errors',
           '--progress',
           '--extractor-retries', '3',
+          '--js-runtimes', 'node',
         ];
 
         // Add Dailymotion-specific options for better compatibility
