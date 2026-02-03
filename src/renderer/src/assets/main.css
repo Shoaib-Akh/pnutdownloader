@@ -24,4 +24,29 @@ body {
   * {
     scrollbar-width: thin;
     scrollbar-color: #BB4F28 #f1f1f1;
-  }  
+  }
+
+  /* Responsive Layout Styles */
+  @media (max-width: 1200px) {
+    .app-container {
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .app-container {
+      font-size: 13px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .app-container {
+      font-size: 12px;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .app-container {
+      font-size: 11px;
+    }
+  }

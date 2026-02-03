@@ -459,19 +459,27 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         if (!value) return ''
         return value
           .toString()
-          .normalize('NFC')
+          .normalize('NFD') // Decompose characters for better Unicode handling
           .toLowerCase()
-          .replace(/’/g, "'")
-          .replace(/\s+/g, ' ')
+          // Normalize various apostrophe types across languages
+          .replace(/[''‛‹›""「」『』【】〔〕]/g, "'")
+          // Normalize quotes across languages
+          .replace(/["""„""«»‹›]/g, '"')
+          // Replace multiple whitespace characters (including Unicode spaces) with single space
+          .replace(/[\s\u2000-\u200F\u2028-\u202F\u205F\u3000]+/g, ' ')
           .trim()
           // remove common quality/bitrate suffixes used in saved filenames
-          .replace(/[_\-\s]+\d+p(\.[a-z0-9]+)?$/i, '')
-          .replace(/[_\-\s]+\d+k$/i, '')
+          .replace(/[_\-\s]+\d+[pP](\.[a-z0-9]+)?$/i, '')
+          .replace(/[_\-\s]+\d+[kK]$/i, '')
           // remove leftover extension fragments
           .replace(/\.[a-z0-9]{2,5}$/i, '')
-          // normalize punctuation/emoji
-          .replace(/[\|\:]/g, '_')
-          .replace(/[^\p{L}\p{N}._-]/gu, ' ')
+          // normalize punctuation but preserve international characters
+          .replace(/[\|\:\/\\]/g, '_')
+          // Remove combining diacritical marks while preserving base letters
+          .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u20D0-\u20FF]/g, '')
+          // Keep letters, numbers, and common punctuation, replace others with space
+          .replace(/[^\p{L}\p{N}._\-\s'"']/gu, ' ')
+          // Replace multiple spaces with single space and trim
           .replace(/\s+/g, ' ')
           .trim()
       }
@@ -614,12 +622,34 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
   const cleanTitle = (title) => {
     if (!title) return title
     
-    // Remove common quality and format suffixes
+    // Normalize Unicode for better international character handling
     return title
-      .replace(/_\d+p\.\w+$/g, '') // Remove _720p.f140, _1080p.f137, etc.
-      .replace(/_\d+K$/g, '') // Remove _320K, _128K, etc.
-      .replace(/_\w+$/g, '') // Remove other underscore suffixes
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      .normalize('NFD') // Decompose characters for better Unicode handling
+      // Remove common quality and format suffixes (case-insensitive)
+      .replace(/[_\-\s]+\d+[pP](\.[a-zA-Z0-9]+)?$/g, '') // Remove _720p.f140, _1080p.f137, etc.
+      .replace(/[_\-\s]+\d+[kK]$/g, '') // Remove _320K, _128K, etc.
+      .replace(/[_\-\s]+\d+[xX]$/g, '') // Remove _1920x1080, etc.
+      // Remove various file extension patterns
+      .replace(/[_\-\s]+\.[a-zA-Z0-9]{2,5}$/g, '') // Remove ._mp4, ._webm, etc.
+      // Remove common technical suffixes
+      .replace(/[_\-\s]+(HD|4K|8K|240p|360p|480p|720p|1080p|1440p|2160p)$/gi, '')
+      .replace(/[_\-\s]+(60fps|30fps|24fps)$/gi, '')
+      .replace(/[_\-\s]+(h264|h265|vp9|av1)$/gi, '')
+      // Remove underscore and dash suffixes
+      .replace(/[_\-\s]+\w+$/g, '') // Remove other underscore/dash suffixes
+      // Remove combining diacritical marks while preserving base letters
+      .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u20D0-\u20FF]/g, '')
+      // Normalize various punctuation and separators across languages
+      .replace(/[''‛‹›""「」『』【】〔〕]/g, "'") // Normalize apostrophes
+      .replace(/["""„""«»‹›]/g, '"') // Normalize quotes
+      .replace(/[\|\:\/\\]/g, '_') // Normalize separators
+      // Replace multiple whitespace characters (including Unicode spaces) with single space
+      .replace(/[\s\u2000-\u200F\u2028-\u202F\u205F\u3000]+/g, ' ')
+      // Remove unwanted characters but keep international letters, numbers, and common punctuation
+      .replace(/[^\p{L}\p{N}._\-\s'"']/gu, ' ')
+      // Final cleanup
+      .replace(/\s+/g, ' ') // Normalize whitespace again
+      .replace(/^[._\-\s]+|[._\-\s]+$/g, '') // Remove leading/trailing punctuation
       .trim()
   }
 
@@ -782,7 +812,12 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         {searchFilteredList?.length > 0 ? (
           [...new Set(searchFilteredList.map((item) => item.id))].map((uniqueId, index) => {
             const item = searchFilteredList.find((i) => i.id === uniqueId);
+            console.log(item)
+
             const progress = progressMap.get(item.id)?.progress || 0;
+            const speed = progressMap.get(item.id)?.speed || 'Unknown';
+            const fileSize = progressMap.get(item.id)?.fileSize || 'Unknown';
+            const eta = progressMap.get(item.id)?.eta || 'Unknown';
             const remainingTime = calculateRemainingTime(item.duration, progress);
             const formattedRemainingTime = formatTime(remainingTime);
             const duration = formatTime(convertISODurationToSeconds(item.duration));
@@ -1024,7 +1059,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
                     {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
                       <Skeleton width={300} />
                     ) : (
-                      cleanTitle(item.title) || 'Untitled'
+                      cleanTitle(item.title || item.filename) || 'Untitled'
                     )}
                   </h3>
 
@@ -1131,6 +1166,19 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
                           now={progress || 0}
                           style={{ height: '5px' }}
                         />
+                        {/* Download Speed Info */}
+                        <div style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          marginTop: '6px',
+                          fontSize: '11px',
+                          color: '#666'
+                        }}>
+                          <span>Speed: {speed}</span>
+                          <span>Size: {fileSize}</span>
+                          <span>ETA: {eta}</span>
+                        </div>
                       </div>
                     )}
                   </div>

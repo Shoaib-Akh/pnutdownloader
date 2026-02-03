@@ -121,7 +121,9 @@ console.log(versionInfo)
 
           if (window.api.onUpdateDownloadedProgress) {
             window.api.onUpdateDownloadedProgress((progress) => {
-              setDownloadProgress(progress.percent)
+              console.log('Update progress received:', progress)
+              console.log('Progress percent:', progress.percent)
+              setDownloadProgress(progress.percent || 0)
             })
           }
 

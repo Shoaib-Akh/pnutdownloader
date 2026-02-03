@@ -247,9 +247,8 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   };
 
   return (
-    <nav className="navbar-modern">
+    <nav className="navbar-modern" role="navigation" aria-label="Main navigation">
       {/* Logo on Left */}
-     
 
       {/* Input Group in Center */}
       <div className="navbar-input-group">
@@ -257,8 +256,10 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
         <button 
           className="navbar-paste-btn"
           onClick={handlePasteClick}
+          aria-label="Paste URL from clipboard"
+          title="Paste URL from clipboard"
         >
-          <FaPaste /> <span>Paste</span>
+          <FaPaste /> <span className="btn-text">Paste</span>
         </button>
 
         {/* Input Field */}
@@ -268,20 +269,25 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           value={urlInput}
           onChange={handleInputChange}
           onKeyPress={handleInputKeyPress}
-          placeholder="Paste the video URL and choose the format to convert"
+          placeholder="Paste the video URL"
+          aria-label="Video URL input"
+          autoComplete="off"
+          spellCheck="false"
         />
 
         {/* Download Button */}
         <button
           className="navbar-download-btn"
           onClick={handleDownloadButtonClick}
+          aria-label="Download video"
+          title="Download video"
         >
-          <FaDownload /> <span>Download</span>
+          <FaDownload /> <span className="btn-text">Download</span>
         </button>
       </div>
 
       {/* Secondary Controls on Right */}
-      <div className="navbar-controls">
+      <div className="navbar-controls" role="group" aria-label="Download options">
         <CustomDropdown
           label="Download"
           options={Object.keys(formatOptions)}

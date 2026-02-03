@@ -809,8 +809,8 @@ function createWindow() {
 
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
-    minWidth: 1500,
-    minHeight: 850,
+    minWidth: 1150,
+    minHeight: 750,
     icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {
@@ -1456,6 +1456,7 @@ ipcMain.handle('fetch-playlist-entries', async (event, url) => {
       '--cookies', cookiesPath,
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--extractor-retries', '3',
+      '--js-runtimes', 'node',
       url,
     ]
 
@@ -1619,6 +1620,7 @@ console.log("options",options);
             shouldDownloadPlaylist ? '--get-filename' : '--get-title',
             '-o', shouldDownloadPlaylist ? '%(playlist_title)s' : '%(title)s',
             shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist',
+            '--js-runtimes', 'node',
             url,
           ];
           
@@ -1680,6 +1682,7 @@ console.log("options",options);
             '--cookies', cookiesPath,
             '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             '--extractor-retries', '3',
+            '--js-runtimes', 'node',
             url
           ];
 
@@ -2054,6 +2057,7 @@ console.log("options",options);
 
         downloadProcess.stderr.on('data', (data) => {
           const errorMessage = data.toString().trim();
+          console.error(`[${downloadId}] yt-dlp stderr:`, errorMessage);
           
           // Check if this is a Twitch authentication error
           const isTwitchError = errorMessage.includes('[twitch]') && (
@@ -2070,20 +2074,73 @@ console.log("options",options);
             errorMessage.includes('Failed to download m3u8')
           );
           
+          // Check for YouTube-specific errors
+          const isYouTubeUnavailable = errorMessage.includes('[youtube]') && (
+            errorMessage.includes('Video unavailable') ||
+            errorMessage.includes('This video is not available') ||
+            errorMessage.includes('private video') ||
+            errorMessage.includes('members-only') ||
+            errorMessage.includes('age-restricted') ||
+            errorMessage.includes('sign in to view')
+          );
+          
+          // Check for other common errors
+          const isGeoBlocked = errorMessage.includes('geo') || errorMessage.includes('region') || errorMessage.includes('country') || errorMessage.includes('not available in your country');
+          const isPrivateVideo = errorMessage.includes('private') || errorMessage.includes('members-only');
+          const isNotFoundError = errorMessage.includes('not found') || errorMessage.includes('404');
+          const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
+          
           if (isTwitchError) {
             event.sender.send('download-progress', { 
               downloadId,
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
-              isAuthError: true
+              isAuthError: true,
+              details: errorMessage
             });
           } else if (isDailymotionError) {
             event.sender.send('download-progress', { 
               downloadId,
               error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
-              isAuthError: true
+              isAuthError: true,
+              details: errorMessage
+            });
+          } else if (isYouTubeUnavailable) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'This YouTube video is unavailable. It may be private, deleted, age-restricted, or geo-blocked.',
+              isAuthError: true,
+              details: errorMessage
+            });
+          } else if (isGeoBlocked) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'This video is geo-blocked and not available in your region.',
+              details: errorMessage
+            });
+          } else if (isPrivateVideo) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'This video is private or requires membership to access.',
+              details: errorMessage
+            });
+          } else if (isNotFoundError) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'Video not found. The URL may be incorrect or the video may have been removed.',
+              details: errorMessage
+            });
+          } else if (isNetworkError) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'Network error occurred. Please check your internet connection and try again.',
+              details: errorMessage
             });
           } else {
-            event.sender.send('download-progress', { downloadId, error: errorMessage });
+            event.sender.send('download-progress', { 
+              downloadId, 
+              error: errorMessage,
+              details: errorMessage
+            });
           }
         });
 
@@ -2095,8 +2152,39 @@ console.log("options",options);
             event.sender.send('download-progress', { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
             resolve();
           } else {
-            event.sender.send('download-progress', { downloadId, error: `Download failed with code ${code}` });
-            reject(new Error(`Download failed with code ${code}`));
+            console.error(`[${downloadId}] Download process exited with code ${code}`);
+            // Provide more specific error messages based on common exit codes
+            let errorMessage = `Download failed with code ${code}`;
+            let errorDetails = '';
+            
+            switch (code) {
+              case 1:
+                errorMessage = 'Download failed - General error';
+                errorDetails = 'This could be due to network issues, invalid URL, or video not available.';
+                break;
+              case 2:
+                errorMessage = 'Download failed - No video formats found';
+                errorDetails = 'The video may not be available in the requested format or quality.';
+                break;
+              case 3:
+                errorMessage = 'Download failed - Network error';
+                errorDetails = 'Check your internet connection and try again.';
+                break;
+              case 4:
+                errorMessage = 'Download failed - Authentication required';
+                errorDetails = 'This video may require login or cookies to access.';
+                break;
+              default:
+                errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+            }
+            
+            event.sender.send('download-progress', { 
+              downloadId, 
+              error: errorMessage,
+              details: errorDetails,
+              exitCode: code
+            });
+            reject(new Error(`${errorMessage}: ${errorDetails}`));
           }
         });
 
@@ -2478,6 +2566,7 @@ const getThumbnailInfo = async (url) => {
       '--get-thumbnail',
       '--no-playlist',
       '--extractor-retries', '3',
+      '--js-runtimes', 'node',
       url
     ];
     

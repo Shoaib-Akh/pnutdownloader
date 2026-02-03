@@ -1,9 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvailable, downloadProgress }) {
   console.log("downloadProgress", downloadProgress);
   console.log("updateInfo", updateInfo);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [testProgress, setTestProgress] = useState(0);
+
+  // Test progress simulation
+  useEffect(() => {
+    if (isDownloading && !downloadProgress) {
+      const interval = setInterval(() => {
+        setTestProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(interval);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, [isDownloading, downloadProgress]);
+
+  const displayProgress = downloadProgress || testProgress;
 
   // Loader component
   const DownloadLoader = () => (
@@ -11,9 +30,21 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
       <div className="spinner-border text-primary" style={{ width: '3rem', height: '3rem' }} role="status">
         <span className="visually-hidden">Loading...</span>
       </div>
-      {/* <div className="mt-3 text-muted">
-        Downloading: {Math.round(downloadProgress)}%
-      </div> */}
+      <div className="mt-3 text-muted">
+        Downloading: {Math.round(displayProgress)}%
+      </div>
+      <div className="mt-2">
+        <div className="progress" style={{ height: '8px' }}>
+          <div 
+            className="progress-bar" 
+            role="progressbar" 
+            style={{ 
+              width: `${displayProgress}%`,
+              backgroundColor: '#BB4F28'
+            }}
+          ></div>
+        </div>
+      </div>
       <style jsx>{`
         .loader-container {
           display: flex;
@@ -37,6 +68,11 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
   const handleDownload = () => {
     setIsDownloading(true);
     window.api.downloadUpdate();
+    // Test progress manually
+    setTimeout(() => {
+      console.log('Testing progress manually');
+      // This will help us see if UI is working
+    }, 2000);
   };
 
   return (

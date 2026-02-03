@@ -1,6 +1,6 @@
 {
   "name": "PNUTDownloader",
-  "version": "1.0.45",
+  "version": "1.0.34",
   "description": "Your favorite video downloader",
   "main": "./out/main/index.js",
   "author": "PNUT Downloader",
