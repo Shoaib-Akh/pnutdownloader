@@ -12,7 +12,8 @@ import {
   orderBy,
   limit,
   serverTimestamp,
-  Timestamp
+  Timestamp,
+  increment
 } from 'firebase/firestore'
 import { firestore } from '../firebase'
 import { getDeviceId } from './userTracking'
@@ -149,13 +150,18 @@ class FirestoreService {
       // Try to save to Firestore if online
       if (await this.isFirestoreAvailable()) {
         try {
-          const downloadRef = doc(firestore, 'downloads', downloadData.id)
-          await setDoc(downloadRef, {
-            ...downloadData,
+          const userRef = doc(firestore, 'users', this.deviceId)
+          const platform = downloadData.platform || 'Unknown'
+          
+          await setDoc(userRef, {
+            totalDownloads: increment(1),
+            [`platforms.${platform}`]: increment(1),
+            lastDownloadAt: serverTimestamp(),
             deviceId: this.deviceId,
-            downloadDate: downloadData.downloadDate || serverTimestamp(),
             updatedAt: serverTimestamp()
           }, { merge: true })
+          
+          console.log(`✅ Download count updated in Firestore for platform: ${platform}`)
         } catch (firestoreError) {
           // Handle permissions error silently - data is already in localStorage
           if (firestoreError.code === 'permission-denied') {
@@ -303,21 +309,10 @@ class FirestoreService {
         return
       }
 
-      // Sync downloads
-      const downloads = this.getDownloadsFromLocalStorage()
-      const syncPromises = downloads.map(download => {
-        const downloadRef = doc(firestore, 'downloads', download.id)
-        return setDoc(downloadRef, {
-          ...download,
-          deviceId: this.deviceId,
-          downloadDate: download.downloadDate || serverTimestamp(),
-          updatedAt: serverTimestamp()
-        }, { merge: true })
-      })
-
-      await Promise.all(syncPromises)
+      // Note: We no longer sync full download history to Firestore 
+      // to reduce database burden and cost.
       localStorage.setItem(STORAGE_KEY_LAST_SYNC, Date.now().toString())
-      console.log('✅ Synced localStorage to Firestore')
+      console.log('✅ Sync check completed')
     } catch (error) {
       console.error('Error syncing to Firestore:', error)
     } finally {
@@ -403,6 +398,37 @@ class FirestoreService {
       throw error
     }
   }
+
+  /**
+   * Clear all documents from the legacy 'downloads' collection
+   * WARNING: This deletes data for ALL users in that collection
+   */
+  async clearLegacyDownloads() {
+    try {
+      if (!(await this.isFirestoreAvailable())) return;
+      
+      const downloadsRef = collection(firestore, 'downloads')
+      const querySnapshot = await getDocs(query(downloadsRef, limit(500))) // Process in batches to avoid timeout
+      
+      if (querySnapshot.empty) {
+        console.log('No legacy downloads to clear.')
+        return
+      }
+
+      const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref))
+      await Promise.all(deletePromises)
+      
+      console.log(`Successfully cleared ${querySnapshot.size} legacy documents.`)
+      
+      // If there's more, the user can run this again or we could recurse, 
+      // but a small batch is safer for a one-off UI trigger.
+      if (querySnapshot.size === 500) {
+        console.warn('There might be more records. Run cleanup again if needed.')
+      }
+    } catch (error) {
+      console.error('Error clearing legacy downloads:', error)
+    }
+  }
 }
 
 // Export singleton instance
@@ -421,3 +447,4 @@ export const initializeFirestore = () => firestoreService.initialize()
 export const syncToFirestore = () => firestoreService.syncLocalStorageToFirestore()
 export const saveDownloadError = (downloadData, errorMessage) => firestoreService.saveDownloadError(downloadData, errorMessage)
 export const saveFeedback = (feedbackData) => firestoreService.saveFeedback(feedbackData)
+export const clearLegacyDownloads = () => firestoreService.clearLegacyDownloads()

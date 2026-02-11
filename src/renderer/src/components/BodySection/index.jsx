@@ -525,6 +525,7 @@ function BodySection({
       isCompleted: false,
       isFailed: false,
       isPlaylist: videoInfo?.isPlaylist || false,
+      platform: videoInfo?.platform || detectPlatform(url),
       currentItem: 0
     }
 
@@ -564,6 +565,7 @@ function BodySection({
         isCompleted: false,
         isFailed: false,
         isPlaylist: false,
+        platform: PLATFORMS.YOUTUBE, // selectedVideos in this context are YouTube-only
         currentItem: 0,
         forceSingle: true,
       }
@@ -773,12 +775,12 @@ function BodySection({
             });
             localStorage.setItem('downloadList', JSON.stringify(stored));
             saveDownload(stored[itemIdx])
-            
+
             // Increment download count and check if we should show donation modal
             const newCount = downloadCount + 1;
             setDownloadCount(newCount);
             localStorage.setItem('downloadCount', newCount.toString());
-            
+
             // Show donation modal every 2 downloads
             if (newCount % 2 === 0) {
               setShowDonationModal(true)
@@ -807,7 +809,7 @@ function BodySection({
           const newCount = downloadCount + 1;
           setDownloadCount(newCount);
           localStorage.setItem('downloadCount', newCount.toString());
-          
+
           // Show donation modal every 2 downloads
           if (newCount % 2 === 0) {
             setShowDonationModal(true)
@@ -862,12 +864,12 @@ function BodySection({
 
         localStorage.setItem('downloadList', JSON.stringify(storedDownloads));
         saveDownload(storedDownloads[completedIndex])
-        
+
         // Increment download count and check if we should show donation modal
         const newCount = downloadCount + 1;
         setDownloadCount(newCount);
         localStorage.setItem('downloadCount', newCount.toString());
-        
+
         // Show donation modal every 2 downloads
         if (newCount % 2 === 0) {
           setShowDonationModal(true)

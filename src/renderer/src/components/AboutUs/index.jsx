@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react'
 import Logo from '../../assets/Images/logoB.png'
 import UpdateNotification from '../UpdateNotification' // adjust path if needed
 import '../common.css'
-import { FaRocket, FaUsers, FaHeart, FaEnvelope, FaShieldAlt, FaFileContract, FaReddit, FaFacebook } from 'react-icons/fa'
+import { FaRocket, FaUsers, FaHeart, FaEnvelope, FaShieldAlt, FaFileContract, FaReddit, FaFacebook, FaTrash } from 'react-icons/fa'
+import { clearLegacyDownloads } from '../../utils/firestoreService'
 
 function AboutUs() {
   const [appVersion, setAppVersion] = useState('')
@@ -44,9 +45,16 @@ function AboutUs() {
     }
   }
 
+  const handleCleanupLegacyData = async () => {
+    if (confirm('Are you sure you want to clear ALL legacy download data from Firestore? This cannot be undone.')) {
+      await clearLegacyDownloads()
+      alert('Legacy data cleanup triggered. Check console for results.')
+    }
+  }
+
   return (
     <section
-className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-between justify-content-lg-evenly"
+      className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-between justify-content-lg-evenly"
       style={{
         width: '100%',
         height: '100vh',
@@ -54,7 +62,7 @@ className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-betw
         // Ensure the section takes full height and uses Flexbox
         display: 'flex',
         flexDirection: 'column',
-        
+
       }}
     >
       {/* Show update pop-up if update is available */}
@@ -75,44 +83,44 @@ className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-betw
           About PNUT Downloader
         </h1>
         <h4 className="lead text-muted col-md-8 mx-auto mt-3" style={{ fontSize: 18, lineHeight: 1.6 }}>
-          We're passionate about making media downloading simple, fast, and reliable for everyone. 
+          We're passionate about making media downloading simple, fast, and reliable for everyone.
           Join thousands of users who trust PNUT Downloader for their media needs.
         </h4>
       </div>
 
-        <div className="row g-4">
-          <div className="col-md-6 mt-lg-5">
-            <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', }}>
-              <div className="card-body p-4">
-                <div className="mb-3">
-                  <FaRocket style={{ fontSize: '2rem', color: '#BB4F28' }} />
-                </div>
-                <h2 className="h4 fw-semibold text-dark mb-3">Our Mission</h2>
-                <p className="text-muted" style={{ lineHeight: 1.7 }}>
-                  At PNUT Downloader, we strive to empower users by providing a seamless experience
-                  to access and manage audio, video, and playlist content. Our goal is to simplify
-                  the downloading process while ensuring quality and reliability.
-                </p>
+      <div className="row g-4">
+        <div className="col-md-6 mt-lg-5">
+          <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', }}>
+            <div className="card-body p-4">
+              <div className="mb-3">
+                <FaRocket style={{ fontSize: '2rem', color: '#BB4F28' }} />
               </div>
-            </div>
-          </div>
-
-          <div className="col-md-6 mt-lg-5">
-            <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-              <div className="card-body p-4">
-                <div className="mb-3">
-                  <FaUsers style={{ fontSize: '2rem', color: '#BB4F28' }} />
-                </div>
-                <h2 className="h4 fw-semibold text-dark mb-3">Who We Are</h2>
-                <p className="text-muted" style={{ lineHeight: 1.7 }}>
-                  We are a dedicated team of developers and designers committed to creating
-                  innovative tools for media enthusiasts. Our focus is on user satisfaction and
-                  cutting-edge technology.
-                </p>
-              </div>
+              <h2 className="h4 fw-semibold text-dark mb-3">Our Mission</h2>
+              <p className="text-muted" style={{ lineHeight: 1.7 }}>
+                At PNUT Downloader, we strive to empower users by providing a seamless experience
+                to access and manage audio, video, and playlist content. Our goal is to simplify
+                the downloading process while ensuring quality and reliability.
+              </p>
             </div>
           </div>
         </div>
+
+        <div className="col-md-6 mt-lg-5">
+          <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
+            <div className="card-body p-4">
+              <div className="mb-3">
+                <FaUsers style={{ fontSize: '2rem', color: '#BB4F28' }} />
+              </div>
+              <h2 className="h4 fw-semibold text-dark mb-3">Who We Are</h2>
+              <p className="text-muted" style={{ lineHeight: 1.7 }}>
+                We are a dedicated team of developers and designers committed to creating
+                innovative tools for media enthusiasts. Our focus is on user satisfaction and
+                cutting-edge technology.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div className="mt-lg-4 mt-1 row align-items-center">
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center">
@@ -123,7 +131,7 @@ className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-betw
           <h3 className="mb-3" style={{ fontSize: 16, color: '#BB4F28' }}>
             Current Version: <b>{appVersion}</b>
           </h3>
-          
+
           <div className="d-flex flex-column gap-2 mb-3 align-items-center">
             <button
               className="btn px-3"
@@ -140,7 +148,7 @@ className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-betw
             >
               Check for Update
             </button>
-            
+
             <button
               className="btn px-3"
               style={{ background: '#ff4500', border: 'none', fontSize: 15, width: 250, borderRadius: '10px', boxShadow: '0 4px 12px rgba(255, 69, 0, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
@@ -191,6 +199,23 @@ className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-betw
             >
               <FaFacebook className="me-2" />
               Follow on Facebook
+            </button>
+
+            <button
+              className="btn px-3 mt-3"
+              style={{ background: '#dc3545', border: 'none', fontSize: 13, width: 250, borderRadius: '10px', boxShadow: '0 4px 12px rgba(220, 53, 69, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 20px rgba(220, 53, 69, 0.35)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.25)';
+              }}
+              onClick={handleCleanupLegacyData}
+            >
+              <FaTrash className="me-2" />
+              Cleanup Legacy DB Data
             </button>
           </div>
         </div>

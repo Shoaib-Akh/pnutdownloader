@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DB Dashboard - Download Errors</title>
+  <link rel="stylesheet" href="./db-dashboard.css" />
+</head>
+<body>
+  <header>
+    <h1>Download Errors Dashboard</h1>
+    <p class="subtitle">Shows total errors and recent error entries from Firestore collection <code>download_errors</code>.</p>
+  </header>
+
+  <main>
+    <nav class="tabs">
+      <button class="tab active" data-target="errorsSection">Errors</button>
+      <button class="tab" data-target="downloadsSection">Downloads</button>
+      <button class="tab" data-target="usersSection">Users</button>
+    </nav>
+
+    <section class="cards" id="errorsSection">
+      <div class="card">
+        <h2 id="errorCount">--</h2>
+        <p>Total download errors</p>
+      </div>
+      <div class="card small">
+        <h3>Last sync</h3>
+        <p id="lastSync">--</p>
+      </div>
+    </section>
+    <section class="list" id="errorsListSection">
+      <h2>Recent errors</h2>
+      <div class="inline-form">
+        <input id="localErrorTitle" placeholder="Title" />
+        <input id="localErrorUrl" placeholder="URL (optional)" />
+        <input id="localErrorPlatform" placeholder="Platform (optional)" />
+        <input id="localErrorMsg" placeholder="Error message" />
+        <button id="addLocalErrorBtn" class="btn">Add error</button>
+      </div>
+      <div id="loading">Loading...</div>
+      <table id="errorsTable" class="hidden">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Title</th>
+            <th>URL</th>
+            <th>Error</th>
+            <th>Platform</th>
+          </tr>
+        </thead>
+        <tbody id="errorsBody"></tbody>
+      </table>
+      <div class="table-controls">
+        <button id="loadMoreErrorsBtn" class="load-more">Load more errors</button>
+      </div>
+    </section>
+
+    <!-- Downloads section -->
+    <section class="cards hidden" id="downloadsSection">
+      <div class="card">
+        <h2 id="downloadsCount">--</h2>
+        <p>Total downloads</p>
+      </div>
+      <div class="card small">
+        <h3>Last check</h3>
+        <p id="downloadsLastCheck">--</p>
+      </div>
+    </section>
+
+    <section class="list hidden" id="downloadsListSection">
+      <h2>Recent downloads</h2>
+      <div id="downloadsLoading">Loading...</div>
+      <table id="downloadsTable" class="hidden">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Title</th>
+            <th>URL</th>
+            <th>Device</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="downloadsBody"></tbody>
+      </table>
+      <div class="table-controls">
+        <button id="loadMoreDownloadsBtn" class="load-more">Load more downloads</button>
+      </div>
+    </section>
+
+    <!-- Users section (hidden by default) -->
+    <section class="cards hidden" id="usersSection">
+      <div class="card">
+        <h2 id="userCount">--</h2>
+        <p>Total users</p>
+      </div>
+      <div class="card">
+        <h2 id="usersWithDownloadsCount">--</h2>
+        <p>Users with downloads</p>
+      </div>
+      <div class="card small">
+        <h3>Last check</h3>
+        <p id="usersLastCheck">--</p>
+      </div>
+    </section>
+
+    <section class="list hidden" id="usersListSection">
+      <h2>Recent users</h2>
+      <div class="inline-form">
+        <input id="localUserId" placeholder="User / Device ID" />
+        <input id="localUserName" placeholder="Name or email (optional)" />
+        <button id="addLocalUserBtn" class="btn">Add user</button>
+      </div>
+      <div id="usersLoading">Loading...</div>
+      <table id="usersTable" class="hidden">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Email / Name</th>
+            <th>Meta</th>
+          </tr>
+        </thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+      <div class="table-controls">
+        <button id="loadMoreUsersBtn" class="load-more">Load more users</button>
+      </div>
+    </section>
+
+    <footer>
+      <p>Note: This page uses the Firebase Web SDK and the project config from the app. If you see permission errors, check Firestore rules.</p>
+    </footer>
+  </main>
+
+  <script type="module" src="./db-dashboard.js"></script>
+</body>
+</html>
