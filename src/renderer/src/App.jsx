@@ -240,28 +240,7 @@ function App() {
           Initializing Dependencies...
         </div>
 
-        {(versionInfo.yt || versionInfo.ffmpeg) && (
-          <div
-            style={{
-              fontSize: '14px',
-              marginBottom: '20px',
-              color: '#666',
-              textAlign: 'center',
-              fontFamily: 'monospace',
-            }}
-          >
-            {versionInfo.yt && (
-              <div style={{ marginBottom: '5px' }}>
-                YouTube: {versionInfo.yt}
-              </div>
-            )}
-            {versionInfo.ffmpeg && (
-              <div>
-                FFmpeg: {versionInfo.ffmpeg}
-              </div>
-            )}
-          </div>
-        )}
+    
 
         <div
           style={{

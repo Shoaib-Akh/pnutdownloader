@@ -230,22 +230,7 @@ function AboutUs() {
               Follow on Facebook
             </button>
 
-            <button
-              className="btn px-3 mt-3"
-              style={{ background: '#dc3545', border: 'none', fontSize: 13, width: 250, borderRadius: '10px', boxShadow: '0 4px 12px rgba(220, 53, 69, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(220, 53, 69, 0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(220, 53, 69, 0.25)';
-              }}
-              onClick={handleCleanupLegacyData}
-            >
-              <FaTrash className="me-2" />
-              Cleanup Legacy DB Data
-            </button>
+          
           </div>
         </div>
 
