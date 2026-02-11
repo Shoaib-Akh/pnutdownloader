@@ -37,7 +37,7 @@ function App() {
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [versionInfo, setVersionInfo] = useState({ yt: '', ffmpeg: '' })
-console.log(versionInfo)
+  console.log(versionInfo)
   // Save preferences to Firestore when they change
   useEffect(() => {
     const savePreferences = async () => {
@@ -74,7 +74,7 @@ console.log(versionInfo)
           const checkDependencies = async () => {
             try {
               const status = await window.api.checkDependencies()
-              
+
               // Get version information
               try {
                 const ytVersion = await window.api.getYtVersion()
@@ -85,11 +85,11 @@ console.log(versionInfo)
               } catch (versionError) {
                 console.error('Error getting versions:', versionError)
               }
-              
+
               if (status.ready) {
                 setIsLoading(false)
               } else {
-                setTimeout(checkDependencies, 20000)
+                setTimeout(checkDependencies, 2000)
               }
             } catch (error) {
               console.error('Dependency check error:', error)
@@ -239,7 +239,7 @@ console.log(versionInfo)
         >
           Initializing Dependencies...
         </div>
-        
+
         {(versionInfo.yt || versionInfo.ffmpeg) && (
           <div
             style={{
@@ -262,7 +262,7 @@ console.log(versionInfo)
             )}
           </div>
         )}
-        
+
         <div
           style={{
             width: '50px',

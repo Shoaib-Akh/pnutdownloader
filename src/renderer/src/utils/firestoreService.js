@@ -150,7 +150,7 @@ class FirestoreService {
       // Try to save to Firestore if online
       if (await this.isFirestoreAvailable()) {
         try {
-          const userRef = doc(firestore, 'users', this.deviceId)
+          const userRef = doc(firestore, 'user_stats', this.deviceId)
           const platform = downloadData.platform || 'Unknown'
           
           await setDoc(userRef, {
@@ -348,7 +348,6 @@ class FirestoreService {
       if (await this.isFirestoreAvailable()) {
         try {
           // Create a new document in 'download_errors' collection
-          // We use addDoc to let Firestore generate the ID, or we could use the download ID if valid
           await addDoc(collection(firestore, 'download_errors'), {
             downloadId: downloadData.id || 'unknown',
             title: downloadData.title || 'Unknown',
@@ -360,7 +359,15 @@ class FirestoreService {
             platform: downloadData.platform || 'Unknown',
             downloadType: downloadData.downloadType || 'Unknown'
           })
-          console.log('Error logged to Firestore')
+          
+          // Increment error count in user_stats
+          const userRef = doc(firestore, 'user_stats', this.deviceId)
+          await setDoc(userRef, {
+            errorCount: increment(1),
+            updatedAt: serverTimestamp()
+          }, { merge: true })
+          
+          console.log('Error logged to Firestore and error count incremented')
         } catch (firestoreError) {
           console.error('Failed to log error to Firestore:', firestoreError)
         }
@@ -429,6 +436,29 @@ class FirestoreService {
       console.error('Error clearing legacy downloads:', error)
     }
   }
+
+  /**
+   * Get user statistics from Firestore
+   */
+  async getUserStats() {
+    try {
+      if (!(await this.isFirestoreAvailable())) {
+        return null
+      }
+
+      const userRef = doc(firestore, 'user_stats', this.deviceId)
+      const userSnap = await getDoc(userRef)
+      
+      if (userSnap.exists()) {
+        return userSnap.data()
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error getting user stats:', error)
+      return null
+    }
+  }
 }
 
 // Export singleton instance
@@ -448,3 +478,4 @@ export const syncToFirestore = () => firestoreService.syncLocalStorageToFirestor
 export const saveDownloadError = (downloadData, errorMessage) => firestoreService.saveDownloadError(downloadData, errorMessage)
 export const saveFeedback = (feedbackData) => firestoreService.saveFeedback(feedbackData)
 export const clearLegacyDownloads = () => firestoreService.clearLegacyDownloads()
+export const getUserStats = () => firestoreService.getUserStats()

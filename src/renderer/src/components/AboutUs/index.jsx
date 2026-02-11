@@ -3,7 +3,7 @@ import Logo from '../../assets/Images/logoB.png'
 import UpdateNotification from '../UpdateNotification' // adjust path if needed
 import '../common.css'
 import { FaRocket, FaUsers, FaHeart, FaEnvelope, FaShieldAlt, FaFileContract, FaReddit, FaFacebook, FaTrash } from 'react-icons/fa'
-import { clearLegacyDownloads } from '../../utils/firestoreService'
+import { clearLegacyDownloads, getUserStats } from '../../utils/firestoreService'
 
 function AboutUs() {
   const [appVersion, setAppVersion] = useState('')
@@ -11,6 +11,7 @@ function AboutUs() {
   const [updateInfo, setUpdateInfo] = useState(null)
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
+  const [userStats, setUserStats] = useState({ totalDownloads: 0, errorCount: 0 })
 
   useEffect(() => {
     if (window.api) {
@@ -32,6 +33,16 @@ function AboutUs() {
 
       window.api.onUpdateDownloadedProgress((progress) => {
         setDownloadProgress(progress.percent)
+      })
+
+      // Fetch user stats
+      getUserStats().then((stats) => {
+        if (stats) {
+          setUserStats({
+            totalDownloads: stats.totalDownloads || 0,
+            errorCount: stats.errorCount || 0
+          })
+        }
       })
     }
   }, [])
@@ -86,6 +97,24 @@ function AboutUs() {
           We're passionate about making media downloading simple, fast, and reliable for everyone.
           Join thousands of users who trust PNUT Downloader for their media needs.
         </h4>
+      </div>
+
+      <div className="row g-4 mb-4">
+        <div className="col-md-12">
+          <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)' }}>
+            <div className="card-body p-4 d-flex justify-content-around align-items-center">
+              <div className="text-center">
+                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Total Downloads</h3>
+                <div className="h2 fw-bold" style={{ color: '#BB4F28' }}>{userStats.totalDownloads}</div>
+              </div>
+              <div style={{ width: '1px', height: '40px', backgroundColor: '#e2e8f0' }}></div>
+              <div className="text-center">
+                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Download Errors</h3>
+                <div className="h2 fw-bold" style={{ color: '#dc3545' }}>{userStats.errorCount}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="row g-4">

@@ -156,7 +156,7 @@ export const deleteDocument = async (collectionName, docId) => {
  */
 export const initializeUserTrackingFirestore = async (deviceId) => {
   try {
-    const userRef = doc(firestore, 'users', deviceId)
+    const userRef = doc(firestore, 'user_stats', deviceId)
     
     const deviceInfo = {
       deviceId,

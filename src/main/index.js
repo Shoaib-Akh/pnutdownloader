@@ -1049,128 +1049,137 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  // Initialize yt-dlp path - always use bundled/downloaded version
-  const initializeYtdlp = async () => {
-    // Check if bundled version exists
-    const bundledPath = app.isPackaged
-      ? join(process.resourcesPath, getYtdlpExecutableName())
-      : join(__dirname, '../../public', getYtdlpExecutableName());
-    
-    if (existsSync(bundledPath)) {
-      ytdlpPath = bundledPath;
-      // Verify it works
-      try {
-        await checkYtdlpVersion();
-        console.log('Using bundled yt-dlp at:', bundledPath);
-        return true;
-      } catch (err) {
-        console.warn('Bundled yt-dlp failed verification:', err.message);
-        // If it's a PyInstaller error or binary doesn't work, we'll download a new one
-        if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
-          console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
+  // Create window immediately
+  createWindow();
+
+  // Start initialization in the background
+  const initDependencies = async () => {
+    // Initialize yt-dlp path - always use bundled/downloaded version
+    const initializeYtdlp = async () => {
+      // Check if bundled version exists
+      const bundledPath = app.isPackaged
+        ? join(process.resourcesPath, getYtdlpExecutableName())
+        : join(__dirname, '../../public', getYtdlpExecutableName());
+      
+      if (existsSync(bundledPath)) {
+        ytdlpPath = bundledPath;
+        // Verify it works
+        try {
+          await checkYtdlpVersion();
+          console.log('Using bundled yt-dlp at:', bundledPath);
+          return true;
+        } catch (err) {
+          console.warn('Bundled yt-dlp failed verification:', err.message);
+          // If it's a PyInstaller error or binary doesn't work, we'll download a new one
+          if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
+            console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
+          }
         }
       }
+      
+      return false;
+    };
+    
+    const ytdlpInitialized = await initializeYtdlp();
+    console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
+    
+    try {
+      await downloadAndExtractFFmpeg();
+      console.log('FFmpeg initialization completed successfully');
+    } catch (ffmpegErr) {
+      console.error('FFmpeg initialization failed:', ffmpegErr.message);
+      // Don't crash the app, but log the error for debugging
+      // The app will still work but some features might not
     }
     
-    return false;
-  };
-  
-  const ytdlpInitialized = await initializeYtdlp();
-  console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
-  
-  try {
-    await downloadAndExtractFFmpeg();
-    console.log('FFmpeg initialization completed successfully');
-  } catch (ffmpegErr) {
-    console.error('FFmpeg initialization failed:', ffmpegErr.message);
-    // Don't crash the app, but log the error for debugging
-    // The app will still work but some features might not
-  }
-  
-  if (!ytdlpInitialized) {
-    console.log('yt-dlp not found or not working, downloading...');
-    await updateYtdlp().catch(downloadErr => {
-      console.error('Failed to download yt-dlp:', downloadErr);
-    });
-    console.log('yt-dlp path after update:', ytdlpPath);
-  } else {
-    // Verify the version
-    checkYtdlpVersion().then(version => {
-      console.log('yt-dlp version:', version);
-    }).catch(err => {
-      console.error('Failed to check yt-dlp version:', err);
-    });
-    
-    // Auto-update check: Run after 30 seconds to not block startup
-    setTimeout(async () => {
-      try {
-        console.log('Checking for yt-dlp updates...');
-        const updateCheck = await checkYtdlpUpdate();
-        if (updateCheck.needsUpdate) {
-          console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-          console.log('Updating yt-dlp automatically...');
-          try {
-            const updateResult = await updateYtdlp();
-            if (updateResult.success) {
-              console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-              // Notify renderer if window is available
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('ytdlp-updated', {
-                  version: updateResult.version,
-                  message: 'yt-dlp has been updated to the latest nightly build'
-                });
+    if (!ytdlpInitialized) {
+      console.log('yt-dlp not found or not working, downloading...');
+      await updateYtdlp().catch(downloadErr => {
+        console.error('Failed to download yt-dlp:', downloadErr);
+      });
+      console.log('yt-dlp path after update:', ytdlpPath);
+    } else {
+      // Verify the version
+      checkYtdlpVersion().then(version => {
+        console.log('yt-dlp version:', version);
+      }).catch(err => {
+        console.error('Failed to check yt-dlp version:', err);
+      });
+      
+      // Auto-update check: Run after 30 seconds to not block startup
+      setTimeout(async () => {
+        try {
+          console.log('Checking for yt-dlp updates...');
+          const updateCheck = await checkYtdlpUpdate();
+          if (updateCheck.needsUpdate) {
+            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
+            console.log('Updating yt-dlp automatically...');
+            try {
+              const updateResult = await updateYtdlp();
+              if (updateResult.success) {
+                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+                // Notify renderer if window is available
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('ytdlp-updated', {
+                    version: updateResult.version,
+                    message: 'yt-dlp has been updated to the latest nightly build'
+                  });
+                }
               }
+            } catch (updateErr) {
+              console.error('Auto-update failed:', updateErr.message);
             }
-          } catch (updateErr) {
-            console.error('Auto-update failed:', updateErr.message);
+          } else {
+            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
           }
-        } else {
-          console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+        } catch (error) {
+          console.error('Error during auto-update check:', error.message);
         }
-      } catch (error) {
-        console.error('Error during auto-update check:', error.message);
-      }
-    }, 30000); // Wait 30 seconds after app start
-    
-    // Set up periodic auto-update check (every 24 hours)
-    setInterval(async () => {
-      try {
-        console.log('Periodic yt-dlp update check...');
-        const updateCheck = await checkYtdlpUpdate();
-        if (updateCheck.needsUpdate) {
-          console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-          console.log('Updating yt-dlp automatically...');
-          try {
-            const updateResult = await updateYtdlp();
-            if (updateResult.success) {
-              console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-              // Notify renderer if window is available
-              if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('ytdlp-updated', {
-                  version: updateResult.version,
-                  message: 'yt-dlp has been updated to the latest nightly build'
-                });
+      }, 30000); // Wait 30 seconds after app start
+      
+      // Set up periodic auto-update check (every 24 hours)
+      setInterval(async () => {
+        try {
+          console.log('Periodic yt-dlp update check...');
+          const updateCheck = await checkYtdlpUpdate();
+          if (updateCheck.needsUpdate) {
+            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
+            console.log('Updating yt-dlp automatically...');
+            try {
+              const updateResult = await updateYtdlp();
+              if (updateResult.success) {
+                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+                // Notify renderer if window is available
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('ytdlp-updated', {
+                    version: updateResult.version,
+                    message: 'yt-dlp has been updated to the latest nightly build'
+                  });
+                }
               }
+            } catch (updateErr) {
+              console.error('Auto-update failed:', updateErr.message);
             }
-          } catch (updateErr) {
-            console.error('Auto-update failed:', updateErr.message);
+          } else {
+            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
           }
-        } else {
-          console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+        } catch (error) {
+          console.error('Error during periodic auto-update check:', error.message);
         }
-      } catch (error) {
-        console.error('Error during periodic auto-update check:', error.message);
-      }
-    }, 24 * 60 * 60 * 1000); // Check every 24 hours
-  }
+      }, 24 * 60 * 60 * 1000); // Check every 24 hours
+    }
 
-  checkDependencies().then(deps => {
+    const deps = await checkDependencies();
     isInitialized = deps.ready;
     if (isInitialized) {
       console.log('All dependencies initialized successfully');
     } else {
       console.error('Failed to initialize all dependencies');
     }
+  };
+
+  initDependencies().catch(err => {
+    console.error('Background initialization failed:', err);
   });
 
   autoUpdater.autoDownload = true;
