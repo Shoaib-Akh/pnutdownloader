@@ -98,6 +98,14 @@ ipcMain.handle('getYtVersion', async () => {
 ipcMain.handle('getFfmpegVersion', async () => {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
+    
+    // Add 10 second timeout
+    const timeout = setTimeout(() => {
+      console.error('FFmpeg version check timed out');
+      if (proc) proc.kill();
+      resolve('Error: FFmpeg version check timed out');
+    }, 10000);
+
     const proc = spawn(ffmpegPath, ['-version'], { 
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
@@ -115,11 +123,13 @@ ipcMain.handle('getFfmpegVersion', async () => {
     });
 
     proc.on('error', (err) => {
+      clearTimeout(timeout);
       console.error('FFmpeg version check error:', err);
       resolve('Error: ' + err.message);
     });
 
     proc.on('close', (code) => {
+      clearTimeout(timeout);
       if (code === 0) {
         // Extract version from first line
         const firstLine = versionOutput.split('\n')[0];
@@ -362,6 +372,14 @@ async function checkYtdlpVersion() {
 
   return new Promise((resolve, reject) => {
     console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
+    
+    // Add 10 second timeout
+    const timeout = setTimeout(() => {
+      console.error('yt-dlp version check timed out');
+      if (proc) proc.kill();
+      reject(new Error('yt-dlp version check timed out'));
+    }, 10000);
+
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
     const proc = spawn(ytdlpPath, ['--version'], spawnOptions);
     
@@ -379,11 +397,13 @@ async function checkYtdlpVersion() {
     });
 
     proc.on('error', (err) => {
+      clearTimeout(timeout);
       console.error(`Spawn error: ${err.message}`);
       reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
     });
 
     proc.on('close', (code) => {
+      clearTimeout(timeout);
       if (code === 0) {
         console.log(`yt-dlp process closed successfully with version: ${version.trim()}`);
         resolve(version.trim());
@@ -809,6 +829,8 @@ function createWindow() {
 
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
+    width: 1200,
+    height: 800,
     minWidth: 1150,
     minHeight: 750,
     icon: iconPath,
@@ -1188,7 +1210,11 @@ app.whenReady().then(async () => {
   
   // Force update checks in development
   if (is.dev) {
-    autoUpdater.checkForUpdatesAndNotify();
+    try {
+      autoUpdater.checkForUpdatesAndNotify();
+    } catch (err) {
+      console.error('Failed to checkForUpdatesAndNotify:', err.message);
+    }
     autoUpdater.forceDevUpdateConfig = true;
   }
   
@@ -1199,7 +1225,13 @@ app.whenReady().then(async () => {
     token: process.env.GH_TOKEN,
   });
 
-  autoUpdater.checkForUpdates();
+  try {
+    autoUpdater.checkForUpdates().catch(err => {
+      console.error('autoUpdater.checkForUpdates() error:', err.message);
+    });
+  } catch (err) {
+    console.error('Failed to initiate checkForUpdates:', err.message);
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window);

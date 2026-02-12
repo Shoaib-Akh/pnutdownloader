@@ -75,20 +75,23 @@ function App() {
             try {
               const status = await window.api.checkDependencies()
 
-              // Get version information
-              try {
-                const ytVersion = await window.api.getYtVersion()
-                const ffmpegVersion = await window.api.getFfmpegVersion()
-                setVersionInfo({ yt: ytVersion, ffmpeg: ffmpegVersion })
-                console.log('YouTube version:', ytVersion)
-                console.log('FFmpeg version:', ffmpegVersion)
-              } catch (versionError) {
-                console.error('Error getting versions:', versionError)
-              }
-
               if (status.ready) {
+                // Dependencies are ready, stop loading screen
                 setIsLoading(false)
+
+                // Fetch version information in background without blocking
+                Promise.all([
+                  window.api.getYtVersion().catch(err => `Error: ${err.message}`),
+                  window.api.getFfmpegVersion().catch(err => `Error: ${err.message}`)
+                ]).then(([ytVersion, ffmpegVersion]) => {
+                  setVersionInfo({ yt: ytVersion, ffmpeg: ffmpegVersion })
+                  console.log('YouTube version:', ytVersion)
+                  console.log('FFmpeg version:', ffmpegVersion)
+                }).catch(err => {
+                  console.error('Error getting versions in background:', err)
+                })
               } else {
+                // Not ready yet, check again in 2 seconds
                 setTimeout(checkDependencies, 2000)
               }
             } catch (error) {
@@ -100,7 +103,11 @@ function App() {
 
           // Check for updates
           if (window.api.checkForUpdates) {
-            window.api.checkForUpdates()
+            try {
+              window.api.checkForUpdates()
+            } catch (err) {
+              console.error('Failed to call checkForUpdates:', err)
+            }
           }
 
           if (window.api.onUpdateAvailable) {
@@ -232,45 +239,27 @@ function App() {
       >
         <div
           style={{
-            fontSize: '24px',
-            marginBottom: '20px',
-            color: '#333',
+            fontSize: '32px',
+            marginBottom: '30px',
+            color: '#1e293b',
+            fontWeight: '700',
+            letterSpacing: '-0.5px'
           }}
         >
           Initializing Dependencies...
         </div>
 
-        {(versionInfo.yt || versionInfo.ffmpeg) && (
-          <div
-            style={{
-              fontSize: '14px',
-              marginBottom: '20px',
-              color: '#666',
-              textAlign: 'center',
-              fontFamily: 'monospace',
-            }}
-          >
-            {versionInfo.yt && (
-              <div style={{ marginBottom: '5px' }}>
-                YouTube: {versionInfo.yt}
-              </div>
-            )}
-            {versionInfo.ffmpeg && (
-              <div>
-                FFmpeg: {versionInfo.ffmpeg}
-              </div>
-            )}
-          </div>
-        )}
+
 
         <div
           style={{
-            width: '50px',
-            height: '50px',
-            border: '5px solid #ccc',
-            borderTop: '5px solid #BB4F28',
+            width: '64px',
+            height: '64px',
+            border: '6px solid #e2e8f0',
+            borderTop: '6px solid #BB4F28',
             borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
+            animation: 'spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+            boxShadow: '0 4px 12px rgba(187, 79, 40, 0.15)'
           }}
         ></div>
         <style>{`
