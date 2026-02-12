@@ -362,22 +362,22 @@ function downloadFile(url, destPath) {
 
 async function checkYtdlpVersion() {
   if (!existsSync(ytdlpPath)) {
-    throw new Error(`yt-dlp not found at ${ytdlpPath}`);
+    return null; // Return null instead of throwing
   }
 
   const stats = await fs.stat(ytdlpPath);
   if (stats.size === 0) {
-    throw new Error(`yt-dlp is empty at ${ytdlpPath}`);
+    return null; // Return null instead of throwing
   }
 
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
     
     // Add 10 second timeout
     const timeout = setTimeout(() => {
-      console.error('yt-dlp version check timed out');
+      console.warn('yt-dlp version check timed out');
       if (proc) proc.kill();
-      reject(new Error('yt-dlp version check timed out'));
+      resolve(null); // Return null on timeout
     }, 10000);
 
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
@@ -398,8 +398,8 @@ async function checkYtdlpVersion() {
 
     proc.on('error', (err) => {
       clearTimeout(timeout);
-      console.error(`Spawn error: ${err.message}`);
-      reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
+      console.warn(`Spawn error (non-fatal): ${err.message}`);
+      resolve(null); // Return null instead of throwing
     });
 
     proc.on('close', (code) => {
@@ -408,19 +408,19 @@ async function checkYtdlpVersion() {
         console.log(`yt-dlp process closed successfully with version: ${version.trim()}`);
         resolve(version.trim());
       } else {
-        console.error(`yt-dlp process failed with code ${code}, error: ${errorOutput}`);
-        reject(new Error(`yt-dlp --version failed with code ${code}: ${errorOutput}`));
+        console.warn(`yt-dlp process failed with code ${code}, error: ${errorOutput}`);
+        resolve(null); // Return null instead of throwing
       }
     });
   });
 }
 
-// Function to fetch latest nightly release from GitHub API
-async function getLatestNightlyRelease() {
+// Function to fetch latest release from GitHub API (supports custom repos)
+async function getLatestRelease(owner = 'yt-dlp', repo = 'yt-dlp-nightly-builds') {
   return new Promise((resolve, reject) => {
     const options = {
       hostname: 'api.github.com',
-      path: '/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest',
+      path: `/repos/${owner}/${repo}/releases/latest`,
       method: 'GET',
       headers: {
         'User-Agent': 'PNUTDownloader',
@@ -454,23 +454,43 @@ async function getLatestNightlyRelease() {
     });
 
     req.on('error', (err) => {
-      reject(new Error(`Failed to fetch latest nightly release: ${err.message}`));
+      reject(new Error(`Failed to fetch latest release: ${err.message}`));
     });
 
     req.setTimeout(10000, () => {
       req.destroy();
-      reject(new Error('Request timeout while fetching latest nightly release'));
+      reject(new Error('Request timeout while fetching latest release'));
     });
 
     req.end();
   });
 }
 
-// Function to get the download URL for the latest nightly build
-async function getNightlyDownloadUrl() {
+// Backwards compatibility wrapper
+async function getLatestNightlyRelease() {
+  return getLatestRelease('yt-dlp', 'yt-dlp-nightly-builds');
+}
+
+// Function to get the download URL for yt-dlp from custom or nightly builds
+async function getYtdlpDownloadUrl(useCustomRepo = true) {
   try {
-    const release = await getLatestNightlyRelease();
-    console.log(`Latest nightly release: ${release.tag}`);
+    let release;
+    
+    // Try custom repository first
+    if (useCustomRepo) {
+      try {
+        release = await getLatestRelease('Shoaib-Akh', 'pnutdownloader');
+        console.log(`Latest custom release: ${release.tag}`);
+      } catch (customErr) {
+        console.warn(`Failed to fetch from custom repo: ${customErr.message}`);
+        console.log('Falling back to nightly builds...');
+        release = await getLatestNightlyRelease();
+        console.log(`Latest nightly release: ${release.tag}`);
+      }
+    } else {
+      release = await getLatestNightlyRelease();
+      console.log(`Latest nightly release: ${release.tag}`);
+    }
     
     // Determine which asset to download based on platform
     let assetName;
@@ -493,43 +513,75 @@ async function getNightlyDownloadUrl() {
 
     return { url: asset.browser_download_url, tag: release.tag };
   } catch (error) {
-    console.error(`Failed to get nightly download URL: ${error.message}`);
-    // Fallback to latest stable if nightly fails
+    console.error(`Failed to get yt-dlp download URL: ${error.message}`);
     throw error;
   }
 }
 
-// Function to check if update is needed
+// Backwards compatibility wrapper
+async function getNightlyDownloadUrl() {
+  return getYtdlpDownloadUrl(false);
+}
+
+// Function to check if yt-dlp update is needed
 async function checkYtdlpUpdate() {
   try {
-    // Get current version
-    let currentVersion;
-    try {
-      currentVersion = await checkYtdlpVersion();
-      console.log(`Current yt-dlp version: ${currentVersion}`);
-    } catch (err) {
-      console.log('Could not get current version, will update:', err.message);
-      return { needsUpdate: true, reason: 'version_check_failed' };
+    // Check if binary exists first
+    if (!existsSync(ytdlpPath)) {
+      return { needsUpdate: true, reason: 'binary_missing' };
     }
 
-    // Get latest nightly release
-    const release = await getLatestNightlyRelease();
-    console.log(`Latest nightly release tag: ${release.tag}`);
+    // Get latest release from custom repo
+    let release;
+    try {
+      release = await getLatestRelease('Shoaib-Akh', 'pnutdownloader');
+      console.log(`Latest custom release tag: ${release.tag}`);
+    } catch (customErr) {
+      console.warn(`Failed to check custom repo: ${customErr.message}`);
+      return { needsUpdate: false, reason: 'check_failed', error: customErr.message };
+    }
 
-    // Compare versions (simple string comparison for now)
-    // Nightly tags are in format YYYY.MM.DD.HHMMSS
-    // Current version might be in different format, so we'll update if tag is newer
+    // Determine which asset to check based on platform
+    let assetName;
+    if (process.platform === 'win32') {
+      assetName = 'yt-dlp.exe';
+    } else if (process.platform === 'darwin') {
+      assetName = 'yt-dlp_macos';
+    } else {
+      assetName = 'yt-dlp';
+    }
+
+    // Find the matching asset to get its metadata
+    const asset = release.assets.find(a => a.name === assetName);
+    const assetUpdatedAt = asset ? asset.updated_at : null;
+
+    // Compare versions using version file
     const versionFile = app.isPackaged
       ? join(process.resourcesPath, 'ytdlp_version.txt')
       : join(__dirname, '../../public/ytdlp_version.txt');
+    
+    const metadataFile = app.isPackaged
+      ? join(process.resourcesPath, 'ytdlp_metadata.txt')
+      : join(__dirname, '../../public/ytdlp_metadata.txt');
 
     let lastKnownVersion = null;
+    let lastKnownMetadata = null;
+    
     try {
       const versionData = await fs.readFile(versionFile, 'utf8');
       lastKnownVersion = versionData.trim();
-      console.log(`Last known version: ${lastKnownVersion}`);
+      console.log(`Last known yt-dlp version: ${lastKnownVersion}`);
     } catch (err) {
-      console.log('No previous version file found');
+      console.log('No previous yt-dlp version file found, will download');
+      return { needsUpdate: true, reason: 'no_version_file', latestVersion: release.tag };
+    }
+
+    try {
+      const metadataData = await fs.readFile(metadataFile, 'utf8');
+      lastKnownMetadata = metadataData.trim();
+      console.log(`Last known yt-dlp metadata: ${lastKnownMetadata}`);
+    } catch (err) {
+      console.log('No previous yt-dlp metadata file found');
     }
 
     // If we have a new release tag, update
@@ -537,8 +589,21 @@ async function checkYtdlpUpdate() {
       return { 
         needsUpdate: true, 
         reason: 'new_version_available',
-        currentVersion: lastKnownVersion || currentVersion,
-        latestVersion: release.tag
+        currentVersion: lastKnownVersion,
+        latestVersion: release.tag,
+        assetUpdatedAt
+      };
+    }
+
+    // Same tag, but check if binary file changed (updated_at timestamp)
+    if (assetUpdatedAt && lastKnownMetadata !== assetUpdatedAt) {
+      console.log(`Binary changed within same tag. Old: ${lastKnownMetadata}, New: ${assetUpdatedAt}`);
+      return {
+        needsUpdate: true,
+        reason: 'binary_updated_in_same_tag',
+        currentVersion: lastKnownVersion,
+        latestVersion: release.tag,
+        assetUpdatedAt
       };
     }
 
@@ -553,19 +618,41 @@ async function updateYtdlp(forceUpdate = false) {
   // Determine download URL and target path
   let ytdlpUrl;
   let releaseTag = null;
+  let assetUpdatedAt = null;
   const bundledPath = app.isPackaged
     ? join(process.resourcesPath, getYtdlpExecutableName())
     : join(__dirname, '../../public', getYtdlpExecutableName());
   
   try {
-    // Get latest nightly build URL
-    const nightlyInfo = await getNightlyDownloadUrl();
-    ytdlpUrl = nightlyInfo.url;
-    releaseTag = nightlyInfo.tag;
-    console.log(`Downloading yt-dlp nightly build: ${releaseTag}`);
+    // Get latest build URL from custom repo or nightly
+    const ytdlpInfo = await getYtdlpDownloadUrl(true);
+    ytdlpUrl = ytdlpInfo.url;
+    releaseTag = ytdlpInfo.tag;
+    
+    // Get asset metadata for updated_at timestamp
+    try {
+      const release = await getLatestRelease('Shoaib-Akh', 'pnutdownloader');
+      let assetName;
+      if (process.platform === 'win32') {
+        assetName = 'yt-dlp.exe';
+      } else if (process.platform === 'darwin') {
+        assetName = 'yt-dlp_macos';
+      } else {
+        assetName = 'yt-dlp';
+      }
+      const asset = release.assets.find(a => a.name === assetName);
+      if (asset) {
+        assetUpdatedAt = asset.updated_at;
+        console.log(`Asset last updated: ${assetUpdatedAt}`);
+      }
+    } catch (metaErr) {
+      console.warn('Could not get asset metadata:', metaErr.message);
+    }
+    
+    console.log(`Downloading yt-dlp from custom release: ${releaseTag}`);
   } catch (error) {
-    console.warn(`Failed to get nightly build URL, falling back to stable: ${error.message}`);
-    // Fallback to stable releases if nightly fails
+    console.warn(`Failed to get custom release URL, falling back to stable: ${error.message}`);
+    // Fallback to stable releases
     if (process.platform === 'win32') {
       ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
     } else if (process.platform === 'darwin') {
@@ -610,7 +697,18 @@ async function updateYtdlp(forceUpdate = false) {
     
     // Set executable permissions on Unix-like systems
     if (process.platform !== 'win32') {
+      // Remove macOS quarantine attributes first
+      try {
+        const { execSync } = require('child_process');
+        execSync(`xattr -cr "${ytdlpPath}"`, { stdio: 'ignore' });
+        console.log('Removed macOS quarantine attributes from yt-dlp');
+      } catch (xattrErr) {
+        console.warn(`Failed to remove quarantine attributes: ${xattrErr.message}`);
+      }
+      
+      // Then set executable permissions
       await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+      console.log('Set executable permissions for yt-dlp');
     }
     
     // Save version info
@@ -623,6 +721,19 @@ async function updateYtdlp(forceUpdate = false) {
         console.log(`Saved version info: ${releaseTag}`);
       } catch (err) {
         console.warn(`Failed to save version info: ${err.message}`);
+      }
+    }
+    
+    // Save metadata info (asset updated_at timestamp)
+    if (assetUpdatedAt) {
+      const metadataFile = app.isPackaged
+        ? join(process.resourcesPath, 'ytdlp_metadata.txt')
+        : join(__dirname, '../../public/ytdlp_metadata.txt');
+      try {
+        await fs.writeFile(metadataFile, assetUpdatedAt, 'utf8');
+        console.log(`Saved metadata info: ${assetUpdatedAt}`);
+      } catch (err) {
+        console.warn(`Failed to save metadata info: ${err.message}`);
       }
     }
     
@@ -647,6 +758,191 @@ async function updateYtdlp(forceUpdate = false) {
     return { success: true, message: 'yt-dlp updated successfully', version: releaseTag };
   } catch (error) {
     console.error(`Failed to update yt-dlp: ${error.message}`);
+    throw error;
+  }
+}
+
+// Function to get FFmpeg download URL from custom GitHub releases
+async function getFfmpegDownloadUrl() {
+  try {
+    const release = await getLatestRelease('Shoaib-Akh', 'pnutdownloader');
+    console.log(`Latest custom release for FFmpeg: ${release.tag}`);
+    
+    // Determine which asset to download based on platform
+    let assetName;
+    if (process.platform === 'win32') {
+      assetName = 'ffmpeg.exe';
+    } else if (process.platform === 'darwin') {
+      assetName = 'ffmpeg';
+    } else {
+      assetName = 'ffmpeg';
+    }
+
+    // Find the matching asset
+    const asset = release.assets.find(a => a.name === assetName);
+    if (!asset) {
+      throw new Error(`FFmpeg binary (${assetName}) not found in release ${release.tag}`);
+    }
+
+    return { url: asset.browser_download_url, tag: release.tag };
+  } catch (error) {
+    console.error(`Failed to get FFmpeg download URL: ${error.message}`);
+    throw error;
+  }
+}
+
+// Function to check if FFmpeg update is needed
+async function checkFfmpegUpdate() {
+  try {
+    // Get latest release from custom repo
+    const release = await getLatestRelease('Shoaib-Akh', 'pnutdownloader');
+    console.log(`Latest custom release tag for FFmpeg: ${release.tag}`);
+
+    // Compare versions using version file
+    const versionFile = app.isPackaged
+      ? join(process.resourcesPath, 'ffmpeg_version.txt')
+      : join(__dirname, '../../public/ffmpeg_version.txt');
+
+    let lastKnownVersion = null;
+    try {
+      const versionData = await fs.readFile(versionFile, 'utf8');
+      lastKnownVersion = versionData.trim();
+      console.log(`Last known FFmpeg version: ${lastKnownVersion}`);
+    } catch (err) {
+      console.log('No previous FFmpeg version file found');
+    }
+
+    // If we have a new release tag, update
+    if (!lastKnownVersion || lastKnownVersion !== release.tag) {
+      return { 
+        needsUpdate: true, 
+        reason: 'new_version_available',
+        currentVersion: lastKnownVersion,
+        latestVersion: release.tag
+      };
+    }
+
+    return { needsUpdate: false, reason: 'up_to_date', currentVersion: release.tag };
+  } catch (error) {
+    console.error(`Error checking for FFmpeg update: ${error.message}`);
+    return { needsUpdate: false, reason: 'check_failed', error: error.message };
+  }
+}
+
+// Function to update FFmpeg binary from GitHub releases
+async function updateFfmpeg(forceUpdate = false) {
+  let ffmpegUrl;
+  let releaseTag = null;
+  const targetPath = ffmpegPath;
+  
+  try {
+    // Check if update is needed (unless forced)
+    if (!forceUpdate) {
+      const updateCheck = await checkFfmpegUpdate();
+      if (!updateCheck.needsUpdate && updateCheck.reason === 'up_to_date') {
+        console.log('FFmpeg is already up to date');
+        return { success: true, message: 'Already up to date', version: updateCheck.currentVersion };
+      }
+      if (updateCheck.needsUpdate) {
+        console.log(`FFmpeg update available: ${updateCheck.currentVersion} -> ${updateCheck.latestVersion}`);
+      }
+    }
+
+    // Get download URL from custom release
+    const ffmpegInfo = await getFfmpegDownloadUrl();
+    ffmpegUrl = ffmpegInfo.url;
+    releaseTag = ffmpegInfo.tag;
+    console.log(`Downloading FFmpeg from custom release: ${releaseTag}`);
+
+    // Backup old binary if it exists
+    const backupPath = `${targetPath}.old`;
+    if (existsSync(targetPath)) {
+      try {
+        if (existsSync(backupPath)) {
+          await fs.unlink(backupPath);
+        }
+        await fs.copyFile(targetPath, backupPath);
+        console.log(`Backed up old FFmpeg to: ${backupPath}`);
+      } catch (backupErr) {
+        console.warn(`Failed to backup old FFmpeg: ${backupErr.message}`);
+      }
+    }
+
+    // Remove old binary
+    if (existsSync(targetPath)) {
+      try {
+        await fs.unlink(targetPath);
+        console.log(`Removed old FFmpeg binary: ${targetPath}`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (err) {
+        console.warn(`Failed to remove old FFmpeg binary: ${err.message}, will try to overwrite`);
+      }
+    }
+    
+    console.log(`Downloading FFmpeg from: ${ffmpegUrl}`);
+    await downloadFile(ffmpegUrl, targetPath);
+    console.log('FFmpeg downloaded successfully');
+    
+    const stats = await fs.stat(targetPath);
+    console.log(`FFmpeg file size after download: ${stats.size} bytes`);
+    
+    // Set executable permissions on Unix-like systems
+    if (process.platform !== 'win32') {
+      // Remove macOS quarantine attributes first
+      try {
+        const { execSync } = require('child_process');
+        execSync(`xattr -cr "${targetPath}"`, { stdio: 'ignore' });
+        console.log('Removed macOS quarantine attributes from FFmpeg');
+      } catch (xattrErr) {
+        console.warn(`Failed to remove quarantine attributes: ${xattrErr.message}`);
+      }
+      
+      // Then set executable permissions
+      await fs.chmod(targetPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+      console.log('Set executable permissions for FFmpeg');
+    }
+    
+    // Save version info
+    if (releaseTag) {
+      const versionFile = app.isPackaged
+        ? join(process.resourcesPath, 'ffmpeg_version.txt')
+        : join(__dirname, '../../public/ffmpeg_version.txt');
+      try {
+        await fs.writeFile(versionFile, releaseTag, 'utf8');
+        console.log(`Saved FFmpeg version info: ${releaseTag}`);
+      } catch (err) {
+        console.warn(`Failed to save FFmpeg version info: ${err.message}`);
+      }
+    }
+    
+    // Verify the downloaded binary works
+    try {
+      const { execSync } = require('child_process');
+      const version = execSync(`"${targetPath}" -version`, { 
+        encoding: 'utf8', 
+        stdio: ['ignore', 'pipe', 'pipe'], 
+        timeout: 10000 
+      }).split('\n')[0];
+      console.log(`Downloaded FFmpeg binary verified successfully: ${version}`);
+    } catch (verifyErr) {
+      console.warn('FFmpeg verification failed (binary may still work):', verifyErr.message);
+    }
+    
+    return { success: true, message: 'FFmpeg updated successfully', version: releaseTag };
+  } catch (error) {
+    console.error(`Failed to update FFmpeg: ${error.message}`);
+    
+    // Restore backup if update failed
+    const backupPath = `${targetPath}.old`;
+    if (existsSync(backupPath) && !existsSync(targetPath)) {
+      try {
+        await fs.copyFile(backupPath, targetPath);
+        console.log('Restored FFmpeg from backup after failed update');
+      } catch (restoreErr) {
+        console.error(`Failed to restore FFmpeg backup: ${restoreErr.message}`);
+      }
+    }
+    
     throw error;
   }
 }
@@ -1076,120 +1372,189 @@ app.whenReady().then(async () => {
 
   // Start initialization in the background
   const initDependencies = async () => {
-    // Initialize yt-dlp path - always use bundled/downloaded version
+    // Initialize yt-dlp - use version file to avoid unnecessary downloads
     const initializeYtdlp = async () => {
-      // Check if bundled version exists
+      // Set the bundled path
       const bundledPath = app.isPackaged
         ? join(process.resourcesPath, getYtdlpExecutableName())
         : join(__dirname, '../../public', getYtdlpExecutableName());
       
-      if (existsSync(bundledPath)) {
-        ytdlpPath = bundledPath;
-        // Verify it works
+      ytdlpPath = bundledPath;
+      
+      // Check if we need to download based on version file
+      const updateCheck = await checkYtdlpUpdate();
+      
+      if (updateCheck.needsUpdate) {
+        console.log(`yt-dlp needs update. Reason: ${updateCheck.reason}`);
+        if (updateCheck.reason === 'new_version_available') {
+          console.log(`Current: ${updateCheck.currentVersion}, Latest: ${updateCheck.latestVersion}`);
+        }
+        
+        // Download the binary
         try {
-          await checkYtdlpVersion();
-          console.log('Using bundled yt-dlp at:', bundledPath);
-          return true;
-        } catch (err) {
-          console.warn('Bundled yt-dlp failed verification:', err.message);
-          // If it's a PyInstaller error or binary doesn't work, we'll download a new one
-          if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
-            console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
+          await updateYtdlp(true); // Force update
+          console.log('yt-dlp downloaded successfully');
+        } catch (downloadErr) {
+          console.error('Failed to download yt-dlp:', downloadErr.message);
+          return false;
+        }
+      } else {
+        console.log(`yt-dlp is up to date (${updateCheck.reason})`);
+        
+        // Set executable permissions even if we don't download (non-Windows only)
+        if (process.platform !== 'win32') {
+          try {
+            // Remove macOS quarantine attributes first
+            const { execSync } = require('child_process');
+            try {
+              execSync(`xattr -cr "${bundledPath}"`, { stdio: 'ignore' });
+              console.log('Removed macOS quarantine attributes from yt-dlp');
+            } catch (xattrErr) {
+              // Ignore if xattr fails
+            }
+            
+            // Set executable permissions
+            await fs.chmod(bundledPath, 0o755);
+            console.log('Set executable permissions for yt-dlp');
+          } catch (chmodErr) {
+            console.warn('Failed to set permissions on yt-dlp:', chmodErr.message);
           }
         }
       }
       
-      return false;
+      return true;
     };
     
+    // Initialize FFmpeg - use version file to avoid unnecessary downloads
+    const initializeFfmpeg = async () => {
+      // Check if we need to download based on version file
+      const updateCheck = await checkFfmpegUpdate();
+      
+      if (updateCheck.needsUpdate) {
+        console.log(`FFmpeg needs update. Reason: ${updateCheck.reason}`);
+        if (updateCheck.reason === 'new_version_available') {
+          console.log(`Current: ${updateCheck.currentVersion}, Latest: ${updateCheck.latestVersion}`);
+        }
+        
+        // Check if binary exists - if not, download from custom repo
+        if (!existsSync(ffmpegPath)) {
+          console.log('FFmpeg binary not found, downloading from custom repository...');
+          try {
+            await updateFfmpeg(true); // Force update
+            console.log('FFmpeg downloaded successfully from custom repository');
+          } catch (customErr) {
+            console.warn('Failed to download FFmpeg from custom repo:', customErr.message);
+            console.log('Falling back to downloadAndExtractFFmpeg...');
+            // Fallback to the old method if custom repo doesn't have it
+            try {
+              await downloadAndExtractFFmpeg();
+              console.log('FFmpeg downloaded successfully via fallback method');
+            } catch (fallbackErr) {
+              console.error('FFmpeg fallback download also failed:', fallbackErr.message);
+              return false;
+            }
+          }
+        } else {
+          // Binary exists but version is outdated
+          try {
+            await updateFfmpeg(true); // Force update
+            console.log('FFmpeg updated successfully');
+          } catch (updateErr) {
+            console.error('Failed to update FFmpeg:', updateErr.message);
+            // Don't fail - continue with existing binary
+            console.log('Continuing with existing FFmpeg binary');
+          }
+        }
+      } else {
+        console.log(`FFmpeg is up to date (${updateCheck.reason})`);
+        
+        // Set executable permissions even if we don't download (non-Windows only)
+        if (process.platform !== 'win32' && existsSync(ffmpegPath)) {
+          try {
+            // Remove macOS quarantine attributes first
+            const { execSync } = require('child_process');
+            try {
+              execSync(`xattr -cr "${ffmpegPath}"`, { stdio: 'ignore' });
+              console.log('Removed macOS quarantine attributes from FFmpeg');
+            } catch (xattrErr) {
+              // Ignore if xattr fails
+            }
+            
+            // Set executable permissions
+            await fs.chmod(ffmpegPath, 0o755);
+            console.log('Set executable permissions for FFmpeg');
+          } catch (chmodErr) {
+            console.warn('Failed to set permissions on FFmpeg:', chmodErr.message);
+          }
+        }
+      }
+      
+      return true;
+    };
+    
+    // Initialize both binaries
     const ytdlpInitialized = await initializeYtdlp();
     console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
     
-    try {
-      await downloadAndExtractFFmpeg();
-      console.log('FFmpeg initialization completed successfully');
-    } catch (ffmpegErr) {
-      console.error('FFmpeg initialization failed:', ffmpegErr.message);
-      // Don't crash the app, but log the error for debugging
-      // The app will still work but some features might not
-    }
+    const ffmpegInitialized = await initializeFfmpeg();
+    console.log('FFmpeg initialized:', ffmpegInitialized, 'path:', ffmpegPath);
     
-    if (!ytdlpInitialized) {
-      console.log('yt-dlp not found or not working, downloading...');
-      await updateYtdlp().catch(downloadErr => {
-        console.error('Failed to download yt-dlp:', downloadErr);
-      });
-      console.log('yt-dlp path after update:', ytdlpPath);
-    } else {
-      // Verify the version
-      checkYtdlpVersion().then(version => {
-        console.log('yt-dlp version:', version);
-      }).catch(err => {
-        console.error('Failed to check yt-dlp version:', err);
-      });
-      
-      // Auto-update check: Run after 30 seconds to not block startup
-      setTimeout(async () => {
-        try {
-          console.log('Checking for yt-dlp updates...');
-          const updateCheck = await checkYtdlpUpdate();
-          if (updateCheck.needsUpdate) {
-            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-            console.log('Updating yt-dlp automatically...');
-            try {
-              const updateResult = await updateYtdlp();
-              if (updateResult.success) {
-                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-                // Notify renderer if window is available
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('ytdlp-updated', {
-                    version: updateResult.version,
-                    message: 'yt-dlp has been updated to the latest nightly build'
-                  });
-                }
+    // Auto-update check: Run after 5 seconds to not block startup
+    setTimeout(async () => {
+      try {
+        console.log('Checking for binary updates from custom repository...');
+        
+        // Check yt-dlp updates
+        const ytdlpUpdateCheck = await checkYtdlpUpdate();
+        if (ytdlpUpdateCheck.needsUpdate && ytdlpUpdateCheck.reason === 'new_version_available') {
+          console.log(`New yt-dlp version available: ${ytdlpUpdateCheck.latestVersion}`);
+          console.log('Updating yt-dlp automatically...');
+          try {
+            const updateResult = await updateYtdlp();
+            if (updateResult.success) {
+              console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+              // Notify renderer if window is available
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('ytdlp-updated', {
+                  version: updateResult.version,
+                  message: 'yt-dlp has been updated to the latest version'
+                });
               }
-            } catch (updateErr) {
-              console.error('Auto-update failed:', updateErr.message);
             }
-          } else {
-            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+          } catch (updateErr) {
+            console.error('yt-dlp auto-update failed:', updateErr.message);
           }
-        } catch (error) {
-          console.error('Error during auto-update check:', error.message);
+        } else {
+          console.log(`yt-dlp is up to date. Reason: ${ytdlpUpdateCheck.reason}`);
         }
-      }, 30000); // Wait 30 seconds after app start
-      
-      // Set up periodic auto-update check (every 24 hours)
-      setInterval(async () => {
-        try {
-          console.log('Periodic yt-dlp update check...');
-          const updateCheck = await checkYtdlpUpdate();
-          if (updateCheck.needsUpdate) {
-            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-            console.log('Updating yt-dlp automatically...');
-            try {
-              const updateResult = await updateYtdlp();
-              if (updateResult.success) {
-                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-                // Notify renderer if window is available
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('ytdlp-updated', {
-                    version: updateResult.version,
-                    message: 'yt-dlp has been updated to the latest nightly build'
-                  });
-                }
+        
+        // Check FFmpeg updates
+        const ffmpegUpdateCheck = await checkFfmpegUpdate();
+        if (ffmpegUpdateCheck.needsUpdate && ffmpegUpdateCheck.reason === 'new_version_available') {
+          console.log(`New FFmpeg version available: ${ffmpegUpdateCheck.latestVersion}`);
+          console.log('Updating FFmpeg automatically...');
+          try {
+            const updateResult = await updateFfmpeg();
+            if (updateResult.success) {
+              console.log(`FFmpeg updated successfully to ${updateResult.version}`);
+              // Notify renderer if window is available
+              if (mainWindow && !mainWindow.isDestroyed()) {
+                mainWindow.webContents.send('ffmpeg-updated', {
+                  version: updateResult.version,
+                  message: 'FFmpeg has been updated to the latest version'
+                });
               }
-            } catch (updateErr) {
-              console.error('Auto-update failed:', updateErr.message);
             }
-          } else {
-            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+          } catch (updateErr) {
+            console.error('FFmpeg auto-update failed:', updateErr.message);
           }
-        } catch (error) {
-          console.error('Error during periodic auto-update check:', error.message);
+        } else {
+          console.log(`FFmpeg is up to date. Reason: ${ffmpegUpdateCheck.reason}`);
         }
-      }, 24 * 60 * 60 * 1000); // Check every 24 hours
-    }
+      } catch (error) {
+        console.error('Error during auto-update check:', error.message);
+      }
+    }, 5000); // Wait 5 seconds after app start
 
     const deps = await checkDependencies();
     isInitialized = deps.ready;
