@@ -87,6 +87,7 @@ ipcMain.handle('get-app-version', () => {
 ipcMain.handle('getYtVersion', async () => {
   try {
     const version = await checkYtdlpVersion();
+    console.log("version",version)
     return version;
   } catch (error) {
     console.error('Error getting yt-dlp version:', error);
@@ -337,9 +338,24 @@ function downloadFile(url, destPath) {
         console.log(`Downloaded ${downloadedBytes} bytes`);
       });
 
-      file.on('finish', () => {
+      file.on('finish', async () => {
         file.close();
         console.log(`Download completed, file size: ${downloadedBytes} bytes`);
+        
+        // Set executable permissions for binary files on Unix-like systems
+        if (process.platform !== 'win32' && (
+          destPath.includes('yt-dlp') || 
+          destPath.includes('ffmpeg') ||
+          destPath.endsWith('.sh')
+        )) {
+          try {
+            await fs.chmod(destPath, 0o755);
+            console.log(`Set executable permissions for: ${destPath}`);
+          } catch (chmodErr) {
+            console.warn(`Failed to set executable permissions: ${chmodErr.message}`);
+          }
+        }
+        
         resolve(destPath);
       });
     });
@@ -373,15 +389,20 @@ async function checkYtdlpVersion() {
   return new Promise((resolve, reject) => {
     console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
     
+    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+    let proc;
+    
     // Add 10 second timeout
     const timeout = setTimeout(() => {
       console.error('yt-dlp version check timed out');
       if (proc) proc.kill();
       reject(new Error('yt-dlp version check timed out'));
-    }, 10000);
+    }, 100000);
 
-    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-    const proc = spawn(ytdlpPath, ['--version'], spawnOptions);
+    proc = spawn(ytdlpPath, ['--version'], {
+      ...spawnOptions,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
     
     let version = '';
     let errorOutput = '';
@@ -502,6 +523,33 @@ async function getNightlyDownloadUrl() {
 // Function to check if update is needed
 async function checkYtdlpUpdate() {
   try {
+    const versionFile = app.isPackaged
+      ? join(process.resourcesPath, 'ytdlp_version.txt')
+      : join(__dirname, '../../public/ytdlp_version.txt');
+
+    let lastKnownVersion = null;
+    let lastUpdateTime = null;
+    
+    try {
+      const versionData = await fs.readFile(versionFile, 'utf8');
+      const lines = versionData.trim().split('\n');
+      lastKnownVersion = lines[0];
+      lastUpdateTime = lines[1] ? parseInt(lines[1]) : null;
+      console.log(`Last known version: ${lastKnownVersion}`);
+      console.log(`Last update time: ${lastUpdateTime ? new Date(lastUpdateTime).toISOString() : 'Unknown'}`);
+    } catch (err) {
+      console.log('No previous version file found');
+    }
+
+    // Check if 3 days (259200000 ms) have passed since last update
+    const now = Date.now();
+    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
+    const shouldUpdateTimeBased = lastUpdateTime && (now - lastUpdateTime > threeDaysInMs);
+    
+    if (shouldUpdateTimeBased) {
+      console.log('3 days passed since last update, checking for new version');
+    }
+
     // Get current version
     let currentVersion;
     try {
@@ -516,27 +564,13 @@ async function checkYtdlpUpdate() {
     const release = await getLatestNightlyRelease();
     console.log(`Latest nightly release tag: ${release.tag}`);
 
-    // Compare versions (simple string comparison for now)
-    // Nightly tags are in format YYYY.MM.DD.HHMMSS
-    // Current version might be in different format, so we'll update if tag is newer
-    const versionFile = app.isPackaged
-      ? join(process.resourcesPath, 'ytdlp_version.txt')
-      : join(__dirname, '../../public/ytdlp_version.txt');
-
-    let lastKnownVersion = null;
-    try {
-      const versionData = await fs.readFile(versionFile, 'utf8');
-      lastKnownVersion = versionData.trim();
-      console.log(`Last known version: ${lastKnownVersion}`);
-    } catch (err) {
-      console.log('No previous version file found');
-    }
-
-    // If we have a new release tag, update
-    if (!lastKnownVersion || lastKnownVersion !== release.tag) {
+    // Update if: 1) new version available, 2) 3 days passed, or 3) no previous version
+    if (!lastKnownVersion || lastKnownVersion !== release.tag || shouldUpdateTimeBased) {
       return { 
         needsUpdate: true, 
-        reason: 'new_version_available',
+        reason: !lastKnownVersion ? 'first_time' : 
+                lastKnownVersion !== release.tag ? 'new_version_available' : 
+                'time_based_update',
         currentVersion: lastKnownVersion || currentVersion,
         latestVersion: release.tag
       };
@@ -608,19 +642,36 @@ async function updateYtdlp(forceUpdate = false) {
     const stats = await fs.stat(ytdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
     
-    // Set executable permissions on Unix-like systems
+    // Set executable permissions on Unix-like systems with retry logic
     if (process.platform !== 'win32') {
-      await fs.chmod(ytdlpPath, 0o755).catch(err => console.warn(`chmod failed: ${err.message}`));
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          await fs.chmod(ytdlpPath, 0o755);
+          console.log(`Successfully set executable permissions for yt-dlp`);
+          break;
+        } catch (err) {
+          retries--;
+          console.warn(`chmod failed (attempt ${4 - retries}/3): ${err.message}`);
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } else {
+            console.error(`Failed to set executable permissions after 3 attempts`);
+          }
+        }
+      }
     }
     
-    // Save version info
+    // Save version info with timestamp
     if (releaseTag) {
       const versionFile = app.isPackaged
         ? join(process.resourcesPath, 'ytdlp_version.txt')
         : join(__dirname, '../../public/ytdlp_version.txt');
       try {
-        await fs.writeFile(versionFile, releaseTag, 'utf8');
-        console.log(`Saved version info: ${releaseTag}`);
+        const timestamp = Date.now().toString();
+        const versionData = `${releaseTag}\n${timestamp}`;
+        await fs.writeFile(versionFile, versionData, 'utf8');
+        console.log(`Saved version info: ${releaseTag} at ${new Date(parseInt(timestamp)).toISOString()}`);
       } catch (err) {
         console.warn(`Failed to save version info: ${err.message}`);
       }
@@ -1208,29 +1259,28 @@ app.whenReady().then(async () => {
   autoUpdater.autoInstallOnAppQuit = true;
   electronApp.setAppUserModelId('com.electron');
   
-  // Force update checks in development
+  // Configure auto updater for development
   if (is.dev) {
-    try {
-      autoUpdater.checkForUpdatesAndNotify();
-    } catch (err) {
-      console.error('Failed to checkForUpdatesAndNotify:', err.message);
-    }
-    autoUpdater.forceDevUpdateConfig = true;
-  }
-  
-  autoUpdater.setFeedURL({
-    provider: "github",
-    owner: "Shoaib-Akh",
-    repo: "pnutdownloader",
-    token: process.env.GH_TOKEN,
-  });
-
-  try {
-    autoUpdater.checkForUpdates().catch(err => {
-      console.error('autoUpdater.checkForUpdates() error:', err.message);
+    // Completely disable auto updater in development
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = false;
+    console.log('Development mode: Auto-updater completely disabled');
+  } else {
+    // Production: Use GitHub releases
+    autoUpdater.setFeedURL({
+      provider: "github",
+      owner: "Shoaib-Akh",
+      repo: "pnutdownloader",
+      private: false,
     });
-  } catch (err) {
-    console.error('Failed to initiate checkForUpdates:', err.message);
+    
+    try {
+      autoUpdater.checkForUpdates().catch(err => {
+        console.error('autoUpdater.checkForUpdates() error:', err.message);
+      });
+    } catch (err) {
+      console.error('Failed to initiate checkForUpdates:', err.message);
+    }
   }
 
   app.on('browser-window-created', (_, window) => {
@@ -2474,6 +2524,17 @@ async function checkDependencies() {
     console.log('yt-dlp exists:', ytdlpExists);
     
     if (ffmpegExists && ytdlpExists) {
+      // Ensure executable permissions on Unix-like systems
+      if (process.platform !== 'win32') {
+        try {
+          await fs.chmod(ytdlpPath, 0o755);
+          await fs.chmod(ffmpegPath, 0o755);
+          console.log('Ensured executable permissions for binaries');
+        } catch (permErr) {
+          console.warn(`Failed to set permissions: ${permErr.message}`);
+        }
+      }
+      
       const ffmpegStats = await fs.stat(ffmpegPath);
       const ytdlpStats = await fs.stat(ytdlpPath);
       

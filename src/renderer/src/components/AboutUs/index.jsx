@@ -65,15 +65,14 @@ function AboutUs() {
 
   return (
     <section
-      className="py-2 pe-4 d-flex flex-column about-us-section justify-content-md-between justify-content-lg-evenly"
+      className="py-2 pe-4 d-flex flex-column about-us-section"
       style={{
         width: '100%',
-        height: '100vh',
-        // height: '85vh',
-        // Ensure the section takes full height and uses Flexbox
+        minHeight: '100vh',
+        maxHeight: '100vh',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-
       }}
     >
       {/* Show update pop-up if update is available */}
@@ -86,23 +85,23 @@ function AboutUs() {
         />
       )}
 
-      <div className="text-center mb-4">
-        <div className="mb-4 mt-5 pt-3">
-          <img src={Logo} alt="PNUT Downloader Logo" style={{ height: '80px', marginBottom: '20px' }} />
+      <div className="text-center mb-3">
+        <div className="mb-3 mt-2 pt-1">
+          <img src={Logo} alt="PNUT Downloader Logo" style={{ height: '50px', marginBottom: '10px' }} />
         </div>
-        <h1 className="display-4 fw-bold text-dark mb-3" style={{ fontSize: 28, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        <h1 className="display-4 fw-bold text-dark mb-2" style={{ fontSize: 22, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
           About PNUT Downloader
         </h1>
-        <h4 className="lead text-muted col-md-8 mx-auto mt-3" style={{ fontSize: 18, lineHeight: 1.6 }}>
+        <h4 className="lead text-muted col-md-10 mx-auto" style={{ fontSize: 15, lineHeight: 1.4 }}>
           We're passionate about making media downloading simple, fast, and reliable for everyone.
           Join thousands of users who trust PNUT Downloader for their media needs.
         </h4>
       </div>
 
-      <div className="row g-4 mb-4">
+      <div className="row g-4 mb-5">
         <div className="col-md-12">
           <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)' }}>
-            <div className="card-body p-4 d-flex justify-content-around align-items-center">
+            <div className="card-body p-3 d-flex justify-content-around align-items-center">
               <div className="text-center">
                 <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Total Downloads</h3>
                 <div className="h2 fw-bold" style={{ color: '#BB4F28' }}>{userStats.totalDownloads}</div>
@@ -117,15 +116,15 @@ function AboutUs() {
         </div>
       </div>
 
-      <div className="row g-4">
-        <div className="col-md-6 mt-lg-5">
+      <div className="row g-4 mb-3">
+        <div className="col-md-6 mt-2">
           <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', }}>
-            <div className="card-body p-4">
-              <div className="mb-3">
-                <FaRocket style={{ fontSize: '2rem', color: '#BB4F28' }} />
+            <div className="card-body p-3">
+              <div className="mb-2">
+                <FaRocket style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
               </div>
-              <h2 className="h4 fw-semibold text-dark mb-3">Our Mission</h2>
-              <p className="text-muted" style={{ lineHeight: 1.7 }}>
+              <h2 className="h5 fw-semibold text-dark mb-2">Our Mission</h2>
+              <p className="text-muted small" style={{ lineHeight: 1.6 }}>
                 At PNUT Downloader, we strive to empower users by providing a seamless experience
                 to access and manage audio, video, and playlist content. Our goal is to simplify
                 the downloading process while ensuring quality and reliability.
@@ -134,14 +133,14 @@ function AboutUs() {
           </div>
         </div>
 
-        <div className="col-md-6 mt-lg-5">
+        <div className="col-md-6 mt-2">
           <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
-            <div className="card-body p-4">
-              <div className="mb-3">
-                <FaUsers style={{ fontSize: '2rem', color: '#BB4F28' }} />
+            <div className="card-body p-3">
+              <div className="mb-2">
+                <FaUsers style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
               </div>
-              <h2 className="h4 fw-semibold text-dark mb-3">Who We Are</h2>
-              <p className="text-muted" style={{ lineHeight: 1.7 }}>
+              <h2 className="h5 fw-semibold text-dark mb-2">Who We Are</h2>
+              <p className="text-muted small" style={{ lineHeight: 1.6 }}>
                 We are a dedicated team of developers and designers committed to creating
                 innovative tools for media enthusiasts. Our focus is on user satisfaction and
                 cutting-edge technology.
@@ -151,20 +150,20 @@ function AboutUs() {
         </div>
       </div>
 
-      <div className="mt-lg-4 mt-1 row align-items-center">
+      <div className="mt-3 row align-items-start">
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center">
-          <h2 className="h4 fw-semibold text-dark mt-lg-4 mt-2" style={{ fontSize: 20, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <h2 className="h5 fw-semibold text-dark mt-2" style={{ fontSize: 18, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
             Connect With Us
           </h2>
-          <p className="text-muted mb-3">Join our community and stay updated!</p>
-          <h3 className="mb-3" style={{ fontSize: 16, color: '#BB4F28' }}>
+          <p className="text-muted mb-2 small">Join our community and stay updated!</p>
+          <h3 className="mb-2" style={{ fontSize: 14, color: '#BB4F28' }}>
             Current Version: <b>{appVersion}</b>
           </h3>
 
           <div className="d-flex flex-column gap-2 mb-3 align-items-center">
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 15, width: 180, borderRadius: '10px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(187, 79, 40, 0.35)';
@@ -180,7 +179,7 @@ function AboutUs() {
 
             <button
               className="btn px-3"
-              style={{ background: '#ff4500', border: 'none', fontSize: 15, width: 250, borderRadius: '10px', boxShadow: '0 4px 12px rgba(255, 69, 0, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: '#ff4500', border: 'none', fontSize: 13, width: 220, borderRadius: '8px', boxShadow: '0 4px 12px rgba(255, 69, 0, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(255, 69, 0, 0.35)';
@@ -206,7 +205,7 @@ function AboutUs() {
 
             <button
               className="btn px-3"
-              style={{ background: '#1877f2', border: 'none', fontSize: 15, width: 250, borderRadius: '10px', boxShadow: '0 4px 12px rgba(24, 119, 242, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: '#1877f2', border: 'none', fontSize: 13, width: 220, borderRadius: '8px', boxShadow: '0 4px 12px rgba(24, 119, 242, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(24, 119, 242, 0.35)';
@@ -229,14 +228,12 @@ function AboutUs() {
               <FaFacebook className="me-2" />
               Follow on Facebook
             </button>
-
-          
           </div>
         </div>
 
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center" style={{ cursor: 'default' }}>
-          <h3 className="mb-3" style={{ fontSize: 18, fontWeight: '600', background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Quick Links</h3>
-          <div className="d-flex flex-column gap-2 ">
+          <h3 className="mb-2" style={{ fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Quick Links</h3>
+          <div className="d-flex flex-column gap-2">
             <button
               onClick={() => {
                 if (window.api) {
@@ -247,7 +244,7 @@ function AboutUs() {
                 }
               }}
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 15, width: 180, borderRadius: '10px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(187, 79, 40, 0.35)';
@@ -262,7 +259,7 @@ function AboutUs() {
             </button>
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 15, width: 220, borderRadius: '10px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
+              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.35)';
@@ -284,7 +281,7 @@ function AboutUs() {
             </button>
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 15, width: 220, borderRadius: '10px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
+              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
                 e.target.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.35)';
@@ -309,13 +306,13 @@ function AboutUs() {
       </div>
 
       {/* Copyright notice pushed to the bottom */}
-      <div className="text-center mt-4 mb-3">
-        <div className="mb-2">
-          <p className="mb-1" style={{ fontSize: 14, color: '#6c757d' }}>
+      <div className="text-center mt-3 mb-2">
+        <div className="mb-1">
+          <p className="mb-1" style={{ fontSize: 12, color: '#6c757d' }}>
             Made with <FaHeart style={{ color: '#e74c3c' }} /> by the PNUT Team
           </p>
         </div>
-        <p style={{ fontSize: 12, color: '#6c757d', margin: 0 }}>
+        <p style={{ fontSize: 11, color: '#6c757d', margin: 0 }}>
           Copyright 2025 PNUT Downloader. All Rights Reserved.
         </p>
       </div>
