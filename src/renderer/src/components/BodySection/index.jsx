@@ -79,6 +79,29 @@ function BodySection({
   const webviewRef = useRef(null)
   const downloadQueue = useRef([])
   const isProcessing = useRef(false)
+
+  const normalizeYouTubeUrlForSingleVideo = (inputUrl) => {
+    if (!inputUrl || typeof inputUrl !== 'string') return inputUrl
+    try {
+      const u = new URL(inputUrl)
+      const host = u.hostname.toLowerCase()
+      const isYouTubeHost = host.includes('youtube.com') || host.includes('youtu.be')
+      if (!isYouTubeHost) return inputUrl
+
+      const hasVideoId = Boolean(extractVideoId(inputUrl))
+      const isPlaylistPage = u.pathname.toLowerCase().includes('/playlist')
+      if (!hasVideoId || isPlaylistPage) return inputUrl
+
+      u.searchParams.delete('list')
+      u.searchParams.delete('index')
+      u.searchParams.delete('start_radio')
+      u.searchParams.delete('rv')
+      return u.toString()
+    } catch {
+      return inputUrl
+    }
+  }
+
   const customSanitize = (str) => {
     if (!str) return 'Unknown';
     return str
@@ -118,9 +141,10 @@ function BodySection({
     if (pastLinkUrl) {
       const fetchAndDownload = async () => {
         const list = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        const normalizedUrl = normalizeYouTubeUrlForSingleVideo(pastLinkUrl)
         const isDuplicate = isDuplicateDownload(
           list,
-          pastLinkUrl,
+          normalizedUrl,
           format,
           quality,
           saveTo,
@@ -143,7 +167,7 @@ function BodySection({
           setPastLinkUrl('')
           return
         }
-        const videoInfo = await getVideoInfo(pastLinkUrl)
+        const videoInfo = await getVideoInfo(normalizedUrl)
         if (videoInfo) {
           if (videoInfo.isPlaylist) {
             setPlaylistModalLoading(true)
@@ -151,7 +175,7 @@ function BodySection({
             setPlaylistModalOpen(true)
             setPlaylistModalLoading(false)
           } else {
-            addToQueue(pastLinkUrl)
+            addToQueue(normalizedUrl)
             setDownloadListOpen(true)
             setShowWebView(false)
             setIsSidebarOpen(true)
@@ -286,7 +310,8 @@ function BodySection({
       console.error('window.api is not defined')
     }
     setAboutUs(false);
-    const urlToDownload = pastLinkUrl || currentWebViewUrl;
+    const rawUrlToDownload = pastLinkUrl || currentWebViewUrl;
+    const urlToDownload = normalizeYouTubeUrlForSingleVideo(rawUrlToDownload);
     if (!urlToDownload) return;
 
     // Duplicate only when same video + same format, quality, saveTo, audio/video, bitrate
@@ -433,15 +458,20 @@ function BodySection({
         const videoId = extractVideoId(url);
         const playlistId = extractPlaylistId(url);
 
-        // YouTube Mix/Radio playlists (list=RD...) frequently don't work with Data API.
-        // Fallback to yt-dlp playlist extraction via main process.
-        if (playlistId && playlistId.startsWith('RD') && window.api?.fetchPlaylistEntries) {
-          return await window.api.fetchPlaylistEntries(url)
+        // If we have a videoId (even if URL includes list/index), download as a single video by default.
+        if (videoId) {
+          const normalizedSingle = normalizeYouTubeUrlForSingleVideo(url)
+          return await youtubeAPI.extractVideoInfo(normalizedSingle)
         }
 
-        if (videoId && !playlistId) {
-          return await youtubeAPI.extractVideoInfo(url);
-        } else if (playlistId) {
+        // No videoId => treat as playlist URL
+        if (playlistId) {
+          // YouTube Mix/Radio playlists (list=RD...) frequently don't work with Data API.
+          // Fallback to yt-dlp playlist extraction via main process.
+          if (playlistId.startsWith('RD') && window.api?.fetchPlaylistEntries) {
+            return await window.api.fetchPlaylistEntries(url)
+          }
+
           const apiPlaylist = await youtubeAPI.extractPlaylistInfo(url);
           if (apiPlaylist && Array.isArray(apiPlaylist.videos) && apiPlaylist.videos.length > 0) {
             return apiPlaylist

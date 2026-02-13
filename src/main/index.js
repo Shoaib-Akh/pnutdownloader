@@ -333,9 +333,80 @@ function downloadFile(url, destPath) {
 
       response.pipe(file);
       let downloadedBytes = 0;
+      const totalBytesHeader = response.headers['content-length'];
+      const totalBytes = totalBytesHeader ? Number(totalBytesHeader) : null;
+      const startTimeMs = Date.now();
+      let lastLogTimeMs = 0;
+      let lastLogBytes = 0;
+
+      const formatBytes = (bytes) => {
+        if (!Number.isFinite(bytes)) return 'unknown';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let v = bytes;
+        let i = 0;
+        while (v >= 1024 && i < units.length - 1) {
+          v /= 1024;
+          i++;
+        }
+        return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`;
+      };
+
+      const logProgress = (force = false) => {
+        const now = Date.now();
+        if (!force && now - lastLogTimeMs < 500) return;
+
+        const elapsedSec = Math.max((now - startTimeMs) / 1000, 0.001);
+        const overallSpeedBps = downloadedBytes / elapsedSec;
+
+        const windowElapsedSec = Math.max((now - (lastLogTimeMs || startTimeMs)) / 1000, 0.001);
+        const windowSpeedBps = (downloadedBytes - lastLogBytes) / windowElapsedSec;
+
+        const speedBps = Number.isFinite(windowSpeedBps) && windowSpeedBps > 0 ? windowSpeedBps : overallSpeedBps;
+        const speedStr = `${formatBytes(speedBps)}/s`;
+
+        const progressPayload = {
+          destPath,
+          url,
+          downloadedBytes,
+          totalBytes: totalBytes && Number.isFinite(totalBytes) ? totalBytes : null,
+          speedBps: Number.isFinite(speedBps) ? speedBps : null,
+          timestamp: now
+        };
+
+        try {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('download-progress', progressPayload);
+          }
+        } catch (err) {
+          // Ignore progress IPC errors
+        }
+
+        if (totalBytes && Number.isFinite(totalBytes) && totalBytes > 0) {
+          const pct = Math.min((downloadedBytes / totalBytes) * 100, 100);
+          console.log(
+            `Download progress: ${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)} (${pct.toFixed(1)}%) @ ${speedStr}`
+          );
+        } else {
+          console.log(`Download progress: ${formatBytes(downloadedBytes)} downloaded @ ${speedStr}`);
+        }
+
+        lastLogTimeMs = now;
+        lastLogBytes = downloadedBytes;
+      };
+
+      if (totalBytes && Number.isFinite(totalBytes) && totalBytes > 0) {
+        console.log(`Download size: ${formatBytes(totalBytes)} (content-length)`);
+      } else {
+        console.log('Download size: unknown (missing content-length)');
+      }
+
       response.on('data', (chunk) => {
         downloadedBytes += chunk.length;
-        console.log(`Downloaded ${downloadedBytes} bytes`);
+        logProgress(false);
+      });
+
+      response.on('end', () => {
+        logProgress(true);
       });
 
       file.on('finish', async () => {

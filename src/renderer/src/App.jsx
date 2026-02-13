@@ -31,6 +31,7 @@ function App() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [dependencyProgressText, setDependencyProgressText] = useState('')
   const [aboutUs, setAboutUs] = useState(false)
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
@@ -71,6 +72,46 @@ function App() {
         }
 
         if (window.api) {
+          if (window.api.onDownloadProgress) {
+            try {
+              window.api.onDownloadProgress((progressData) => {
+                try {
+                  const downloadedBytes = Number(progressData?.downloadedBytes || 0)
+                  const totalBytes = progressData?.totalBytes ? Number(progressData.totalBytes) : null
+                  const speedBps = progressData?.speedBps ? Number(progressData.speedBps) : null
+
+                  const formatBytes = (bytes) => {
+                    if (!Number.isFinite(bytes)) return '0 B'
+                    const units = ['B', 'KB', 'MB', 'GB', 'TB']
+                    let v = bytes
+                    let i = 0
+                    while (v >= 1024 && i < units.length - 1) {
+                      v /= 1024
+                      i++
+                    }
+                    return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`
+                  }
+
+                  const speedStr = speedBps && Number.isFinite(speedBps) ? `${formatBytes(speedBps)}/s` : ''
+                  if (totalBytes && Number.isFinite(totalBytes) && totalBytes > 0) {
+                    const pct = Math.min((downloadedBytes / totalBytes) * 100, 100)
+                    setDependencyProgressText(
+                      `Downloading dependencies: ${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)} (${pct.toFixed(1)}%)${speedStr ? ` @ ${speedStr}` : ''}`
+                    )
+                  } else {
+                    setDependencyProgressText(
+                      `Downloading dependencies: ${formatBytes(downloadedBytes)}${speedStr ? ` @ ${speedStr}` : ''}`
+                    )
+                  }
+                } catch (err) {
+                  setDependencyProgressText('Downloading dependencies...')
+                }
+              })
+            } catch (err) {
+              // ignore
+            }
+          }
+
           const checkDependencies = async () => {
             try {
               const status = await window.api.checkDependencies()
@@ -78,6 +119,7 @@ function App() {
               if (status.ready) {
                 // Dependencies are ready, stop loading screen
                 setIsLoading(false)
+                setDependencyProgressText('')
 
                 // Fetch version information in background without blocking
                 Promise.all([
@@ -248,6 +290,22 @@ function App() {
         >
           Initializing Dependencies...
         </div>
+
+        {dependencyProgressText ? (
+          <div
+            style={{
+              marginBottom: '18px',
+              color: '#334155',
+              fontSize: '14px',
+              fontWeight: '500',
+              maxWidth: '520px',
+              textAlign: 'center',
+              padding: '0 16px'
+            }}
+          >
+            {dependencyProgressText}
+          </div>
+        ) : null}
 
 
         <div
