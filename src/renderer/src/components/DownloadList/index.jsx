@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -1221,6 +1221,14 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
                         <FaEllipsisV />
                       </Dropdown.Toggle>
                       <Dropdown.Menu className="dropdown-menu">
+                        <Dropdown.Item
+                          onClick={() => {
+                            setOpenDropdown(null)
+                            if (typeof onRetry === 'function') onRetry(item.id)
+                          }}
+                        >
+                          Retry Download <FaRedoAlt className="me-2" />
+                        </Dropdown.Item>
                         <Dropdown.Item
                           onClick={() => {
                             handleAddToFolder(item);

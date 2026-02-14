@@ -21,6 +21,7 @@ try {
 }
 
 const https = require('https');
+ const treeKill = require('tree-kill');
 
 // Platform detection utilities
 const getPlatformExecutableName = (baseName) => {
@@ -52,6 +53,7 @@ const cookiesPath = app.isPackaged
 let mainWindow
 let clipboardMonitorInterval = null
 let lastClipboardText = ''
+let isAppClosing = false;
 const { dirname } = require('path');
 // Get yt-dlp path - always use bundled/downloaded version
 const getYtdlpPath = () => {
@@ -970,6 +972,9 @@ function createWindow() {
 
   // Handle window close event to show confirmation dialog
   mainWindow.on('close', async (event) => {
+    if (isAppClosing) {
+      return;
+    }
     event.preventDefault(); // Prevent immediate close
     console.log('Main window close requested, showing confirmation dialog...');
     try {
@@ -985,6 +990,12 @@ function createWindow() {
 
       if (result.response === 0) { // User clicked "Yes"
         console.log('User confirmed exit, closing main window...');
+        isAppClosing = true;
+        try {
+          await cancelActiveDownloads({ reason: 'app_close' });
+        } catch (e) {
+          // ignore
+        }
         mainWindow.destroy(); // Destroy window to trigger 'closed' event
       } else {
         console.log('User canceled exit, keeping window open.');
@@ -992,6 +1003,12 @@ function createWindow() {
       }
     } catch (error) {
       console.error('Error showing exit confirmation dialog:', error);
+      isAppClosing = true;
+      try {
+        await cancelActiveDownloads({ reason: 'app_close_error' });
+      } catch (e) {
+        // ignore
+      }
       mainWindow.destroy(); // Fallback to closing on error
     }
   });
@@ -1192,6 +1209,37 @@ function createWindow() {
   startClipboardMonitoring();
 }
 
+async function cancelActiveDownloads({ reason } = {}) {
+  const hasActive = Boolean(downloadProcess) || Object.keys(activeDownloads || {}).length > 0;
+  if (!hasActive) return;
+
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('download-progress', {
+        status: 'Download cancelled (app closing).',
+        reason: reason || 'app_closing'
+      });
+    }
+  } catch (e) {
+    // ignore IPC errors
+  }
+
+  const ids = Object.keys(activeDownloads || {});
+  ids.forEach((id) => {
+    delete activeDownloads[id];
+  });
+
+  if (downloadProcess && typeof downloadProcess.pid === 'number') {
+    const pid = downloadProcess.pid;
+    await new Promise((resolve) => {
+      treeKill(pid, 'SIGKILL', () => resolve());
+      setTimeout(resolve, 1500);
+    });
+  }
+
+  downloadProcess = null;
+}
+
 app.whenReady().then(async () => {
   // Create window immediately
   createWindow();
@@ -1372,6 +1420,17 @@ app.whenReady().then(async () => {
       createWindow();
     }
   });
+});
+
+app.on('before-quit', (event) => {
+  if (isAppClosing) return;
+  if (downloadProcess || (activeDownloads && Object.keys(activeDownloads).length > 0)) {
+    event.preventDefault();
+    isAppClosing = true;
+    cancelActiveDownloads({ reason: 'before_quit' }).finally(() => {
+      app.quit();
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -2395,7 +2454,6 @@ ipcMain.handle('resumeDownload', async (event, options) => {
   return false;
 });
 
-const treeKill = require('tree-kill');
 ipcMain.handle('pauseDownload', () => {
   console.log('Attempting to pause download...');
   if (downloadProcess) {
