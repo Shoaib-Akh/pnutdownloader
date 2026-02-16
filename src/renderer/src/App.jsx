@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Navbar from './components/Navbar'
 import BodySection from './components/BodySection'
 import Sidebar from './components/Sidebar'
@@ -6,13 +6,6 @@ import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
 import { FaRegLightbulb } from 'react-icons/fa'
 import { MdFeedback } from 'react-icons/md'
-import FeedbackModal from './components/FeedbackModal'
-import { initializeUserTracking } from './utils/userTracking'
-import { initializeFirestore, getUserPreferences, saveUserPreferences } from './utils/firestoreService'
-import { initializeUserTrackingFirestore } from './utils/firestoreUtils'
-import { getDeviceId } from './utils/userTracking'
-import { isDuplicateDownload } from './components/commonFunction'
-
 
 function App() {
   const [downloadType, setDownloadType] = useState('Video')
@@ -32,33 +25,11 @@ function App() {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [dependencyProgressText, setDependencyProgressText] = useState('')
+  const dependencyLastProgressAtRef = useRef(0)
   const [aboutUs, setAboutUs] = useState(false)
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
-  const [versionInfo, setVersionInfo] = useState({ yt: '', ffmpeg: '' })
-  console.log(versionInfo)
-  // Save preferences to Firestore when they change
-  useEffect(() => {
-    const savePreferences = async () => {
-      try {
-        await saveUserPreferences({
-          defaultQuality: quality,
-          defaultFormat: format,
-          defaultBitrate: bitrate,
-          defaultSaveTo: saveTo,
-          defaultDownloadType: downloadType
-        })
-      } catch (error) {
-        console.error('Error saving preferences:', error)
-      }
-    }
-
-    // Debounce preference saves (only save after user stops changing for 2 seconds)
-    const timeoutId = setTimeout(savePreferences, 2000)
-    return () => clearTimeout(timeoutId)
-  }, [quality, format, bitrate, saveTo, downloadType])
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -76,6 +47,7 @@ function App() {
             try {
               window.api.onDownloadProgress((progressData) => {
                 try {
+                  dependencyLastProgressAtRef.current = Date.now()
                   const downloadedBytes = Number(progressData?.downloadedBytes || 0)
                   const totalBytes = progressData?.totalBytes ? Number(progressData.totalBytes) : null
                   const speedBps = progressData?.speedBps ? Number(progressData.speedBps) : null
@@ -115,41 +87,29 @@ function App() {
           const checkDependencies = async () => {
             try {
               const status = await window.api.checkDependencies()
-
               if (status.ready) {
-                // Dependencies are ready, stop loading screen
-                setIsLoading(false)
-                setDependencyProgressText('')
+                const now = Date.now()
+                const lastProgressAt = dependencyLastProgressAtRef.current
+                const hasRecentProgress = lastProgressAt && now - lastProgressAt < 3000
 
-                // Fetch version information in background without blocking
-                Promise.all([
-                  window.api.getYtVersion().catch(err => `Error: ${err.message}`),
-                  window.api.getFfmpegVersion().catch(err => `Error: ${err.message}`)
-                ]).then(([ytVersion, ffmpegVersion]) => {
-                  setVersionInfo({ yt: ytVersion, ffmpeg: ffmpegVersion })
-                  console.log('YouTube version:', ytVersion)
-                  console.log('FFmpeg version:', ffmpegVersion)
-                }).catch(err => {
-                  console.error('Error getting versions in background:', err)
-                })
+                if (hasRecentProgress) {
+                  setTimeout(checkDependencies, 2000)
+                } else {
+                  setIsLoading(false)
+                }
               } else {
-                // Not ready yet, check again in 2 seconds
-                setTimeout(checkDependencies, 2000)
+                setTimeout(checkDependencies, 20000)
               }
             } catch (error) {
               console.error('Dependency check error:', error)
-              setIsLoading(false)
+              setTimeout(checkDependencies, 5000)
             }
           }
           checkDependencies()
 
           // Check for updates
           if (window.api.checkForUpdates) {
-            try {
-              window.api.checkForUpdates()
-            } catch (err) {
-              console.error('Failed to call checkForUpdates:', err)
-            }
+            window.api.checkForUpdates()
           }
 
           if (window.api.onUpdateAvailable) {
@@ -170,9 +130,7 @@ function App() {
 
           if (window.api.onUpdateDownloadedProgress) {
             window.api.onUpdateDownloadedProgress((progress) => {
-              console.log('Update progress received:', progress)
-              console.log('Progress percent:', progress.percent)
-              setDownloadProgress(progress.percent || 0)
+              setDownloadProgress(progress.percent)
             })
           }
 
@@ -204,35 +162,6 @@ function App() {
 
     initializeApp()
 
-    // Initialize user tracking (Realtime Database)
-    initializeUserTracking()
-
-    // Initialize Firestore
-    const initFirestore = async () => {
-      try {
-        const deviceId = getDeviceId()
-        // Initialize Firestore user tracking (may fail due to permissions, that's OK)
-        // Silently handle - function already handles errors internally
-        await initializeUserTrackingFirestore(deviceId)
-        // Initialize Firestore service
-        await initializeFirestore()
-
-        // Load user preferences from Firestore
-        const preferences = await getUserPreferences()
-        if (preferences) {
-          if (preferences.defaultQuality) setQuality(preferences.defaultQuality)
-          if (preferences.defaultFormat) setFormat(preferences.defaultFormat)
-          if (preferences.defaultBitrate) setBitrate(preferences.defaultBitrate)
-          if (preferences.defaultSaveTo) setSaveTo(preferences.defaultSaveTo)
-          if (preferences.defaultDownloadType) setDownloadType(preferences.defaultDownloadType)
-        }
-      } catch (error) {
-        console.error('Error initializing Firestore:', error)
-        // App continues to work with localStorage
-      }
-    }
-    initFirestore()
-
     // Cleanup listener on unmount
     return () => {
       if (window.api && typeof window.api.removeVideoUrlDetectedListener === 'function') {
@@ -257,13 +186,16 @@ function App() {
   }
 
   const handleFeedbackClick = () => {
-    setFeedbackModalOpen(true)
     if (window.api) {
       try {
         window.api.trackEvent('feedback_button_clicked')
+       
+        window.api.openExternal(feedbackUrl)
       } catch (error) {
         console.error('Failed to track feedback_button_clicked:', error)
       }
+    } else {
+      console.error('window.api is not defined')
     }
   }
 
@@ -281,44 +213,36 @@ function App() {
       >
         <div
           style={{
-            fontSize: '32px',
-            marginBottom: '30px',
-            color: '#1e293b',
-            fontWeight: '700',
-            letterSpacing: '-0.5px'
+            fontSize: '24px',
+            marginBottom: '20px',
+            color: '#333',
           }}
         >
           Initializing Dependencies...
         </div>
-
+        <div
+          style={{
+            width: '50px',
+            height: '50px',
+            border: '5px solid #ccc',
+            borderTop: '5px solid #BB4F28',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+          }}
+        ></div>
         {dependencyProgressText ? (
           <div
             style={{
-              marginBottom: '18px',
-              color: '#334155',
+              marginTop: '16px',
               fontSize: '14px',
-              fontWeight: '500',
-              maxWidth: '520px',
+              color: '#555',
               textAlign: 'center',
-              padding: '0 16px'
+              maxWidth: '80%',
             }}
           >
             {dependencyProgressText}
           </div>
         ) : null}
-
-
-        <div
-          style={{
-            width: '64px',
-            height: '64px',
-            border: '6px solid #e2e8f0',
-            borderTop: '6px solid #BB4F28',
-            borderRadius: '50%',
-            animation: 'spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite',
-            boxShadow: '0 4px 12px rgba(187, 79, 40, 0.15)'
-          }}
-        ></div>
         <style>{`
           @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -340,38 +264,15 @@ function App() {
 
   const handleUrlDetectionDownload = async () => {
     if (!detectedUrl || !window.api) return
-
-    const list = JSON.parse(localStorage.getItem('downloadList') || '[]')
-    const isDuplicate = isDuplicateDownload(
-      list,
-      detectedUrl,
-      format,
-      quality,
-      saveTo,
-      downloadType,
-      bitrate
-    )
-    if (isDuplicate) {
-      try {
-        await window.api.showMessageBox({
-          type: 'warning',
-          title: 'Duplicate Download',
-          message:
-            'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
-        })
-      } catch {
-        alert(
-          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
-        )
-      }
-      return
-    }
-
+    
     setIsUrlDownloading(true)
     try {
+      // Set the detected URL to pastLinkUrl so BodySection can handle it
       setPastLinkUrl(detectedUrl)
+      // Close the modal
       setUrlDetectionModalOpen(false)
-      setDetectedUrl('')
+      // Optionally trigger download automatically
+      // You can add auto-download logic here if needed
     } catch (error) {
       console.error('Error handling URL detection download:', error)
     } finally {
@@ -393,11 +294,6 @@ function App() {
         />
       )}
 
-      <FeedbackModal
-        isOpen={feedbackModalOpen}
-        onClose={() => setFeedbackModalOpen(false)}
-      />
-
       <UrlDetectionModal
         isOpen={urlDetectionModalOpen}
         onClose={handleUrlDetectionClose}
@@ -406,50 +302,49 @@ function App() {
         isLoading={isUrlDownloading}
       />
 
-      <div className="d-flex" style={{
-        paddingTop: '0',
+      <div className="d-flex" style={{ 
+        paddingTop: '0', 
         borderTop: '1px solid #e2e8f0',
         height: 'calc(100vh - 60px)',
         overflow: 'hidden'
       }}>
         <div style={{ width: '16%' }}>
           <Sidebar
-            setSelectedItem={setSelectedItem}
-            selectedItem={selectedItem}
-            setDownload={setDownload}
-            download={download}
-            setShowWebView={setShowWebView}
-            showWebView={showWebView}
-            setDownloadListOpen={setDownloadListOpen}
-            setAboutUs={setAboutUs}
-            setFeedbackModalOpen={setFeedbackModalOpen}
-          />
+              setSelectedItem={setSelectedItem}
+              selectedItem={selectedItem}
+              setDownload={setDownload}
+              download={download}
+              setShowWebView={setShowWebView}
+              showWebView={showWebView}
+              setDownloadListOpen={setDownloadListOpen}
+              setAboutUs={setAboutUs}
+            />
         </div>
 
-        {/* <button className="feedback-button" onClick={handleFeedbackClick}>
+        <button className="feedback-button" onClick={handleFeedbackClick}>
           <MdFeedback /> Feedback
-        </button> */}
+        </button>
 
         <div style={{ display: 'none' }}>
           <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
         </div>
-        {!showWebView && <Navbar
-          bitrate={bitrate}
-          setBitrate={setBitrate}
-          downloadType={downloadType}
-          setDownloadType={setDownloadType}
-          quality={quality}
-          setQuality={setQuality}
-          format={format}
-          setFormat={setFormat}
-          saveTo={saveTo}
-          setSaveTo={setSaveTo}
-          isSidebarOpen={isSidebarOpen}
-          // setIsSidebarOpen={setIsSidebarOpen}
-          setPastLinkUrl={setPastLinkUrl}
-        />}
+ {!showWebView && <Navbar
+        bitrate={bitrate}
+        setBitrate={setBitrate}
+        downloadType={downloadType}
+        setDownloadType={setDownloadType}
+        quality={quality}
+        setQuality={setQuality}
+        format={format}
+        setFormat={setFormat}
+        saveTo={saveTo}
+        setSaveTo={setSaveTo}
+        isSidebarOpen={isSidebarOpen}
+        // setIsSidebarOpen={setIsSidebarOpen}
+        setPastLinkUrl={setPastLinkUrl}
+      />}
         <BodySection
-          setPastLinkUrl={setPastLinkUrl}
+        setPastLinkUrl={setPastLinkUrl}
           bitrate={bitrate}
           setBitrate={setBitrate}
           downloadType={downloadType}

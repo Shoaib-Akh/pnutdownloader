@@ -289,9 +289,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
 
   const handleCopyUrl = (item) => {
     navigator.clipboard.writeText(item.url)
-      .then(() => {
-        alert('URL copied to clipboard!')
-      })
+     
       .catch((err) => {
         console.error('Failed to copy URL:', err)
       })

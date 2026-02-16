@@ -113,10 +113,7 @@ function BodySection({
   const handleCopyUrl = () => {
     navigator.clipboard
       .writeText(currentWebViewUrl)
-      .then(() => {
-
-        alert('URL copied to clipboard!')
-      })
+     
       .catch((err) => {
         console.error('Failed to copy URL:', err)
       })
