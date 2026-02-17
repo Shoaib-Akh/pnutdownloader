@@ -8,7 +8,7 @@ const api = {
   fetchVideoInfo: (url) => ipcRenderer.invoke('fetch-video-info', url),
   fetchPlaylistEntries: (url) => ipcRenderer.invoke('fetch-playlist-entries', url),
   getYoutubeInfo: (url) => ipcRenderer.invoke('get-youtube-info', url),
-
+  saveWebViewCookies: () => ipcRenderer.invoke('save-webview-cookies'),
   showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
 trackEvent: (eventName, props) => trackEvent(eventName, props),
   downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, playlistTitle, forceSingle }) =>

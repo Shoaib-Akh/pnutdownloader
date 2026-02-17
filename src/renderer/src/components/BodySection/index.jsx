@@ -369,26 +369,16 @@ function BodySection({
 
   const handleLogin = () => {
     window.api.trackEvent('youtube-login')
-    const youtubeLoginUrl = 'https://accounts.google.com/ServiceLogin?service=youtube';
-    setCurrentWebViewUrl(youtubeLoginUrl);
-    setUrl(youtubeLoginUrl);
-    setLastUrl(youtubeLoginUrl);
+    // Navigate to YouTube - when user signs in here, cookies will be saved
+    // Use youtube.com home page which will redirect to login if needed
+    const youtubeUrl = 'https://www.youtube.com';
+    setCurrentWebViewUrl(youtubeUrl);
+    setUrl(youtubeUrl);
+    setLastUrl(youtubeUrl);
     setShowWebView(true);
     setIsSidebarOpen(false);
     setShowLoginPopup(false);
-    setIsWebViewReady(false); // Reset readiness
-
-    if (webviewRef.current) {
-      const onDomReady = () => {
-        webviewRef.current.src = youtubeLoginUrl;
-        setIsWebViewReady(true);
-        setCanGoBack(webviewRef.current.canGoBack());
-        setCanGoForward(webviewRef.current.canGoForward());
-        webviewRef.current.removeEventListener('dom-ready', onDomReady);
-      };
-
-      webviewRef.current.addEventListener('dom-ready', onDomReady);
-    }
+    setIsWebViewReady(true);
   };
   // Array of API keys from environment variables
   // apiKeys.js
@@ -1157,12 +1147,15 @@ function BodySection({
             </OverlayTrigger>
           </div>
           <div className="webview-height">
-            {isWebViewReady ?
-              <webview ref={webviewRef} src={url} style={{ height: '100%', width: '100%' }} />
-              : <p>sdfsdf</p>
+            {showWebView &&
+              <webview 
+                ref={webviewRef} 
+                src={url} 
+                style={{ height: '100%', width: '100%' }}
+                allowpopups="true"
+                partition="persist:main"
+              />
             }
-
-
           </div>
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>

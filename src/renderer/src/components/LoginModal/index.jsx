@@ -33,7 +33,9 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
         <p className="modal-message">
           YouTube has restricted downloads.<br/> Please log in to YouTube to resume downloading your content.
         </p>
-       
+        <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+          Click "Log in to YouTube" to open YouTube in the browser. Sign in with your Google account, then you can download.
+        </p>
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer">
        
