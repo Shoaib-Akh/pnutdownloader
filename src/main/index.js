@@ -10,6 +10,12 @@ import { autoUpdater } from 'electron-updater';
 import { extractVideoId } from '../renderer/src/components/commonFunction';
 
 import { initialize, trackEvent } from "@aptabase/electron/main";
+
+// Set app user model ID for Windows notifications immediately
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.shoaibakh.pnutdownloader');
+}
+
 try {
   console.log('Initializing Aptabase...')
   initialize('A-US-9628986453')
@@ -1376,7 +1382,7 @@ app.whenReady().then(async () => {
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
-  electronApp.setAppUserModelId('com.electron');
+  electronApp.setAppUserModelId('pnutdownloader');
   
   // Configure auto updater for development
   if (is.dev) {
@@ -1439,6 +1445,113 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+// Function to clean up partial download files
+async function cleanupPartialFile(filePath) {
+  try {
+    if (existsSync(filePath)) {
+      await fs.unlink(filePath);
+      console.log(`Cleaned up partial file: ${filePath}`);
+      return true;
+    }
+  } catch (cleanupError) {
+    console.warn(`Failed to clean up partial file ${filePath}:`, cleanupError.message);
+  }
+  return false;
+}
+
+// Function to handle manual file deletion and update tracking
+async function handleFileDeletion(filePath) {
+  try {
+    if (existsSync(filePath)) {
+      const stats = await fs.stat(filePath);
+      console.log(`File exists before deletion: ${filePath} (${stats.size} bytes)`);
+      
+      // Delete the file
+      await fs.unlink(filePath);
+      console.log(`Manually deleted file: ${filePath}`);
+      
+      // Update any internal tracking or UI state
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('file-deleted', { 
+          filePath: filePath,
+          timestamp: new Date().toISOString(),
+          message: `File deleted: ${require('path').basename(filePath)}`
+        });
+      }
+      
+      return true;
+    } else {
+      console.log(`File not found for deletion: ${filePath}`);
+      return false;
+    }
+  } catch (deleteError) {
+    console.error(`Failed to delete file ${filePath}:`, deleteError.message);
+    throw deleteError;
+  }
+}
+
+// Function to safely delete file with verification
+async function safeDeleteFile(filePath) {
+  try {
+    // Check if file exists first
+    if (!existsSync(filePath)) {
+      console.log(`File does not exist: ${filePath}`);
+      return { success: false, message: 'File does not exist' };
+    }
+    
+    // Get file info before deletion
+    const stats = await fs.stat(filePath);
+    const fileName = require('path').basename(filePath);
+    const fileSize = stats.size;
+    
+    console.log(`Deleting file: ${fileName} (${fileSize} bytes)`);
+    
+    // Delete the file
+    await fs.unlink(filePath);
+    
+    // Verify deletion
+    if (existsSync(filePath)) {
+      throw new Error('File still exists after deletion attempt');
+    }
+    
+    console.log(`Successfully deleted: ${fileName}`);
+    
+    // Notify renderer of successful deletion
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-deleted-successfully', {
+        filePath: filePath,
+        fileName: fileName,
+        fileSize: fileSize,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    return { 
+      success: true, 
+      message: `Successfully deleted ${fileName}`,
+      fileName: fileName,
+      fileSize: fileSize
+    };
+    
+  } catch (error) {
+    console.error(`Error deleting file ${filePath}:`, error.message);
+    
+    // Notify renderer of deletion failure
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('file-deletion-failed', {
+        filePath: filePath,
+        error: error.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    return { 
+      success: false, 
+      message: `Failed to delete file: ${error.message}` 
+    };
+  }
+}
 
 async function updateCookiesFile() {
   try {
@@ -2365,7 +2478,19 @@ console.log("options",options);
           }
         });
 
-        downloadProcess.on('close', (code) => {
+        downloadProcess.on('error', async (err) => {
+          delete activeDownloads[downloadId];
+          downloadProcess = null;
+          
+          // Clean up partial file on process error
+          if (resolvedDownloadPath) {
+            await cleanupPartialFile(resolvedDownloadPath);
+          }
+          
+          reject(err);
+        });
+
+        downloadProcess.on('close', async (code) => {
           delete activeDownloads[downloadId];
           downloadProcess = null;
 
@@ -2374,6 +2499,12 @@ console.log("options",options);
             resolve();
           } else {
             console.error(`[${downloadId}] Download process exited with code ${code}`);
+            
+            // Clean up partial file on download failure
+            if (resolvedDownloadPath) {
+              await cleanupPartialFile(resolvedDownloadPath);
+            }
+            
             // Provide more specific error messages based on common exit codes
             let errorMessage = `Download failed with code ${code}`;
             let errorDetails = '';
@@ -2408,12 +2539,6 @@ console.log("options",options);
             reject(new Error(`${errorMessage}: ${errorDetails}`));
           }
         });
-
-        downloadProcess.on('error', (err) => {
-          delete activeDownloads[downloadId];
-          downloadProcess = null;
-          reject(err);
-        });
       }).catch((err) => {
         event.sender.send('download-progress', { downloadId, error: err.message });
         reject(err);
@@ -2424,12 +2549,14 @@ console.log("options",options);
     }
   });
 };
+
 ipcMain.handle('select-folder', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],
   });
   return result.canceled ? null : result.filePaths[0]; // Return null if canceled, else folder path
 })
+
 ipcMain.handle('downloadVideo', async (event, options) => {
   console.log('Starting download...');
   try {
@@ -2454,15 +2581,27 @@ ipcMain.handle('resumeDownload', async (event, options) => {
   return false;
 });
 
-ipcMain.handle('pauseDownload', () => {
+ipcMain.handle('pauseDownload', async () => {
   console.log('Attempting to pause download...');
   if (downloadProcess) {
     console.log('Killing download process with PID:', downloadProcess.pid);
-    treeKill(downloadProcess.pid, 'SIGKILL', (err) => {
+    
+    // Get current download path for cleanup
+    let currentDownloadPath = null;
+    if (downloadProcess && downloadProcess.resolvedDownloadPath) {
+      currentDownloadPath = downloadProcess.resolvedDownloadPath;
+    }
+    
+    treeKill(downloadProcess.pid, 'SIGKILL', async (err) => {
       if (err) {
         console.error('Failed to kill process tree:', err);
       } else {
         console.log('Process tree killed successfully.');
+        
+        // Clean up partial file when download is paused
+        if (currentDownloadPath) {
+          await cleanupPartialFile(currentDownloadPath);
+        }
       }
     });
     downloadProcess = null;
@@ -2489,6 +2628,82 @@ ipcMain.handle('openPath', async (event, path) => {
   } catch (error) {
     console.error(`Failed to open path ${path}:`, error);
     throw error;
+  }
+});
+
+ipcMain.handle('deleteFile', async (event, filePath) => {
+  try {
+    console.log(`Delete file request received for: ${filePath}`);
+    const result = await safeDeleteFile(filePath);
+    return result;
+  } catch (error) {
+    console.error(`Error in deleteFile handler:`, error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('handleFileDeletion', async (event, filePath) => {
+  try {
+    console.log(`Handle file deletion request for: ${filePath}`);
+    const result = await handleFileDeletion(filePath);
+    return { success: result, message: result ? 'File deleted successfully' : 'File not found' };
+  } catch (error) {
+    console.error(`Error in handleFileDeletion handler:`, error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('deleteMultipleFiles', async (event, filePaths) => {
+  try {
+    console.log(`Batch delete request for ${filePaths.length} files`);
+    const results = [];
+    
+    for (const filePath of filePaths) {
+      try {
+        const result = await safeDeleteFile(filePath);
+        results.push({ filePath, ...result });
+      } catch (error) {
+        results.push({ 
+          filePath, 
+          success: false, 
+          message: error.message 
+        });
+      }
+    }
+    
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.length - successCount;
+    
+    console.log(`Batch deletion completed: ${successCount} success, ${failureCount} failed`);
+    
+    return {
+      success: failureCount === 0,
+      message: `Deleted ${successCount} of ${results.length} files`,
+      results: results
+    };
+  } catch (error) {
+    console.error(`Error in batch delete handler:`, error.message);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('checkFileExists', async (event, filePath) => {
+  try {
+    const exists = existsSync(filePath);
+    if (exists) {
+      const stats = await fs.stat(filePath);
+      return {
+        exists: true,
+        size: stats.size,
+        modified: stats.mtime,
+        isFile: stats.isFile(),
+        isDirectory: stats.isDirectory()
+      };
+    }
+    return { exists: false };
+  } catch (error) {
+    console.error(`Error checking file existence ${filePath}:`, error.message);
+    return { exists: false, error: error.message };
   }
 });
 
