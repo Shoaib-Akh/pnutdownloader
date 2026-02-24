@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Status Download Error</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .error-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 50px auto;
+            max-width: 1200px;
+            overflow: hidden;
+        }
+        
+        .error-header {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .error-details {
+            padding: 40px;
+        }
+        
+        .error-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .error-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+        }
+        
+        .error-code {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .user-info {
+            background: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .timestamp {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container">
+            <div class="error-header">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h1>User Status Download Error</h1>
+                <p class="mb-0">Something went wrong while downloading user status data</p>
+            </div>
+            
+            <div class="error-details">
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="user-info">
+                            <h5><i class="fas fa-user-circle me-2"></i>User Information</h5>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <strong>User ID:</strong> <span id="userId">Loading...</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Device ID:</strong> <span id="deviceId">Loading...</span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <strong>Platform:</strong> <span id="platform">YouTube</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Total Downloads:</strong> <span id="totalDownloads">0</span>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <strong>Last Download:</strong> <span id="lastDownload">Never</span>
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Account Status:</strong> <span id="accountStatus">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <h4 class="mb-3"><i class="fas fa-bug me-2"></i>Error Details</h4>
+                        
+                        <div class="card error-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="card-title mb-0">Download Failed</h6>
+                                    <span class="badge bg-danger status-badge">Critical</span>
+                                </div>
+                                <p class="card-text">Unable to fetch user statistics from the server. Please check your internet connection and try again.</p>
+                                <div class="error-code">
+                                    <strong>Error Code:</strong> USER_STATS_DOWNLOAD_FAILED<br>
+                                    <strong>Timestamp:</strong> <span class="timestamp" id="errorTime"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card error-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h6 class="card-title mb-0">Firebase Connection Error</h6>
+                                    <span class="badge bg-warning status-badge">Warning</span>
+                                </div>
+                                <p class="card-text">Failed to connect to Firebase database. The service might be temporarily unavailable.</p>
+                                <div class="error-code">
+                                    <strong>Error Code:</strong> FIREBASE_CONNECTION_ERROR<br>
+                                    <strong>Collection:</strong> user_stats, download_errors
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-tools me-2"></i>Troubleshooting</h5>
+                                <ul class="list-unstyled">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Check internet connection
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Verify Firebase configuration
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Clear browser cache
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check-circle text-success me-2"></i>
+                                        Restart the application
+                                    </li>
+                                </ul>
+                                
+                                <div class="action-buttons">
+                                    <button class="btn refresh-btn" onclick="refreshData()">
+                                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                                    </button>
+                                    <button class="btn btn-outline-secondary" onclick="reportError()">
+                                        <i class="fas fa-bug me-2"></i>Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card mt-3">
+                            <div class="card-body">
+                                <h5 class="card-title"><i class="fas fa-chart-line me-2"></i>System Status</h5>
+                                <div class="mb-2">
+                                    <small class="text-muted">Firebase Status</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">API Response</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-warning" style="width: 30%"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <small class="text-muted">Database Connection</small>
+                                    <div class="progress" style="height: 8px;">
+                                        <div class="progress-bar bg-danger" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Initialize page data
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get user ID from URL parameter or generate one
+            const urlParams = new URLSearchParams(window.location.search);
+            const userId = urlParams.get('userId') || 'user_' + Math.random().toString(36).substr(2, 9);
+            
+            // Store user ID for future use
+            window.currentUserId = userId;
+            
+            loadUserData(userId);
+            updateTimestamp();
+            simulateSystemStatus();
+            loadUserSpecificErrors(userId);
+        });
+        
+        function loadUserData(userId) {
+            // Simulate loading user data based on user ID (replace with actual Firebase calls)
+            document.getElementById('userId').textContent = userId;
+            
+            // Simulate different data for different users
+            const userSeed = userId.split('_')[1] || 'default';
+            const randomSeed = parseInt(userSeed, 36) || 12345;
+            
+            setTimeout(() => {
+                document.getElementById('deviceId').textContent = 'device_' + (randomSeed % 100000);
+                document.getElementById('totalDownloads').textContent = Math.floor(randomSeed % 1000);
+                
+                const lastDownloadTime = new Date(Date.now() - (randomSeed % 7) * 24 * 60 * 60 * 1000);
+                document.getElementById('lastDownload').textContent = lastDownloadTime.toLocaleString();
+                
+                // Set account status based on user ID
+                const statuses = ['Active', 'Inactive', 'Suspended', 'Premium'];
+                document.getElementById('accountStatus').textContent = statuses[randomSeed % statuses.length];
+                
+                // Update platform based on user ID pattern
+                const platforms = ['YouTube', 'Facebook', 'Instagram', 'Twitter'];
+                document.getElementById('platform').textContent = platforms[randomSeed % platforms.length];
+            }, 1000);
+        }
+        
+        function updateTimestamp() {
+            const now = new Date();
+            document.getElementById('errorTime').textContent = now.toLocaleString();
+        }
+        
+        function refreshData() {
+            const btn = event.target;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Refreshing...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                loadUserData(window.currentUserId);
+                loadUserSpecificErrors(window.currentUserId);
+                updateTimestamp();
+                btn.innerHTML = '<i class="fas fa-sync-alt me-2"></i>Refresh';
+                btn.disabled = false;
+                
+                // Show success message
+                showAlert('Data refreshed successfully!', 'success');
+            }, 2000);
+        }
+        
+        function reportError() {
+            showAlert('Error report sent to support team.', 'info');
+        }
+        
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 5000);
+        }
+        
+        function loadUserSpecificErrors(userId) {
+            // Simulate loading user-specific error data
+            const errorContainer = document.getElementById('userSpecificErrors');
+            if (!errorContainer) {
+                // Create container for user-specific errors if it doesn't exist
+                const errorSection = document.createElement('div');
+                errorSection.id = 'userSpecificErrors';
+                errorSection.className = 'mt-4';
+                errorSection.innerHTML = `
+                    <h4 class="mb-3"><i class="fas fa-user-shield me-2"></i>User-Specific Errors</h4>
+                    <div id="userErrorList"></div>
+                `;
+                
+                const mainContent = document.querySelector('.col-lg-8');
+                mainContent.appendChild(errorSection);
+            }
+            
+            // Generate user-specific errors based on user ID
+            const userSeed = userId.split('_')[1] || 'default';
+            const randomSeed = parseInt(userSeed, 36) || 12345;
+            const errorCount = (randomSeed % 5) + 1;
+            
+            const errorList = document.getElementById('userErrorList');
+            errorList.innerHTML = '';
+            
+            const errorTypes = [
+                { type: 'Authentication Failed', severity: 'danger', code: 'AUTH_FAILED' },
+                { type: 'Download Quota Exceeded', severity: 'warning', code: 'QUOTA_EXCEEDED' },
+                { type: 'Video Not Available', severity: 'info', code: 'VIDEO_UNAVAILABLE' },
+                { type: 'Network Timeout', severity: 'warning', code: 'NETWORK_TIMEOUT' },
+                { type: 'Invalid URL Format', severity: 'danger', code: 'INVALID_URL' }
+            ];
+            
+            for (let i = 0; i < errorCount; i++) {
+                const error = errorTypes[(randomSeed + i) % errorTypes.length];
+                const errorCard = document.createElement('div');
+                errorCard.className = 'card error-card';
+                errorCard.innerHTML = `
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h6 class="card-title mb-0">${error.type}</h6>
+                            <span class="badge bg-${error.severity} status-badge">${error.severity.toUpperCase()}</span>
+                        </div>
+                        <p class="card-text">This error occurred specifically for user ${userId} while attempting to download content.</p>
+                        <div class="error-code">
+                            <strong>Error Code:</strong> ${error.code}_${userId.substr(-6)}<br>
+                            <strong>Occurrences:</strong> ${(randomSeed % 10) + 1} times<br>
+                            <strong>Last Occurrence:</strong> ${new Date(Date.now() - (randomSeed % 24) * 60 * 60 * 1000).toLocaleString()}
+                        </div>
+                    </div>
+                `;
+                errorList.appendChild(errorCard);
+            }
+        }
+        
+        function simulateSystemStatus() {
+            // Simulate changing system status
+            setInterval(() => {
+                const progressBars = document.querySelectorAll('.progress-bar');
+                progressBars.forEach(bar => {
+                    const currentWidth = parseInt(bar.style.width);
+                    const change = Math.floor(Math.random() * 20) - 10;
+                    const newWidth = Math.max(0, Math.min(100, currentWidth + change));
+                    bar.style.width = newWidth + '%';
+                    
+                    // Update color based on percentage
+                    bar.className = 'progress-bar';
+                    if (newWidth > 70) {
+                        bar.classList.add('bg-success');
+                    } else if (newWidth > 30) {
+                        bar.classList.add('bg-warning');
+                    } else {
+                        bar.classList.add('bg-danger');
+                    }
+                });
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

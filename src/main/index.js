@@ -1878,6 +1878,63 @@ console.log("options",options);
         return reject(new Error('Download already in progress.'));
       }
 
+      // Pre-download validation: Check yt-dlp availability and functionality
+      try {
+        console.log(`[${downloadId}] Performing pre-download validation...`);
+        
+        // Check if yt-dlp binary exists and is executable
+        const currentYtdlpPath = getYtdlpPath();
+        if (!existsSync(currentYtdlpPath)) {
+          throw new Error(`yt-dlp binary not found at ${currentYtdlpPath}`);
+        }
+        
+        // Quick version check to ensure yt-dlp is working
+        const versionCheck = spawn(currentYtdlpPath, ['--version'], { 
+          windowsHide: true, 
+          stdio: ['ignore', 'pipe', 'pipe'],
+          timeout: 5000 
+        });
+        
+        await new Promise((versionResolve, versionReject) => {
+          let versionOutput = '';
+          let versionError = '';
+          
+          versionCheck.stdout.on('data', (data) => {
+            versionOutput += data.toString();
+          });
+          
+          versionCheck.stderr.on('data', (data) => {
+            versionError += data.toString();
+          });
+          
+          versionCheck.on('close', (code) => {
+            if (code === 0 && versionOutput.trim()) {
+              console.log(`[${downloadId}] yt-dlp validation passed, version: ${versionOutput.trim()}`);
+              versionResolve();
+            } else {
+              versionReject(new Error(`yt-dlp validation failed: ${versionError || 'Unknown error'}`));
+            }
+          });
+          
+          versionCheck.on('error', (err) => {
+            versionReject(new Error(`yt-dlp validation error: ${err.message}`));
+          });
+        });
+        
+        console.log(`[${downloadId}] Pre-download validation completed successfully`);
+        
+      } catch (validationError) {
+        console.error(`[${downloadId}] Pre-download validation failed:`, validationError.message);
+        event.sender.send('download-progress', { 
+          downloadId,
+          error: 'Download failed - yt-dlp validation error',
+          details: validationError.message,
+          suggestedAction: 'Try restarting the application to auto-fix yt-dlp issues.',
+          isValidationError: true
+        });
+        return reject(new Error(`yt-dlp validation failed: ${validationError.message}`));
+      }
+
       // Update cookies before starting download (important for Dailymotion and other platforms)
       try {
         await updateCookiesFile();
@@ -1921,7 +1978,8 @@ console.log("options",options);
         const bitrateOption = selectBitrate ? `--audio-quality ${selectBitrate}` : '--audio-quality best';
         formatSpecifier = `--extract-audio --audio-format ${audioFormat} ${bitrateOption}`;
       } else {
-        formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[ext=mp4]/best --merge-output-format ${format}`;
+        // More robust format selection that handles various scenarios
+        formatSpecifier = `-f bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[height<=${finalQualityVideo}]/best[ext=mp4]/best --merge-output-format ${format}`;
       }
 
       const customSanitize = (str) => {
@@ -2329,8 +2387,11 @@ console.log("options",options);
           '--newline',
           '--ignore-errors',
           '--progress',
-          '--extractor-retries', '3',
+          '--extractor-retries', '5',
+          '--retries', '10',
+          '--fragment-retries', '10',
           '--js-runtimes', 'node',
+          '--no-check-certificate',
         ];
 
         // Add Dailymotion-specific options for better compatibility
@@ -2339,7 +2400,18 @@ console.log("options",options);
           args.push('--sleep-requests', '1'); // Add small delay between requests
         }
 
-        args.push(...formatSpecifier.split(' '));
+        // Add format specifier args properly to avoid splitting issues
+        if (isAudioOnly) {
+          args.push('--extract-audio', '--audio-format', audioFormat);
+          if (selectBitrate) {
+            args.push('--audio-quality', selectBitrate);
+          } else {
+            args.push('--audio-quality', 'best');
+          }
+        } else {
+          args.push('-f', `bestvideo[height<=${finalQualityVideo}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=${finalQualityVideo}]+bestaudio/best[height<=${finalQualityVideo}]/best[ext=mp4]/best`);
+          args.push('--merge-output-format', format);
+        }
         args.push(url);
         args.push(shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist');
 
@@ -2393,6 +2465,9 @@ console.log("options",options);
           const errorMessage = data.toString().trim();
           console.error(`[${downloadId}] yt-dlp stderr:`, errorMessage);
           
+          // Store last stderr for error analysis
+          downloadProcess.lastStderr = errorMessage;
+          
           // Check if this is a Twitch authentication error
           const isTwitchError = errorMessage.includes('[twitch]') && (
             errorMessage.includes('logged-in') || 
@@ -2423,8 +2498,32 @@ console.log("options",options);
           const isPrivateVideo = errorMessage.includes('private') || errorMessage.includes('members-only');
           const isNotFoundError = errorMessage.includes('not found') || errorMessage.includes('404');
           const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
+          const isOnlyImagesError = errorMessage.includes('Only images are available for download');
+          const isSignatureError = errorMessage.includes('Signature solving') || errorMessage.includes('signature');
+          const isFormatError = errorMessage.includes('Requested format') || errorMessage.includes('No video formats found');
           
-          if (isTwitchError) {
+          if (isOnlyImagesError) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'This video appears to only have images available. This may be due to YouTube restrictions. Try updating yt-dlp or selecting a different quality/format.',
+              isFormatError: true,
+              details: errorMessage
+            });
+          } else if (isSignatureError) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'YouTube signature extraction failed. This usually means yt-dlp needs to be updated. Please try again later or contact support.',
+              isSignatureError: true,
+              details: errorMessage
+            });
+          } else if (isFormatError) {
+            event.sender.send('download-progress', { 
+              downloadId,
+              error: 'No suitable video format found. Try selecting a different quality or format. The video may not be available in the selected quality.',
+              isFormatError: true,
+              details: errorMessage
+            });
+          } else if (isTwitchError) {
             event.sender.send('download-progress', { 
               downloadId,
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
@@ -2508,35 +2607,70 @@ console.log("options",options);
             // Provide more specific error messages based on common exit codes
             let errorMessage = `Download failed with code ${code}`;
             let errorDetails = '';
+            let suggestedAction = '';
             
             switch (code) {
               case 1:
-                errorMessage = 'Download failed - General error';
-                errorDetails = 'This could be due to network issues, invalid URL, or video not available.';
+                // Get last stderr output for analysis
+                const lastStderr = downloadProcess.lastStderr || '';
+                if (lastStderr.includes('yt-dlp not found') || lastStderr.includes('command not found')) {
+                  errorMessage = 'Download failed - yt-dlp not available';
+                  errorDetails = 'The yt-dlp binary is missing or not executable.';
+                  suggestedAction = 'Try restarting the application to auto-fix this issue.';
+                } else if (lastStderr.includes('Permission denied') || lastStderr.includes('Access denied')) {
+                  errorMessage = 'Download failed - Permission error';
+                  errorDetails = 'Insufficient permissions to access download location or execute yt-dlp.';
+                  suggestedAction = 'Check download folder permissions or try a different location.';
+                } else {
+                  errorMessage = 'Download failed - General error';
+                  errorDetails = 'This could be due to network issues, invalid URL, video not available, or yt-dlp compatibility issues.';
+                  suggestedAction = 'Try updating yt-dlp, check URL, or attempt download again.';
+                }
                 break;
               case 2:
                 errorMessage = 'Download failed - No video formats found';
-                errorDetails = 'The video may not be available in the requested format or quality.';
+                errorDetails = 'The video may not be available in the requested format or quality, or may be geo-blocked.';
+                suggestedAction = 'Try a different quality/format or check if the video is available in your region.';
                 break;
               case 3:
                 errorMessage = 'Download failed - Network error';
-                errorDetails = 'Check your internet connection and try again.';
+                errorDetails = 'Network connection failed or timeout occurred.';
+                suggestedAction = 'Check your internet connection and try again.';
                 break;
               case 4:
                 errorMessage = 'Download failed - Authentication required';
-                errorDetails = 'This video may require login or cookies to access.';
+                errorDetails = 'This video may require login, cookies, or subscription to access.';
+                suggestedAction = 'Try adding browser cookies or check if video requires authentication.';
+                break;
+              case 100:
+                errorMessage = 'Download failed - Video unavailable';
+                errorDetails = 'The video has been deleted, made private, or is otherwise unavailable.';
+                suggestedAction = 'Verify the video URL or try a different video.';
+                break;
+              case 101:
+                errorMessage = 'Download failed - Geo-blocked content';
+                errorDetails = 'This content is not available in your geographic region.';
+                suggestedAction = 'Try using a VPN or check if content is available in your region.';
                 break;
               default:
-                errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+                if (code >= 200) {
+                  errorMessage = 'Download failed - Server error';
+                  errorDetails = `Remote server returned error code ${code}.`;
+                  suggestedAction = 'Try again later or contact support if issue persists.';
+                } else {
+                  errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+                  suggestedAction = 'Try updating yt-dlp or attempt download with different settings.';
+                }
             }
             
             event.sender.send('download-progress', { 
               downloadId, 
               error: errorMessage,
               details: errorDetails,
+              suggestedAction: suggestedAction,
               exitCode: code
             });
-            reject(new Error(`${errorMessage}: ${errorDetails}`));
+            reject(new Error(`${errorMessage}: ${errorDetails} ${suggestedAction}`));
           }
         });
       }).catch((err) => {
@@ -2756,6 +2890,34 @@ ipcMain.handle('get-path', async (event, name) => {
   } catch (error) {
     console.error(`Failed to get path ${name}:`, error);
     throw error;
+  }
+});
+
+// Auto-recover yt-dlp functionality
+ipcMain.handle('recoverYtdlp', async () => {
+  try {
+    console.log('Starting yt-dlp auto-recovery...');
+    
+    // Force update yt-dlp
+    const updateResult = await updateYtdlp(true);
+    
+    if (updateResult.success) {
+      console.log('yt-dlp recovery completed successfully');
+      return { 
+        success: true, 
+        message: 'yt-dlp has been successfully updated and is ready to use.',
+        version: updateResult.version 
+      };
+    } else {
+      throw new Error(updateResult.message || 'yt-dlp recovery failed');
+    }
+  } catch (error) {
+    console.error('yt-dlp auto-recovery failed:', error);
+    return { 
+      success: false, 
+      error: error.message,
+      message: 'Failed to recover yt-dlp automatically. Please restart the application.'
+    };
   }
 });
 ipcMain.handle('show-confirm-dialog', async (event, options) => {

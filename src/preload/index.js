@@ -75,6 +75,7 @@ openPath: (path) => ipcRenderer.invoke('openPath', path),
   installUpdate: () => ipcRenderer.send('install-update'),
   checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
+  recoverYtdlp: () => ipcRenderer.invoke('recoverYtdlp'),
 
   // Image proxy for external CDN images
   proxyImage: (imageUrl) => ipcRenderer.invoke('proxy-image', imageUrl),

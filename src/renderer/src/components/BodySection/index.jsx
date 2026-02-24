@@ -845,8 +845,47 @@ function BodySection({
           progressData?.error?.includes('exporting YouTube cookies')
         ) {
           setShowLoginPopup(true); // Trigger the modal to open
+        }
 
+        // Enhanced error handling for all download errors
+        if (progressData?.error) {
+          console.error('Download error received:', progressData);
+          
+          // Update download item with error details
+          stored[itemIdx].status = 'Failed';
+          stored[itemIdx].isFailed = true;
+          stored[itemIdx].errorMessage = progressData.error;
+          stored[itemIdx].errorDetails = progressData.details;
+          stored[itemIdx].suggestedAction = progressData.suggestedAction;
+          stored[itemIdx].exitCode = progressData.exitCode;
+          
+          localStorage.setItem('downloadList', JSON.stringify(stored));
+          
+          // Update progress map with error status
+          setProgressMap((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(currentId, {
+              progress: 0,
+              fileSize: 'N/A',
+              speed: 'N/A',
+              eta: 'N/A',
+              status: 'Failed',
+              error: progressData.error,
+              details: progressData.details,
+              suggestedAction: progressData.suggestedAction
+            });
+            return newMap;
+          });
 
+          // Remove from active downloads when failed
+          setActiveDownloads(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(currentId);
+            return newSet;
+          });
+
+          // Save error to analytics/tracking
+          saveDownloadError(stored[itemIdx], `${progressData.error}: ${progressData.details || ''}`);
         }
       };
 

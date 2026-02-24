@@ -16,6 +16,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
   const [proxiedThumbnails, setProxiedThumbnails] = useState({})
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedItems, setSelectedItems] = useState(new Set())
+  const [showErrorDetails, setShowErrorDetails] = useState(null)
 
   // Listen for download progress events to capture thumbnail data
   useEffect(() => {
@@ -332,6 +333,9 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
   let downloadListData = JSON.parse(localStorage.getItem('downloadList')) || [];
   console.log('downloadListData', downloadListData)
+  
+  // Function to get Ed Sheeran video URL
+  
   const filteredList = (downloadListData)
     .filter((item) => {
       const isPlaylist =
@@ -810,7 +814,7 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         {searchFilteredList?.length > 0 ? (
           [...new Set(searchFilteredList.map((item) => item.id))].map((uniqueId, index) => {
             const item = searchFilteredList.find((i) => i.id === uniqueId);
-            console.log(item)
+            // console.log(item)
 
             const progress = progressMap.get(item.id)?.progress || 0;
             const speed = progressMap.get(item.id)?.speed || 'Unknown';
@@ -1107,10 +1111,27 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
                         fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px'
-                      }}>
+                        gap: '4px',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
+                      onClick={() => setShowErrorDetails(showErrorDetails === item.id ? null : item.id)}
+                      title={item.errorMessage || 'Click for error details'}
+                      >
                         <FaTimesCircle style={{ fontSize: '12px' }} />
                         Failed
+                        {(item.errorMessage || item.errorDetails) && (
+                          <span style={{
+                            marginLeft: '4px',
+                            background: '#721c24',
+                            color: 'white',
+                            padding: '1px 4px',
+                            borderRadius: '3px',
+                            fontSize: '9px'
+                          }}>
+                            i
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <div style={{
@@ -1281,6 +1302,200 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
           </div>
         )}
       </div>
+
+      {/* Error Details Modal */}
+      {showErrorDetails && (() => {
+        const errorItem = searchFilteredList.find(item => item.id === showErrorDetails);
+        if (!errorItem) return null;
+        
+        return (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999
+          }}
+          onClick={() => setShowErrorDetails(null)}
+          >
+            <div style={{
+              backgroundColor: 'white',
+              padding: '30px',
+              borderRadius: '12px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+            }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '20px'
+              }}>
+                <h3 style={{
+                  margin: 0,
+                  color: '#721c24',
+                  fontSize: '18px',
+                  fontWeight: 'bold'
+                }}>
+                  Download Error Details
+                </h3>
+                <button
+                  onClick={() => setShowErrorDetails(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#666',
+                    padding: '0'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <strong style={{ color: '#333' }}>Video:</strong> {errorItem.title || 'Unknown'}
+              </div>
+
+              {errorItem.errorMessage && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ color: '#721c24' }}>Error:</strong> 
+                  <div style={{
+                    backgroundColor: '#f8d7da',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    marginTop: '5px',
+                    fontSize: '14px'
+                  }}>
+                    {errorItem.errorMessage}
+                  </div>
+                </div>
+              )}
+
+              {errorItem.errorDetails && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ color: '#333' }}>Details:</strong>
+                  <div style={{
+                    backgroundColor: '#f1f3f4',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    marginTop: '5px',
+                    fontSize: '13px',
+                    color: '#555'
+                  }}>
+                    {errorItem.errorDetails}
+                  </div>
+                </div>
+              )}
+
+              {errorItem.suggestedAction && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ color: '#0c5460' }}>Suggested Action:</strong>
+                  <div style={{
+                    backgroundColor: '#d1ecf1',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    marginTop: '5px',
+                    fontSize: '14px',
+                    color: '#0c5460',
+                    border: '1px solid #bee5eb'
+                  }}>
+                    {errorItem.suggestedAction}
+                  </div>
+                </div>
+              )}
+
+              {errorItem.exitCode && (
+                <div style={{ marginBottom: '15px' }}>
+                  <strong style={{ color: '#666' }}>Exit Code:</strong> {errorItem.exitCode}
+                </div>
+              )}
+
+              <div style={{
+                display: 'flex',
+                gap: '10px',
+                justifyContent: 'flex-end',
+                marginTop: '20px'
+              }}>
+                {errorItem.isValidationError && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const result = await window.api.recoverYtdlp();
+                        if (result.success) {
+                          alert('Downloader has been successfully recovered! You can now retry your download.');
+                          setShowErrorDetails(null);
+                        } else {
+                          alert(`Auto-recovery failed: ${result.message || 'Unknown error'}`);
+                        }
+                      } catch (error) {
+                        alert(`Recovery failed: ${error.message || 'Unknown error'}`);
+                      }
+                    }}
+                    style={{
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 20px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Auto-Recover Downloader
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowErrorDetails(null);
+                    if (onRetry) {
+                      onRetry(errorItem);
+                    }
+                  }}
+                  style={{
+                    backgroundColor: '#0ea5e9',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500'
+                  }}
+                >
+                  Retry Download
+                </button>
+                <button
+                  onClick={() => setShowErrorDetails(null)}
+                  style={{
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   )
 }
