@@ -27,6 +27,7 @@ function App() {
   const [dependencyProgressText, setDependencyProgressText] = useState('')
   const dependencyLastProgressAtRef = useRef(0)
   const [aboutUs, setAboutUs] = useState(false)
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
@@ -318,12 +319,13 @@ function App() {
               showWebView={showWebView}
               setDownloadListOpen={setDownloadListOpen}
               setAboutUs={setAboutUs}
+              setFeedbackModalOpen={setFeedbackModalOpen}
             />
         </div>
 
-        <button className="feedback-button" onClick={handleFeedbackClick}>
+        {/* <button className="feedback-button" onClick={handleFeedbackClick}>
           <MdFeedback /> Feedback
-        </button>
+        </button> */}
 
         <div style={{ display: 'none' }}>
           <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />

@@ -39,7 +39,7 @@ function Sidebar({
       icon: FaCommentDots,
       label: 'Feedback',
       badge: 'NEW',
-      color: '#10b981',
+      color: '#4285F4',
       isHighlighted: true,
       description: 'Help us improve'
     },
@@ -111,13 +111,15 @@ function Sidebar({
                   setAboutUs(false);
                   window.api.trackEvent('Feedback Clicked');
                   setFeedbackModalOpen(true);
-                  // window.api.openExternal('https://your-feedback-url.com');
-                } else {
+                  window.api.openExternal('https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true');
+                } else if (item.label === 'About us') {
                   setAboutUs(true);
+                } else {
+                  setAboutUs(false);
                 }
               }}
             >
-              <div className={`sidebar__icon-container ${item.isHighlighted ? 'sidebar__icon-container--green' : ''
+              <div className={`sidebar__icon-container ${item.isHighlighted ? 'sidebar__icon-container--feedback' : ''
                 }`}>
                 <item.icon className="sidebar__icon" />
                 {item.badge && (
