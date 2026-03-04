@@ -786,7 +786,9 @@ h1 {
   border-top: none;
   padding: 16px 24px;
   display: flex;
+  flex-direction: row;
   justify-content: center;
+  align-items: center;
   gap: 12px;
   background-color: #f8f9fa;
 }
@@ -796,9 +798,10 @@ h1 {
   border: 1px solid #6c757d;
   color: #6c757d;
   font-weight: 500;
-  padding: 10px 20px;
+  padding: 10px 24px;
   border-radius: 8px;
   transition: all 0.3s ease;
+  min-width: 120px;
 }
 
 .custom-cancel-button:hover {
@@ -806,24 +809,21 @@ h1 {
   color: #ffffff;
   border-color: #6c757d;
   transform: translateY(-1px);
-
 }
 
 .custom-login-button {
   background-color: #28a745;
-  /* YouTube red */
   border: none;
   color: #ffffff;
-
   font-size: 16px;
-  padding: 10px 20px;
+  padding: 10px 24px;
   border-radius: 8px;
   transition: all 0.3s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  width: 100%;
+  min-width: 120px;
 }
 
 .custom-login-button:hover {

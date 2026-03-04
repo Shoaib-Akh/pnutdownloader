@@ -1,8 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import '../common.css';
 
+const QUOTES = [
+  "\"The best things in life are free — but a coffee keeps the developer happy. ☕\"",
+  "\"Great software is built one donation at a time. 🚀\"",
+  "\"Every download you make, every byte you take — I'll be coding for you. 🎵\"",
+  "\"You didn't just download a file, you downloaded someone's weekend. 😄\"",
+  "\"Free to use, but pizza isn't free. Help a dev out! 🍕\"",
+  "\"Behind every great app is a developer surviving on caffeine. ☕\"",
+  "\"Your support today powers tomorrow's features. 💡\"",
+  "\"Small donations, big dreams. 🌟\"",
+  "\"Even superheroes need a sidekick. Be mine — donate! 🦸\"",
+  "\"You clicked download. Now click donate. You're on a roll! 🎯\""
+];
+
 function DonationModal({ isOpen, onClose, onDonate }) {
+  const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], [isOpen]);
+
   return (
     <Modal
       show={isOpen}
@@ -34,15 +49,26 @@ function DonationModal({ isOpen, onClose, onDonate }) {
           Your download is complete! If this app helps you, you can buy me a coffee or make a
           small donation to support future development.
         </p>
+        <p className="modal-quote">
+          {quote}
+        </p>
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer">
+        <Button
+          onClick={onClose}
+          className="custom-cancel-button"
+          aria-label="Maybe Later"
+          variant="secondary"
+        >
+          Maybe Later
+        </Button>
         <Button
           onClick={onDonate}
           className="custom-login-button"
           aria-label="Donate"
           variant="primary"
         >
-          Donate
+          ☕ Donate
         </Button>
       </Modal.Footer>
     </Modal>

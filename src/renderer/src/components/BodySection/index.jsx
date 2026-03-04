@@ -113,7 +113,7 @@ function BodySection({
   const handleCopyUrl = () => {
     navigator.clipboard
       .writeText(currentWebViewUrl)
-     
+
       .catch((err) => {
         console.error('Failed to copy URL:', err)
       })
@@ -798,8 +798,8 @@ function BodySection({
             setDownloadCount(newCount);
             localStorage.setItem('downloadCount', newCount.toString());
 
-            // Show donation modal every 2 downloads
-            if (newCount % 2 === 0) {
+            // Show donation modal every 4 downloads
+            if (newCount % 4 === 0) {
               setShowDonationModal(true)
             }
           }
@@ -827,8 +827,8 @@ function BodySection({
           setDownloadCount(newCount);
           localStorage.setItem('downloadCount', newCount.toString());
 
-          // Show donation modal every 2 downloads
-          if (newCount % 2 === 0) {
+          // Show donation modal every 4 downloads
+          if (newCount % 4 === 0) {
             setShowDonationModal(true)
           }
 
@@ -887,8 +887,8 @@ function BodySection({
         setDownloadCount(newCount);
         localStorage.setItem('downloadCount', newCount.toString());
 
-        // Show donation modal every 2 downloads
-        if (newCount % 2 === 0) {
+        // Show donation modal every 4 downloads
+        if (newCount % 4 === 0) {
           setShowDonationModal(true)
         }
       }
@@ -1148,9 +1148,9 @@ function BodySection({
           </div>
           <div className="webview-height">
             {showWebView &&
-              <webview 
-                ref={webviewRef} 
-                src={url} 
+              <webview
+                ref={webviewRef}
+                src={url}
                 style={{ height: '100%', width: '100%' }}
                 allowpopups="true"
                 partition="persist:main"
