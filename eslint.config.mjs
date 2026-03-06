@@ -27,5 +27,16 @@ export default [
       ...eslintPluginReactRefresh.configs.vite.rules
     }
   },
+  {
+    files: ['src/main/**/*.{js,jsx}', 'src/preload/**/*.{js,jsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: ['../renderer/**', './renderer/**', 'src/renderer/**']
+        }
+      ]
+    }
+  },
   eslintConfigPrettier
 ]

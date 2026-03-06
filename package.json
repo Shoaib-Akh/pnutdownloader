@@ -11,6 +11,8 @@
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "rimraf dist out && npm run build && electron-builder --win && electron-builder --publish=always",
@@ -48,6 +50,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "prettier": "^3.5.1",
+    "jest": "^29.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "vite": "^6.1.0"

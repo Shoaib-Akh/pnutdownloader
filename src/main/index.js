@@ -7,7 +7,8 @@ import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
 import { spawn } from 'child_process'
 import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
-import { extractVideoId } from '../renderer/src/components/commonFunction';
+import { extractVideoId ,isDownloadableVideoUrl} from '../shared/platformUtils'
+import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
 
 import { initialize, trackEvent } from "@aptabase/electron/main";
 
@@ -18,7 +19,7 @@ if (process.platform === 'win32') {
 
 try {
   console.log('Initializing Aptabase...')
-  initialize('A-US-9628986453')
+  initialize('A-EU-7400909188')
   console.log('Aptabase initialized successfully')
   // Track event in main process
   trackEvent('app_started')
@@ -87,12 +88,12 @@ switch (process.platform) {
     iconPath = join(process.resourcesPath, 'icon.png')
 }
 
-ipcMain.handle('get-app-version', () => {
+ipcMain.handle(IPC_CHANNELS.GET_APP_VERSION, () => {
   return app.getVersion();
 });
 
 // Get yt-dlp version
-ipcMain.handle('getYtVersion', async () => {
+ipcMain.handle(IPC_CHANNELS.GET_YT_VERSION, async () => {
   try {
     const version = await checkYtdlpVersion();
     console.log("version",version)
@@ -104,7 +105,7 @@ ipcMain.handle('getYtVersion', async () => {
 });
 
 // Get FFmpeg version
-ipcMain.handle('getFfmpegVersion', async () => {
+ipcMain.handle(IPC_CHANNELS.GET_FFMPEG_VERSION, async () => {
   return new Promise((resolve, reject) => {
     const { spawn } = require('child_process');
     
@@ -152,77 +153,7 @@ ipcMain.handle('getFfmpegVersion', async () => {
 });
 
 // Function to detect if URL is downloadable video URL
-const isDownloadableVideoUrl = (url) => {
-  if (!url || typeof url !== 'string') return false;
-  
-  const urlLower = url.toLowerCase();
-  
-  // YouTube patterns
-  if (urlLower.includes('youtube.com/watch') || 
-      urlLower.includes('youtube.com/shorts/') ||
-      urlLower.includes('youtube.com/embed/') ||
-      urlLower.includes('youtu.be/') ||
-      urlLower.includes('music.youtube.com') ||
-      urlLower.includes('youtube.com/playlist') ||
-      urlLower.includes('youtubekids.com')) {
-    return true;
-  }
-  
-  // Facebook patterns
-  if (urlLower.includes('facebook.com/watch') || 
-      urlLower.includes('facebook.com/') && urlLower.includes('/videos/') ||
-      urlLower.includes('fb.com/watch') ||
-      urlLower.includes('fb.watch')) {
-    return true;
-  }
-  
-  // Instagram patterns
-  if (urlLower.includes('instagram.com/p/') ||
-      urlLower.includes('instagram.com/reels/') ||
-      urlLower.includes('instagram.com/stories/') ||
-      urlLower.includes('instagr.am/')) {
-    return true;
-  }
-  
-  // TikTok patterns
-  if (urlLower.includes('tiktok.com/@') && urlLower.includes('/video/') ||
-      urlLower.includes('vm.tiktok.com/')) {
-    return true;
-  }
-  
-  // Twitter/X patterns
-  if ((urlLower.includes('twitter.com/') || urlLower.includes('x.com/')) && 
-      urlLower.includes('/status/') ||
-      urlLower.includes('t.co/')) {
-    return true;
-  }
-  
-  // Twitch patterns
-  if (urlLower.includes('twitch.tv/videos/') ||
-      urlLower.includes('twitch.com/') && urlLower.includes('/clip/')) {
-    return true;
-  }
-  
-  // Dailymotion patterns
-  if (urlLower.includes('dailymotion.com/video/') ||
-      urlLower.includes('dai.ly/')) {
-    return true;
-  }
-  
-  // Other supported platforms
-  if (urlLower.includes('vimeo.com/') ||
-      urlLower.includes('soundcloud.com/') ||
-      urlLower.includes('bilibili.com/') ||
-      urlLower.includes('rumble.com/v') ||
-      urlLower.includes('bitchute.com/video/') ||
-      urlLower.includes('reddit.com/') ||
-      urlLower.includes('pinterest.com/') ||
-      urlLower.includes('linkedin.com/')) {
-    return true;
-  }
-  
-  return false;
-};
+
 
 // Function to get platform name from URL
 const getPlatformName = (url) => {
@@ -250,7 +181,7 @@ const getPlatformName = (url) => {
 };
 
 // IPC handler to show notification when downloadable video URL is detected
-ipcMain.handle('show-video-url-notification', async (event, url) => {
+ipcMain.handle(IPC_CHANNELS.SHOW_VIDEO_URL_NOTIFICATION, async (event, url) => {
   try {
     if (!url || !isDownloadableVideoUrl(url)) {
       return { success: false, message: 'Not a downloadable video URL' };
@@ -383,7 +314,7 @@ function downloadFile(url, destPath) {
 
         try {
           if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send('download-progress', progressPayload);
+            mainWindow.webContents.send(IPC_EVENTS.DOWNLOAD_PROGRESS, progressPayload);
           }
         } catch (err) {
           // Ignore progress IPC errors
@@ -1199,7 +1130,7 @@ function createWindow() {
               
               // Send IPC event to renderer to open modal
               if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send('video-url-detected', clipboardText);
+                mainWindow.webContents.send(IPC_EVENTS.VIDEO_URL_DETECTED, clipboardText);
               }
             }
           }
@@ -1221,7 +1152,7 @@ async function cancelActiveDownloads({ reason } = {}) {
 
   try {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('download-progress', {
+      mainWindow.webContents.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
         status: 'Download cancelled (app closing).',
         reason: reason || 'app_closing'
       });
@@ -1318,7 +1249,7 @@ app.whenReady().then(async () => {
                 console.log(`yt-dlp updated successfully to ${updateResult.version}`);
                 // Notify renderer if window is available
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('ytdlp-updated', {
+                  mainWindow.webContents.send(IPC_EVENTS.YTDLP_UPDATED, {
                     version: updateResult.version,
                     message: 'yt-dlp has been updated to the latest nightly build'
                   });
@@ -1349,7 +1280,7 @@ app.whenReady().then(async () => {
                 console.log(`yt-dlp updated successfully to ${updateResult.version}`);
                 // Notify renderer if window is available
                 if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send('ytdlp-updated', {
+                  mainWindow.webContents.send(IPC_EVENTS.YTDLP_UPDATED, {
                     version: updateResult.version,
                     message: 'yt-dlp has been updated to the latest nightly build'
                   });
@@ -1412,10 +1343,10 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  ipcMain.on('open-webview', (event, url) => {
+  ipcMain.on(IPC_CHANNELS.OPEN_WEBVIEW, (event, url) => {
     console.log('Received YouTube Video URL:', url);
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('webview-url-update', url);
+      mainWindow.webContents.send(IPC_EVENTS.WEBVIEW_URL_UPDATE, url);
     }
   });
 
@@ -1473,7 +1404,7 @@ async function handleFileDeletion(filePath) {
       
       // Update any internal tracking or UI state
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('file-deleted', { 
+        mainWindow.webContents.send(IPC_EVENTS.FILE_DELETED, { 
           filePath: filePath,
           timestamp: new Date().toISOString(),
           message: `File deleted: ${require('path').basename(filePath)}`
@@ -1519,7 +1450,7 @@ async function safeDeleteFile(filePath) {
     
     // Notify renderer of successful deletion
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('file-deleted-successfully', {
+      mainWindow.webContents.send(IPC_EVENTS.FILE_DELETED_SUCCESS, {
         filePath: filePath,
         fileName: fileName,
         fileSize: fileSize,
@@ -1539,7 +1470,7 @@ async function safeDeleteFile(filePath) {
     
     // Notify renderer of deletion failure
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('file-deletion-failed', {
+      mainWindow.webContents.send(IPC_EVENTS.FILE_DELETION_FAILED, {
         filePath: filePath,
         error: error.message,
         timestamp: new Date().toISOString()
@@ -1622,14 +1553,14 @@ async function updateCookiesFile() {
   }
 }
 
-ipcMain.handle('getYoutubeCookies', async () => {
+ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_COOKIES, async () => {
   // Note: This handler name is kept for backward compatibility
   // but now updates cookies for all platforms (YouTube, Facebook, Instagram, Twitter, Dailymotion)
   await updateCookiesFile();
   return cookiesPath;
 });
 
-ipcMain.handle('fetch-video-info', async (event, url) => {
+ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
   console.log("url",url);
   
   // Update cookies before fetching video info (important for Dailymotion and other platforms)
@@ -1761,7 +1692,7 @@ ipcMain.handle('fetch-video-info', async (event, url) => {
   });
 });
 
-ipcMain.handle('fetch-playlist-entries', async (event, url) => {
+ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
   if (!url || typeof url !== 'string') {
     throw new Error('Invalid URL.')
   }
@@ -1863,7 +1794,7 @@ const startDownload = async (event, options) => {
   return new Promise(async (resolve, reject) => {
     try {
       if (downloadProcess) {
-        event.sender.send('download-progress', { status: 'A download is already in progress!' });
+        event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { status: 'A download is already in progress!' });
         return reject(new Error('A download is already in progress.'));
       }
 
@@ -2120,7 +2051,7 @@ console.log("options",options);
                   }
                   
                   // Send metadata update to renderer
-                  event.sender.send('download-progress', {
+                  event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
                     downloadId,
                     title: trimmedTitle,
                     sanitizedTitle: sanitizedTitle,
@@ -2143,7 +2074,7 @@ console.log("options",options);
               console.error(`[${downloadId}] Error stack:`, error.stack);
               
               // Send error to renderer for debugging
-              event.sender.send('download-progress', {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
                 downloadId,
                 message: `Failed to extract video info: ${error.message}`,
                 error: `yt-dlp info extraction failed: ${error.message}`
@@ -2258,7 +2189,7 @@ console.log("options",options);
           console.log(`[${downloadId}] Title with quality (from sanitized):`, titleWithQuality);
         
           // Send progress update with title including quality
-          event.sender.send('download-progress', { 
+          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
             downloadId,
             sanitizedTitle: titleWithQuality,
             message: `Using sanitized title: ${titleWithQuality}`
@@ -2310,7 +2241,7 @@ console.log("options",options);
         
         // Send thumbnail information to renderer
         if (thumbnail) {
-          event.sender.send('download-progress', { 
+          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
             downloadId,
             thumbnail,
             message: 'Thumbnail fetched for non-YouTube content'
@@ -2377,7 +2308,7 @@ console.log("options",options);
               // Send an update with the likely title (stripping extension)
               const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
               if (likelyTitle) {
-                 event.sender.send('download-progress', { 
+                 event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
                    downloadId, 
                    title: likelyTitle,
                    message: `Title resolved: ${likelyTitle}`
@@ -2386,7 +2317,7 @@ console.log("options",options);
             } catch (e) { /* ignore path parsing errors */ }
           }
           
-          event.sender.send('download-progress', { downloadId, message: line });
+          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, message: line });
         });
 
         downloadProcess.stderr.on('data', (data) => {
@@ -2425,52 +2356,52 @@ console.log("options",options);
           const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
           
           if (isTwitchError) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
               isAuthError: true,
               details: errorMessage
             });
           } else if (isDailymotionError) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
               isAuthError: true,
               details: errorMessage
             });
           } else if (isYouTubeUnavailable) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'This YouTube video is unavailable. It may be private, deleted, age-restricted, or geo-blocked.',
               isAuthError: true,
               details: errorMessage
             });
           } else if (isGeoBlocked) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'This video is geo-blocked and not available in your region.',
               details: errorMessage
             });
           } else if (isPrivateVideo) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'This video is private or requires membership to access.',
               details: errorMessage
             });
           } else if (isNotFoundError) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'Video not found. The URL may be incorrect or the video may have been removed.',
               details: errorMessage
             });
           } else if (isNetworkError) {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId,
               error: 'Network error occurred. Please check your internet connection and try again.',
               details: errorMessage
             });
           } else {
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId, 
               error: errorMessage,
               details: errorMessage
@@ -2495,7 +2426,7 @@ console.log("options",options);
           downloadProcess = null;
 
           if (code === 0) {
-            event.sender.send('download-progress', { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
             resolve();
           } else {
             console.error(`[${downloadId}] Download process exited with code ${code}`);
@@ -2530,7 +2461,7 @@ console.log("options",options);
                 errorDetails = `Exit code ${code} indicates an error occurred during download.`;
             }
             
-            event.sender.send('download-progress', { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId, 
               error: errorMessage,
               details: errorDetails,
@@ -2540,24 +2471,24 @@ console.log("options",options);
           }
         });
       }).catch((err) => {
-        event.sender.send('download-progress', { downloadId, error: err.message });
+        event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, error: err.message });
         reject(err);
       });
     } catch (err) {
-      event.sender.send('download-progress', { downloadId: options?.id, error: err.message });
+      event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId: options?.id, error: err.message });
       reject(err);
     }
   });
 };
 
-ipcMain.handle('select-folder', async () => {
+ipcMain.handle(IPC_CHANNELS.SELECT_FOLDER, async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openDirectory'],
   });
   return result.canceled ? null : result.filePaths[0]; // Return null if canceled, else folder path
 })
 
-ipcMain.handle('downloadVideo', async (event, options) => {
+ipcMain.handle(IPC_CHANNELS.DOWNLOAD_VIDEO, async (event, options) => {
   console.log('Starting download...');
   try {
     await startDownload(event, options);
@@ -2568,11 +2499,11 @@ ipcMain.handle('downloadVideo', async (event, options) => {
   }
 });
 
-ipcMain.handle('show-message-box', async (_, options) => {
+ipcMain.handle(IPC_CHANNELS.SHOW_MESSAGE_BOX, async (_, options) => {
   return dialog.showMessageBox(mainWindow, options);
 });
 
-ipcMain.handle('resumeDownload', async (event, options) => {
+ipcMain.handle(IPC_CHANNELS.RESUME_DOWNLOAD, async (event, options) => {
   if (!downloadProcess) {
     console.log('Resuming download...');
     await startDownload(event, options);
@@ -2581,7 +2512,7 @@ ipcMain.handle('resumeDownload', async (event, options) => {
   return false;
 });
 
-ipcMain.handle('pauseDownload', async () => {
+ipcMain.handle(IPC_CHANNELS.PAUSE_DOWNLOAD, async () => {
   console.log('Attempting to pause download...');
   if (downloadProcess) {
     console.log('Killing download process with PID:', downloadProcess.pid);
@@ -2616,12 +2547,12 @@ function saveDownloadState(state) {
   fs.writeFileSync(filePath, JSON.stringify(state));
 }
 
-ipcMain.handle('load-download-state', () => {
+ipcMain.handle(IPC_CHANNELS.LOAD_DOWNLOAD_STATE, () => {
   const filePath = join(app.getPath('userData'), 'downloadState.json');
   return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : null;
 });
 
-ipcMain.handle('openPath', async (event, path) => {
+ipcMain.handle(IPC_CHANNELS.OPEN_PATH, async (event, path) => {
   try {
     await shell.openPath(path); // Use Electron's shell.openPath for local files
     return { success: true };
@@ -2631,7 +2562,7 @@ ipcMain.handle('openPath', async (event, path) => {
   }
 });
 
-ipcMain.handle('deleteFile', async (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.DELETE_FILE, async (event, filePath) => {
   try {
     console.log(`Delete file request received for: ${filePath}`);
     const result = await safeDeleteFile(filePath);
@@ -2642,7 +2573,7 @@ ipcMain.handle('deleteFile', async (event, filePath) => {
   }
 });
 
-ipcMain.handle('handleFileDeletion', async (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.HANDLE_FILE_DELETION, async (event, filePath) => {
   try {
     console.log(`Handle file deletion request for: ${filePath}`);
     const result = await handleFileDeletion(filePath);
@@ -2653,7 +2584,7 @@ ipcMain.handle('handleFileDeletion', async (event, filePath) => {
   }
 });
 
-ipcMain.handle('deleteMultipleFiles', async (event, filePaths) => {
+ipcMain.handle(IPC_CHANNELS.DELETE_MULTIPLE_FILES, async (event, filePaths) => {
   try {
     console.log(`Batch delete request for ${filePaths.length} files`);
     const results = [];
@@ -2687,7 +2618,7 @@ ipcMain.handle('deleteMultipleFiles', async (event, filePaths) => {
   }
 });
 
-ipcMain.handle('checkFileExists', async (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.CHECK_FILE_EXISTS, async (event, filePath) => {
   try {
     const exists = existsSync(filePath);
     if (exists) {
@@ -2707,7 +2638,7 @@ ipcMain.handle('checkFileExists', async (event, filePath) => {
   }
 });
 
-ipcMain.handle('openExternal', async (event, url) => {
+ipcMain.handle(IPC_CHANNELS.OPEN_EXTERNAL, async (event, url) => {
   try {
     await shell.openExternal(url); // Use Electron's shell.openExternal for URLs
     return { success: true };
@@ -2717,7 +2648,7 @@ ipcMain.handle('openExternal', async (event, url) => {
   }
 });
 
-ipcMain.handle('read-directory', async (event, dir) => {
+ipcMain.handle(IPC_CHANNELS.READ_DIRECTORY, async (event, dir) => {
   const fs = require('fs').promises;
   try {
     const files = await fs.readdir(dir);
@@ -2728,7 +2659,7 @@ ipcMain.handle('read-directory', async (event, dir) => {
   }
 });
 
-ipcMain.handle('create-directory', async (event, dirPath) => {
+ipcMain.handle(IPC_CHANNELS.CREATE_DIRECTORY, async (event, dirPath) => {
   try {
     if (!existsSync(dirPath)) {
       mkdirSync(dirPath, { recursive: true });
@@ -2741,7 +2672,7 @@ ipcMain.handle('create-directory', async (event, dirPath) => {
   }
 });
 
-ipcMain.handle('accessFile', async (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.ACCESS_FILE, async (event, filePath) => {
   try {
     await fs.access(filePath, fs.constants.F_OK | fs.constants.R_OK);
     return { success: true };
@@ -2750,7 +2681,7 @@ ipcMain.handle('accessFile', async (event, filePath) => {
     throw error;
   }
 });
-ipcMain.handle('get-path', async (event, name) => {
+ipcMain.handle(IPC_CHANNELS.GET_PATH, async (event, name) => {
   try {
     return app.getPath(name);
   } catch (error) {
@@ -2758,7 +2689,7 @@ ipcMain.handle('get-path', async (event, name) => {
     throw error;
   }
 });
-ipcMain.handle('show-confirm-dialog', async (event, options) => {
+ipcMain.handle(IPC_CHANNELS.SHOW_CONFIRM_DIALOG, async (event, options) => {
   const result = await dialog.showMessageBox({
     type: 'warning',
     title: options.title || "Confirm",
@@ -2770,48 +2701,48 @@ ipcMain.handle('show-confirm-dialog', async (event, options) => {
   return result.response;
 });
 
-autoUpdater.on('update-available', (info) => {
+autoUpdater.on(IPC_EVENTS.UPDATE_AVAILABLE, (info) => {
   console.log('Update available:', info);
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('update-available', info);
+    mainWindow.webContents.send(IPC_EVENTS.UPDATE_AVAILABLE, info);
   }
 });
 
-autoUpdater.on('update-downloaded', (info) => {
+autoUpdater.on(IPC_EVENTS.UPDATE_DOWNLOADED, (info) => {
   console.log('Update downloaded:', info);
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('update-downloaded', info);
+    mainWindow.webContents.send(IPC_EVENTS.UPDATE_DOWNLOADED, info);
   }
 });
 
-autoUpdater.on('update-download-progress', (progress) => {
+autoUpdater.on(IPC_EVENTS.UPDATE_DOWNLOAD_PROGRESS, (progress) => {
   console.log("progress",progress);
   
   console.log(`Download speed: ${progress.bytesPerSecond}`);
   console.log(`Downloaded ${progress.percent.toFixed(2)}%`);
   console.log(`${progress.transferred} / ${progress.total}`);
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('update-download-progress', progress);
+    mainWindow.webContents.send(IPC_EVENTS.UPDATE_DOWNLOAD_PROGRESS, progress);
   }
 });
 
 autoUpdater.on('error', (err) => {
   console.error('Update error:', err);
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('update-error', err);
+    mainWindow.webContents.send(IPC_EVENTS.UPDATE_ERROR, err);
   }
 });
 
-ipcMain.on('check-for-updates', () => {
+ipcMain.on(IPC_EVENTS.CHECK_FOR_UPDATES, () => {
   autoUpdater.checkForUpdates();
 });
 
-ipcMain.on('download-update', () => {
+ipcMain.on(IPC_CHANNELS.DOWNLOAD_UPDATE, () => {
   autoUpdater.downloadUpdate();
 });
 
 // IPC handler to check for yt-dlp updates
-ipcMain.handle('check-ytdlp-update', async () => {
+ipcMain.handle(IPC_CHANNELS.CHECK_YTDLP_UPDATE, async () => {
   try {
     const updateCheck = await checkYtdlpUpdate();
     return {
@@ -2831,7 +2762,7 @@ ipcMain.handle('check-ytdlp-update', async () => {
 });
 
 // IPC handler to manually update yt-dlp
-ipcMain.handle('update-ytdlp', async () => {
+ipcMain.handle(IPC_CHANNELS.UPDATE_YTDLP, async () => {
   try {
     console.log('Manual yt-dlp update requested');
     const updateResult = await updateYtdlp(true); // Force update
@@ -2849,7 +2780,7 @@ ipcMain.handle('update-ytdlp', async () => {
   }
 });
 
-ipcMain.on('install-update', () => {
+ipcMain.on(IPC_CHANNELS.INSTALL_UPDATE, () => {
   autoUpdater.quitAndInstall();
 });
 
@@ -2905,7 +2836,7 @@ async function checkDependencies() {
   }
 }
 
-ipcMain.handle('check-dependencies', async () => {
+ipcMain.handle(IPC_CHANNELS.CHECK_DEPENDENCIES, async () => {
   return await checkDependencies();
 });
 
@@ -2913,11 +2844,11 @@ ipcMain.handle('check-dependencies', async () => {
 //   return app.getPath(pathName);
 // });
 
-ipcMain.handle('fileExists', (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.FILE_EXISTS, (event, filePath) => {
   return existsSync(filePath);
 });
 
-ipcMain.handle('openFile', (event, filePath) => {
+ipcMain.handle(IPC_CHANNELS.OPEN_FILE, (event, filePath) => {
   shell.openPath(filePath);
 });
 const API_KEY = import.meta.env.VITE_YOUTUBE_API_KEY
@@ -3115,7 +3046,7 @@ const parseCookiesFromFile = async (domain) => {
 };
 
 // Image proxy handler to bypass 403 errors from external CDNs
-ipcMain.handle('proxy-image', async (event, imageUrl) => {
+ipcMain.handle(IPC_CHANNELS.PROXY_IMAGE, async (event, imageUrl) => {
   const maxRetries = 3;
   const retryDelay = 1000; // 1 second between retries
   
@@ -3330,7 +3261,7 @@ ipcMain.handle('proxy-image', async (event, imageUrl) => {
   }
 });
 
-ipcMain.handle('get-youtube-info', async (event, url) => {
+ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_INFO, async (event, url) => {
   try {
     return await getVideoInfo(url);
   } catch (error) {

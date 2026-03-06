@@ -1,18 +1,19 @@
 import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { trackEvent } from "@aptabase/electron/renderer";
+import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
 
 const api = {
-  openWebview: (url) => ipcRenderer.send('open-webview', url),
-  getYoutubeCookies: () => ipcRenderer.invoke('getYoutubeCookies'),
-  fetchVideoInfo: (url) => ipcRenderer.invoke('fetch-video-info', url),
-  fetchPlaylistEntries: (url) => ipcRenderer.invoke('fetch-playlist-entries', url),
-  getYoutubeInfo: (url) => ipcRenderer.invoke('get-youtube-info', url),
-  saveWebViewCookies: () => ipcRenderer.invoke('save-webview-cookies'),
-  showMessageBox: (options) => ipcRenderer.invoke('show-message-box', options),
+  openWebview: (url) => ipcRenderer.send(IPC_CHANNELS.OPEN_WEBVIEW, url),
+  getYoutubeCookies: () => ipcRenderer.invoke(IPC_CHANNELS.GET_YOUTUBE_COOKIES),
+  fetchVideoInfo: (url) => ipcRenderer.invoke(IPC_CHANNELS.FETCH_VIDEO_INFO, url),
+  fetchPlaylistEntries: (url) => ipcRenderer.invoke(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, url),
+  getYoutubeInfo: (url) => ipcRenderer.invoke(IPC_CHANNELS.GET_YOUTUBE_INFO, url),
+  saveWebViewCookies: () => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WEBVIEW_COOKIES),
+  showMessageBox: (options) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_MESSAGE_BOX, options),
 trackEvent: (eventName, props) => trackEvent(eventName, props),
   downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, playlistTitle, forceSingle }) =>
-    ipcRenderer.invoke('downloadVideo', {
+    ipcRenderer.invoke(IPC_CHANNELS.DOWNLOAD_VIDEO, {
       url,
       isAudioOnly,
       selectedFormat,
@@ -24,14 +25,14 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
       playlistTitle,
       forceSingle
     }),
-  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
-  getYtVersion: () => ipcRenderer.invoke('getYtVersion'),
-  getFfmpegVersion: () => ipcRenderer.invoke('getFfmpegVersion'),
+  getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_APP_VERSION),
+  getYtVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_YT_VERSION),
+  getFfmpegVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_FFMPEG_VERSION),
 
     
-    pauseDownload: (downloadId) => ipcRenderer.invoke('pauseDownload', downloadId),
+    pauseDownload: (downloadId) => ipcRenderer.invoke(IPC_CHANNELS.PAUSE_DOWNLOAD, downloadId),
   resumeDownload: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo,id }) =>
-    ipcRenderer.invoke('resumeDownload', {
+    ipcRenderer.invoke(IPC_CHANNELS.RESUME_DOWNLOAD, {
       url,
       isAudioOnly,
       selectedFormat,
@@ -40,56 +41,56 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
       id
     }),
     showConfirmDialog: (title, message) => {
-      return ipcRenderer.invoke('show-confirm-dialog', { title, message });
+      return ipcRenderer.invoke(IPC_CHANNELS.SHOW_CONFIRM_DIALOG, { title, message });
     },
-  saveDownloadState: (state) => ipcRenderer.invoke('save-download-state', state),
-  loadDownloadState: () => ipcRenderer.invoke('load-download-state'),
+  saveDownloadState: (state) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_DOWNLOAD_STATE, state),
+  loadDownloadState: () => ipcRenderer.invoke(IPC_CHANNELS.LOAD_DOWNLOAD_STATE),
 
   onDownloadProgress: (callback) => {
-    ipcRenderer.on('download-progress', (_event, progressData) => callback(progressData))
+    ipcRenderer.on(IPC_EVENTS.DOWNLOAD_PROGRESS, (_event, progressData) => callback(progressData))
   },
   openExternal: (url) => shell.openExternal(url),
-  getPath: (type) => ipcRenderer.invoke('get-path', type),
-accessFile: (path) => ipcRenderer.invoke('accessFile', path),
-openPath: (path) => ipcRenderer.invoke('openPath', path),
+  getPath: (type) => ipcRenderer.invoke(IPC_CHANNELS.GET_PATH, type),
+accessFile: (path) => ipcRenderer.invoke(IPC_CHANNELS.ACCESS_FILE, path),
+openPath: (path) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, path),
   // ✅ New function to read directory contents
-  readDirectory: (dirPath) => ipcRenderer.invoke('read-directory', dirPath),
+  readDirectory: (dirPath) => ipcRenderer.invoke(IPC_CHANNELS.READ_DIRECTORY, dirPath),
 
   // ✅ New function to create directory
-  createDirectory: (dirPath) => ipcRenderer.invoke('create-directory', dirPath),
+  createDirectory: (dirPath) => ipcRenderer.invoke(IPC_CHANNELS.CREATE_DIRECTORY, dirPath),
 
   // ✅ New function to check if a file exists
-  fileExists: (filePath) => ipcRenderer.invoke('file-exists', filePath),
-  openFile: (openFile) => ipcRenderer.invoke('openFile', openFile),
+  fileExists: (filePath) => ipcRenderer.invoke(IPC_CHANNELS.FILE_EXISTS, filePath),
+  openFile: (openFile) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_FILE, openFile),
 
   
   removeListener: (channel) => ipcRenderer.removeAllListeners(channel),
 
-  checkForUpdates: () => ipcRenderer.send('check-for-updates'),
-  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info)),
-  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_, info) => callback(info)),
-  onUpdateDownloadedProgress: (callback) => ipcRenderer.on('update-download-progress', (_, info) => callback(info)),
+  checkForUpdates: () => ipcRenderer.send(IPC_EVENTS.CHECK_FOR_UPDATES),
+  onUpdateAvailable: (callback) => ipcRenderer.on(IPC_EVENTS.UPDATE_AVAILABLE, (_, info) => callback(info)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on(IPC_EVENTS.UPDATE_DOWNLOADED, (_, info) => callback(info)),
+  onUpdateDownloadedProgress: (callback) => ipcRenderer.on(IPC_EVENTS.UPDATE_DOWNLOAD_PROGRESS, (_, info) => callback(info)),
 
-  onUpdateError: (callback) => ipcRenderer.on('update-error', (_, err) => callback(err)),
-  downloadUpdate: () => ipcRenderer.send('download-update'),
-  installUpdate: () => ipcRenderer.send('install-update'),
-  checkDependencies: () => ipcRenderer.invoke('check-dependencies'),
-  selectFolder: () => ipcRenderer.invoke('select-folder'),
+  onUpdateError: (callback) => ipcRenderer.on(IPC_EVENTS.UPDATE_ERROR, (_, err) => callback(err)),
+  downloadUpdate: () => ipcRenderer.send(IPC_CHANNELS.DOWNLOAD_UPDATE),
+  installUpdate: () => ipcRenderer.send(IPC_CHANNELS.INSTALL_UPDATE),
+  checkDependencies: () => ipcRenderer.invoke(IPC_CHANNELS.CHECK_DEPENDENCIES),
+  selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.SELECT_FOLDER),
 
   // Image proxy for external CDN images
-  proxyImage: (imageUrl) => ipcRenderer.invoke('proxy-image', imageUrl),
+  proxyImage: (imageUrl) => ipcRenderer.invoke(IPC_CHANNELS.PROXY_IMAGE, imageUrl),
 
   // Show notification when downloadable video URL is detected
-  showVideoUrlNotification: (url) => ipcRenderer.invoke('show-video-url-notification', url),
+  showVideoUrlNotification: (url) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_VIDEO_URL_NOTIFICATION, url),
 
   // Listen for video URL detection events from main process
   onVideoUrlDetected: (callback) => {
-    ipcRenderer.on('video-url-detected', (_event, url) => callback(url))
+    ipcRenderer.on(IPC_EVENTS.VIDEO_URL_DETECTED, (_event, url) => callback(url))
   },
 
   // Remove listener for video URL detection
   removeVideoUrlDetectedListener: () => {
-    ipcRenderer.removeAllListeners('video-url-detected')
+    ipcRenderer.removeAllListeners(IPC_EVENTS.VIDEO_URL_DETECTED)
   },
 
 }
