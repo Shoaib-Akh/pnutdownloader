@@ -107,37 +107,47 @@ function BodySection({
   useEffect(() => {
     if (pastLinkUrl) {
       const fetchAndDownload = async () => {
-        const result = await enqueueDownload(pastLinkUrl)
-        if (result?.duplicate) {
-          if (window.api?.showMessageBox) {
-            window.api.showMessageBox({
-              type: 'warning',
-              title: 'Duplicate Download',
-              message:
-                'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
-            })
-          } else {
-            alert(
-              'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
-            )
+        try {
+          console.log('[DEBUG] Processing URL:', pastLinkUrl);
+          const result = await enqueueDownload(pastLinkUrl);
+          console.log('[DEBUG] Enqueue result:', result);
+          
+          if (result?.duplicate) {
+            if (window.api?.showMessageBox) {
+              window.api.showMessageBox({
+                type: 'warning',
+                title: 'Duplicate Download',
+                message:
+                  'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+              })
+            } else {
+              alert(
+                'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
+              )
+            }
+            setPastLinkUrl('')
+            return
           }
+          if (result?.playlist) {
+            setPlaylistModalLoading(true)
+            setPlaylistData(result.playlist)
+            setPlaylistModalOpen(true)
+            setPlaylistModalLoading(false)
+          }
+          if (result?.id) {
+            console.log('[DEBUG] Download added with ID:', result.id);
+            setDownloadListOpen(true)
+            setShowWebView(false)
+            setIsSidebarOpen(true)
+            setSelectedItem('All Files')
+            setDownload(true)
+          }
+        } catch (error) {
+          console.error('[DEBUG] Error adding download:', error);
+          alert('Failed to add download: ' + error.message);
+        } finally {
           setPastLinkUrl('')
-          return
         }
-        if (result?.playlist) {
-          setPlaylistModalLoading(true)
-          setPlaylistData(result.playlist)
-          setPlaylistModalOpen(true)
-          setPlaylistModalLoading(false)
-        }
-        if (result?.id) {
-          setDownloadListOpen(true)
-          setShowWebView(false)
-          setIsSidebarOpen(true)
-          setSelectedItem('All Files')
-          setDownload(true)
-        }
-        setPastLinkUrl('')
       }
       fetchAndDownload()
     }

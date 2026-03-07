@@ -11,7 +11,7 @@ function App() {
   const [downloadType, setDownloadType] = useState('Video')
   const [bitrate, setBitrate] = useState('64k')
   const [quality, setQuality] = useState('1080p')
-  const [format, setFormat] = useState('')
+  const [format, setFormat] = useState('MP4')
   const [saveTo, setSaveTo] = useState('Downloads')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [selectedItem, setSelectedItem] = useState('')

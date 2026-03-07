@@ -5,6 +5,7 @@ import '../common.css';
 import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';
 import { extractYotubePastLink, isDuplicateDownload } from '../commonFunction';
+import { isValidPlatformUrl, detectPlatform } from '../platformUtils';
 
 function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick }) {
   const [urlInput, setUrlInput] = useState('');
@@ -197,10 +198,20 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
       const clipboardText = await navigator.clipboard.readText();
       if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
         setUrlInput(clipboardText);
-        const videoId = extractYotubePastLink(clipboardText);
-        if (!videoId) {
-          alert('The URL does not contain a valid video or playlist');
+        if (!isValidPlatformUrl(clipboardText)) {
+          alert('The URL is not from a supported platform (YouTube, Facebook, Instagram, TikTok, etc.)');
           return;
+        }
+
+        // For YouTube URLs, extract video ID for additional validation
+        const platform = detectPlatform(clipboardText);
+        const isYouTube = platform.includes('youtube');
+        if (isYouTube) {
+          const videoId = extractYotubePastLink(clipboardText);
+          if (!videoId) {
+            alert('The YouTube URL does not contain a valid video or playlist');
+            return;
+          }
         }
 
         if (checkDuplicateAndWarn(clipboardText)) return;
