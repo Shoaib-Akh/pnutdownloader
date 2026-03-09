@@ -15,7 +15,7 @@ import {
 import { SiDailymotion, SiBilibili, SiSoundcloud } from "react-icons/si";
 import "../common.css";
 
-const PlatformIcons = ({ handlePlatformClick }) => {
+const PlatformIcons = ({ theme, handlePlatformClick }) => {
   const platforms = [
     { Component: FaYoutube, url: "https://www.youtube.com", color: "#FF0000", bgColor: "#FFE5E5", alt: "YouTube", domain: "www.youtube.com" },
     { Component: FaTiktok, url: "https://www.tiktok.com", color: "#000000", bgColor: "#F0F0F0", alt: "TikTok", domain: "www.tiktok.com" },
@@ -36,7 +36,7 @@ const PlatformIcons = ({ handlePlatformClick }) => {
       <h1 style={{
         fontSize: '32px',
         fontWeight: 'bold',
-        color: '#333',
+        color: theme === 'dark' ? '#e2e8f0' : '#333',
         textAlign: 'center',
         marginBottom: '30px'
       }}>

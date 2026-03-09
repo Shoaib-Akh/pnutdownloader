@@ -23,6 +23,21 @@
   border: none;
 }
 
+/* Dark Mode Styles */
+[data-theme="dark"] body,
+[data-theme="dark"] .bottom-container {
+  background-color: #121212 !important;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] h1 {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .platform-icon {
+  filter: brightness(0.9);
+}
+
 .bottom-container {
   /* position: absolute; */
   bottom: 0;

@@ -17,6 +17,22 @@
   --navbar-input-focus: #BB4F28;
 }
 
+/* Dark Mode Styles */
+[data-theme="dark"] :root {
+  --navbar-bg: #1a1a2e;
+  --navbar-border: #2d3748;
+  --navbar-shadow: rgba(0, 0, 0, 0.3);
+  --navbar-text-primary: #e2e8f0;
+  --navbar-text-secondary: #a0aec0;
+  --navbar-input-bg: #2d3748;
+  --navbar-input-border: #4a5568;
+}
+
+[data-theme="dark"] .navbar-modern {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-bottom: 1px solid #2d3748;
+}
+
 .navbar-modern {
   background: linear-gradient(135deg, var(--navbar-bg) 0%, #fafafa 100%);
   width: 85.5%;

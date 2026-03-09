@@ -9,7 +9,7 @@ import MediaThumbnail from './MediaThumbnail'
 import { detectPlatform, isYouTubePlatform } from '../platformUtils'
 import './ActiveDownloadAnimations.css'
 
-function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadType, downloadListOpen, onRetry, activeDownloads }) {
+function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadType, downloadListOpen, onRetry, activeDownloads,theme }) {
   const [openDropdown, setOpenDropdown] = useState(null)
   const [lastUpdated, setLastUpdated] = useState(Date.now())
   const [searchQuery, setSearchQuery] = useState('')
@@ -716,7 +716,8 @@ function DownloadList({ selectedItem, progressMap, videoInfo, bitrate, downloadT
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <span style={{ fontSize: '14px', color: '#666' }}>
+        <span style={{ fontSize: '14px',         color: theme === 'dark' ? '#e2e8f0' : '#333',
+}}>
           Total: {searchFilteredList?.length || 0}
         </span>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

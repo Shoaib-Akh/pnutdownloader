@@ -291,7 +291,7 @@ if (isLoading) {
         style={{
           fontSize: '24px',
           marginBottom: '20px',
-          color: '#333',
+        color: theme === 'dark' ? '#e2e8f0' : '#333',
         }}
       >
         Initializing Dependencies...

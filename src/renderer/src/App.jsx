@@ -8,6 +8,17 @@ import { FaRegLightbulb } from 'react-icons/fa'
 import { MdFeedback } from 'react-icons/md'
 
 function App() {
+  // Theme state - detect system preference on load
+  const [theme, setTheme] = useState(() => {
+    // Check localStorage first
+    const savedTheme = localStorage.getItem('appTheme');
+    if (savedTheme) return savedTheme;
+    // Check system preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  });
   const [downloadType, setDownloadType] = useState('Video')
   const [bitrate, setBitrate] = useState('64k')
   const [quality, setQuality] = useState('1080p')
@@ -31,6 +42,33 @@ function App() {
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
+
+  // Apply theme to document and listen for system theme changes
+  useEffect(() => {
+    // Apply theme class to document
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('appTheme', theme);
+  }, [theme]);
+
+  // Listen for system theme changes
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (e) => {
+      // Only auto-switch if user hasn't set a manual preference
+      const savedTheme = localStorage.getItem('appTheme');
+      if (!savedTheme) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, []);
+
+  const handleThemeToggle = (newTheme) => {
+    setTheme(newTheme);
+    localStorage.setItem('appTheme', newTheme);
+  };
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -216,7 +254,8 @@ function App() {
           style={{
             fontSize: '24px',
             marginBottom: '20px',
-            color: '#333',
+          color: theme === 'dark' ? '#e2e8f0' : '#333',
+
           }}
         >
           Initializing Dependencies...
@@ -283,8 +322,11 @@ function App() {
 
   return (
     <div className="vh-100" style={{
-      background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-      minHeight: '100vh'
+      background: theme === 'dark' 
+        ? 'linear-gradient(135deg, #121212 0%, #1a1a1a 100%)' 
+        : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      minHeight: '100vh',
+      color: theme === 'dark' ? '#e2e8f0' : '#1e293b'
     }}>
       {updateAvailable && (
         <UpdateNotification
@@ -311,6 +353,8 @@ function App() {
       }}>
         <div style={{ width: '16%' }}>
           <Sidebar
+              theme={theme}
+              onThemeToggle={handleThemeToggle}
               setSelectedItem={setSelectedItem}
               selectedItem={selectedItem}
               setDownload={setDownload}
@@ -331,6 +375,7 @@ function App() {
           <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
         </div>
  {!showWebView && <Navbar
+        theme={theme}
         bitrate={bitrate}
         setBitrate={setBitrate}
         downloadType={downloadType}
@@ -346,6 +391,7 @@ function App() {
         setPastLinkUrl={setPastLinkUrl}
       />}
         <BodySection
+        theme={theme}
         setPastLinkUrl={setPastLinkUrl}
           bitrate={bitrate}
           setBitrate={setBitrate}

@@ -29,6 +29,7 @@ import { nonYouTubeExtractor } from '../NonYouTubeMetadataExtractor'
 import { saveDownload, saveDownloadError } from '../../utils/firestoreService'
 
 function BodySection({
+  theme,
   downloadType,
   setPastLinkUrl,
   bitrate,
@@ -999,6 +1000,7 @@ function BodySection({
           {downloadListOpen && selectedItem ? (
             <div className="video-preview" style={{ marginRight: 10 }}>
               <DownloadList
+                theme={theme}
                 downloadType={downloadType}
                 quality={quality}
                 format={format}
@@ -1036,7 +1038,7 @@ function BodySection({
             </div>
           ) : (
             <div className="bottom-container">
-              <PlatformIcons handlePlatformClick={handlePlatformClick} />
+              <PlatformIcons theme={theme} handlePlatformClick={handlePlatformClick} />
               {lastUrl && (
                 <OverlayTrigger
                   placement="top"

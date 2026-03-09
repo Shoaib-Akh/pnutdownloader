@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar } from 'react-icons/fa';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar, FaSun, FaMoon, FaCogs } from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
 import squirrel from '../../assets/Images/squirrel.png';
 import './Sidebar.css';
 import Logo from '../../assets/Images/logo.png';
+import LogoDark from '../../assets/Images/logo-dark.png';
+
 
 function Sidebar({
   isOpen,
@@ -16,7 +18,9 @@ function Sidebar({
   setShowWebView,
   setDownloadListOpen,
   setAboutUs,
-  setFeedbackModalOpen
+  setFeedbackModalOpen,
+  theme,
+  onThemeToggle
 }) {
   // Set Home as auto-selected on load
   useEffect(() => {
@@ -56,11 +60,13 @@ function Sidebar({
   return (
     <div className="sidebar">
       <div className="navbar-logo-container">
+         <div className="navbar-logo-container">
         <img
-          src={Logo}
+          src={theme === 'dark' ? LogoDark : Logo}
           alt="PNUT Logo"
           className="navbar-logo"
         />
+      </div>
       </div>
 
       {/* MY FILES Section */}
@@ -137,6 +143,26 @@ function Sidebar({
               )}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Theme Toggle Section */}
+      <div className="sidebar__section">
+        <div className="sidebar__section-header">APPEARANCE</div>
+        <div className="sidebar__theme-toggle">
+          <div className="sidebar__theme-switch-container">
+            <span className="sidebar__theme-label">Dark Mode</span>
+            <label className="sidebar__theme-switch">
+              <input
+                type="checkbox"
+                checked={theme === 'dark'}
+                onChange={(e) => onThemeToggle(e.target.checked ? 'dark' : 'light')}
+                className="sidebar__theme-switch-input"
+              />
+              <span className="sidebar__theme-switch-slider"></span>
+            </label>
+          </div>
+         
         </div>
       </div>
 

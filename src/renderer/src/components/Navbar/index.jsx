@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { FaPaste, FaDownload } from 'react-icons/fa';
 import Logo from '../../assets/Images/logo.png';
+import LogoDark from '../../assets/Images/logo-dark.png';
 import '../common.css';
 import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';
 import { extractYotubePastLink, isDuplicateDownload } from '../commonFunction';
 
-function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick }) {
+function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick, theme }) {
   const [urlInput, setUrlInput] = useState('');
   const formatOptions = {
     Video: ['MP4', 'AVI', 'MKV'],
@@ -249,6 +250,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   return (
     <nav className="navbar-modern" role="navigation" aria-label="Main navigation">
       {/* Logo on Left */}
+    
 
       {/* Input Group in Center */}
       <div className="navbar-input-group">
