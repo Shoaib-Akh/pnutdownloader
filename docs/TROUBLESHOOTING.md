@@ -1,360 +1,385 @@
-# PNUTDownloader Troubleshooting Guide
+# PNUTDownloader — Troubleshooting Guide
 
-Solutions to common problems with PNUTDownloader.
+Solutions to the most common problems users encounter with PNUTDownloader.
 
 ---
 
 ## Table of Contents
 
-1. [Download Issues](#download-issues)
-2. [Installation Problems](#installation-problems)
-3. [Video Availability](#video-availability)
-4. [Performance Issues](#performance-issues)
-5. [Error Messages](#error-messages)
-6. [Platform-Specific Issues](#platform-specific-issues)
+1. [Download Errors](#download-errors)
+2. [YouTube Specific Issues](#youtube-specific-issues)
+3. [Installation & Startup Issues](#installation--startup-issues)
+4. [Browser (WebView) Issues](#browser-webview-issues)
+5. [Platform-Specific Issues](#platform-specific-issues)
+6. [Performance Issues](#performance-issues)
+7. [Update Issues](#update-issues)
+8. [Checking Logs](#checking-logs)
+9. [Getting More Help](#getting-more-help)
 
 ---
 
-## Download Issues
+## Download Errors
 
-### Download Fails Immediately
+### "Download Failed" — generic failure
 
-**Symptoms:**
-- Download starts but fails within seconds
-- Error: "Download failed"
+**Causes & Fixes:**
 
-**Solutions:**
-1. **Check your internet connection**
-   - Try loading the website in your browser
-   - Test with a different URL
-
-2. **Update PNUTDownloader**
-   - Go to **Help** > **Check for Updates**
-   - Update yt-dlp if prompted
-
-3. **Try a different format**
-   - Some videos only work with specific formats
-   - Try "Best Available" instead of specific quality
-
-4. **Disable VPN/Proxy** (if applicable)
-   - Some sites block VPN connections
+| Probable Cause | Solution |
+|----------------|---------|
+| Bad internet connection | Check your connection, then click **Retry** |
+| Outdated yt-dlp | Go to **About → Update yt-dlp** or restart the app |
+| Video deleted or private | Confirm the video is publicly accessible in a browser |
+| Format not available | Change **Quality** or **Format** in the Navbar |
+| Region restriction | Use a VPN to change your apparent location |
 
 ---
 
-### Download Stuck at 0%
+### "Duplicate download" warning
 
-**Symptoms:**
-- Download shows 0% progress
-- Nothing happens for a long time
+This appears when you attempt to add the same URL with the same **Format**, **Quality**, **Save To**, and **Type**.
 
-**Solutions:**
-1. **Wait 30-60 seconds**
-   - Initial connection can take time for large videos
-
-2. **Check firewall settings**
-   - Make sure PNUTDownloader can access the internet
-
-3. **Try different quality**
-   - Lower quality often downloads faster
-
-4. **Clear download queue**
-   - Cancel stuck downloads
-   - Try downloading one at a time
+**Fix**: Change any one of those settings (e.g., change quality from 1080p to Best), then download again.
 
 ---
 
-### Very Slow Download Speed
+### Download stuck at 0% or "Fetching Info…"
 
-**Symptoms:**
-- Downloads taking much longer than expected
+**Causes & Fixes:**
 
-**Solutions:**
-1. **Check your internet speed**
-   - Run a speed test
-
-2. **Some sites limit download speeds**
-   - This is beyond app control
-
-3. **Try different times**
-   - Peak hours may be slower
-
-4. **Use a download manager**
-   - Some countries may benefit from this
+| Probable Cause | Solution |
+|----------------|---------|
+| Slow network / CDN delay | Wait 30 seconds; yt-dlp is resolving the stream |
+| yt-dlp binary corrupted | Restart app to trigger yt-dlp auto-update |
+| Unsupported URL | Verify the URL works in the built-in browser |
 
 ---
 
-### Cannot Resume Download
+### Download fails immediately for Instagram / TikTok / Facebook
 
-**Symptoms:**
-- Lost connection, can't resume
-- Download starts from beginning
+**Cause**: These platforms restrict direct access without cookies.
 
-**Solutions:**
-1. **Enable auto-save**
-   - Check Settings > Enable download state saving
-
-2. **Clear partial files**
-   - Cancel and delete partial download
-   - Start fresh
-
-3. **Check disk space**
-   - Ensure enough space for resume data
+**Fix**:
+1. Use the built-in browser → click the Platform Icon (e.g., Instagram)
+2. Log into the platform
+3. Navigate to the video
+4. Click the **Download** button that appears
 
 ---
 
-## Installation Problems
+### "Destination" file appears but download never completes
 
-### App Won't Launch (Windows)
+**Cause**: yt-dlp downloads video and audio as separate streams and merges them with FFmpeg. If FFmpeg is missing or corrupted, merging fails.
 
-**Symptoms:**
-- App crashes on startup
-- No error message
-
-**Solutions:**
-1. **Install Visual C++ Redistributable**
-   - Download from Microsoft
-
-2. **Run as Administrator**
-   - Right-click > Run as administrator
-
-3. **Reinstall the app**
-   - Uninstall completely
-   - Download fresh installer
+**Fix**:
+1. Restart the app (FFmpeg is auto-downloaded on startup if missing)
+2. Check **About** → verify FFmpeg version shows correctly
+3. If FFmpeg version shows `Error`, see [FFmpeg not found](#ffmpeg-not-found-or-unavailable)
 
 ---
 
-### App Won't Launch (macOS)
+## YouTube Specific Issues
 
-**Symptoms:**
-- "App is damaged" error
+### "Sign in to confirm your age" / Login error
 
-**Solutions:**
+**Cause**: YouTube requires authentication for age-restricted content or detects bot-like access.
+
+**Fix**:
+1. A **Login Modal** will appear automatically when this error is detected
+2. Click **Open YouTube** in the modal
+3. Log into your Google account in the built-in browser
+4. Your session cookies are automatically saved
+5. Close any open Login modal and click **Retry** on the failed download
+
+> **Note**: Cookies are saved to `cookies.txt` locally and passed to yt-dlp. They are never uploaded anywhere.
+
+---
+
+### YouTube playlist downloads only show one video
+
+**Cause**: The URL includes both a video ID (`v=`) and a playlist ID (`list=`). PNUTDownloader strips the `list=` parameter by default to download the single video.
+
+**Fix**: Use the actual playlist URL: `youtube.com/playlist?list=PLxxxxxxxx` (not a watch URL with `&list=`). The Playlist Selection Modal will open automatically.
+
+---
+
+### YouTube Music downloads fail
+
+**Cause**: YouTube Music sometimes requires an authenticated session.
+
+**Fix**: Log into YouTube Music in the built-in browser (use the YouTube Music icon in Platform Icons) before downloading.
+
+---
+
+### "HTTP Error 429: Too Many Requests"
+
+**Cause**: YouTube rate-limited your IP because of too many rapid requests.
+
+**Fix**:
+1. Wait 5–15 minutes before trying again
+2. Avoid queuing many YouTube videos simultaneously
+3. Consider using a VPN to rotate your IP
+
+---
+
+## Installation & Startup Issues
+
+### App shows "Initializing Dependencies…" forever
+
+**Cause**: yt-dlp or FFmpeg download stalled on first run.
+
+**Fix**:
+1. Check your internet connection
+2. Force-quit the app and relaunch
+3. If it persists, manually place binaries in the app resources folder (see [INSTALLATION.md](./INSTALLATION.md))
+
+---
+
+### "yt-dlp not found" error on startup
+
+**Cause**: The yt-dlp binary is missing or has zero bytes.
+
+**Fix — macOS/Linux** (development mode):
+```bash
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos \
+     -o /path/to/pnutdownloader/public/yt-dlp_macos
+chmod +x /path/to/pnutdownloader/public/yt-dlp_macos
+```
+
+**Fix — Windows** (development mode):
+```bash
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe `
+     -o C:\path\to\pnutdownloader\public\yt-dlp.exe
+```
+
+**Fix — packaged app**: Uninstall and reinstall the app.
+
+---
+
+### FFmpeg not found or unavailable
+
+**Cause**: FFmpeg binary missing, corrupted, or failed to download.
+
+**Fix**:
+1. Restart the app — FFmpeg is automatically downloaded on startup from official sources
+2. If still missing, manually install:
+
+**macOS**:
+```bash
+brew install ffmpeg
+# App will use system ffmpeg as fallback
+```
+
+**Linux**:
+```bash
+sudo apt install ffmpeg
+```
+
+**Windows**: Download from [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html) and place `ffmpeg.exe` in the app resources folder.
+
+---
+
+### macOS: "App cannot be opened because it is from an unidentified developer"
+
+**Fix**:
 ```bash
 # Remove quarantine attribute
 xattr -cr /Applications/PNUTDownloader.app
 ```
 
-Or:
+Or right-click the app → **Open** → **Open** in the dialog.
+
+---
+
+### macOS: App opens but nothing happens
+
+**Cause**: Permission issue with the binary.
+
+**Fix**:
 ```bash
-# Gatekeeper workaround
-sudo spctl --master-disable
+chmod +x /Applications/PNUTDownloader.app/Contents/MacOS/PNUTDownloader
 ```
 
 ---
 
-### Missing yt-dlp
+### Windows: "Windows protected your PC" (SmartScreen)
 
-**Symptoms:**
-- Error: "yt-dlp not found"
-- Downloads won't start
-
-**Solutions:**
-1. **Update the app**
-   - Newer versions include yt-dlp
-
-2. **Manual installation**
-   - Download yt-dlp from https://yt-dlp.github.io
-   - Place in app resources folder
+**Fix**: Click **More Info** → **Run Anyway**. This is expected for unsigned Electron apps.
 
 ---
 
-### Missing FFmpeg
+### Linux: AppImage doesn't open
 
-**Symptoms:**
-- Error: "FFmpeg not found"
-- Can't convert audio/video
+**Fix** — install FUSE:
+```bash
+# Ubuntu/Debian
+sudo apt install libfuse2
 
-**Solutions:**
-1. **App has bundled FFmpeg**
-   - Should work automatically
-
-2. **Install system FFmpeg**
-   - macOS: `brew install ffmpeg`
-   - Ubuntu: `sudo apt install ffmpeg`
-   - Windows: Add to PATH
+# Fedora
+sudo dnf install fuse fuse-libs
+```
 
 ---
 
-## Video Availability
+## Browser (WebView) Issues
 
-### "Video Unavailable" Error
+### Built-in browser shows a blank white page
 
-**Symptoms:**
-- "This video is not available"
-- "Video has been removed"
+**Cause**: WebView failed to load.
 
-**Solutions:**
-1. **Video may be deleted**
-   - Check in browser first
-
-2. **Region blocked**
-   - Use VPN to match video region
-
-3. **Age-restricted**
-   - Try using cookies from logged-in account
-
-4. **Private video**
-   - Must be logged in (use cookies)
+**Fix**:
+1. Click the **Reload** button (⟳) in the browser toolbar
+2. Close and reopen the browser
+3. Restart the app
 
 ---
 
-### "Login Required" Error
+### No **Download** button appears on a video page
 
-**Symptoms:**
-- "This video requires authentication"
-- Can watch in browser but not download
+**Cause**: The current URL doesn't match any downloadable video pattern in `all.json`.
 
-**Solutions:**
-1. **Export browser cookies**
-   - Use "Get cookies.txt LOCALLY" extension
-   - Import in Settings > Cookies
-
-2. **Make sure cookies are valid**
-   - Some expire after logout
-
-3. **Check cookie format**
-   - Must be Netscape format
+**Possible scenarios:**
+- You're on a search results page, not a video page — navigate directly to a video
+- The platform isn't yet supported — copy the URL and paste it directly instead
 
 ---
 
-### Playlist Not Loading
+### YouTube login doesn't persist in the browser
 
-**Symptoms:**
-- Can't see playlist videos
-- Only getting single video
+**Cause**: The WebView session partition `persist:main` may have been cleared.
 
-**Solutions:**
-1. **Copy playlist URL**
-   - Make sure it's the playlist link
-   - Not just one video
-
-2. **Update yt-dlp**
-   - Some playlist changes require updates
-
-3. **Check playlist privacy**
-   - Private playlists need authentication
-
----
-
-## Performance Issues
-
-### High Memory Usage
-
-**Symptoms:**
-- App is slow
-- System is sluggish
-
-**Solutions:**
-1. **Limit concurrent downloads**
-   - Settings > Max concurrent downloads = 1-2
-
-2. **Clear completed downloads**
-   - Remove from list when done
-
-3. **Restart the app**
-   - Close and reopen
-
----
-
-### App Freezes
-
-**Symptoms:**
-- UI becomes unresponsive
-- Buttons don't work
-
-**Solutions:**
-1. **Wait for background process**
-   - May be processing large file
-
-2. **Force restart**
-   - Task Manager > End task
-   - Then reopen app
-
-3. **Check logs**
-   - Help > View Logs
-
----
-
-## Error Messages
-
-### "ERR_INVALID_URL"
-
-- Invalid URL format
-- **Fix**: Check the URL is correct
-
-### "ERR_NETWORK_ERROR"
-
-- Network connection issue
-- **Fix**: Check internet, try again
-
-### "ERR_FILE_EXISTS"
-
-- File already exists
-- **Fix**: Enable "Overwrite" in settings or change filename
-
-### "ERR_PERMISSION_DENIED"
-
-- Can't write to folder
-- **Fix**: Choose different download folder
-
-### "ERR_DISK_FULL"
-
-- No space left
-- **Fix**: Free up disk space
+**Fix**:
+1. Clear app data: delete `~/Library/Application Support/PNUTDownloader` (macOS) or `%APPDATA%\PNUTDownloader` (Windows)
+2. Relaunch and log in again
 
 ---
 
 ## Platform-Specific Issues
 
-### Windows
+### TikTok: Downloads watermarked
 
-| Issue | Solution |
-|-------|----------|
-| Antivirus blocks | Add to exceptions |
-| Missing DLL | Install Visual C++ Redistributable |
-| Slow on Windows 11 | Update to latest version |
+**Cause**: yt-dlp may download the watermarked version from some TikTok endpoints.
+
+**Fix**: This is a yt-dlp limitation. Try updating yt-dlp via **About → Update yt-dlp** as newer versions may resolve this.
+
+---
+
+### Twitter / X: "Could not find video"
+
+**Cause**: The tweet doesn't contain a video, or the account is private.
+
+**Fix**: Confirm the tweet URL is a tweet (`.../status/...`) and the video is publicly visible.
+
+---
+
+### Instagram Stories: Expired link
+
+**Cause**: Instagram story URLs expire after 24 hours.
+
+**Fix**: Download stories while they're still live.
+
+---
+
+### Twitch VODs: Only first few minutes download
+
+**Cause**: Subscriber-only or premium VOD content.
+
+**Fix**: Log into Twitch in the built-in browser to save your session cookies.
+
+---
+
+## Performance Issues
+
+### App is slow or uses high CPU during download
+
+**Cause**: FFmpeg merge process is CPU-intensive for high-resolution video.
+
+**Fix**:
+- Download lower quality (720p instead of 4K)
+- Avoid downloading multiple files simultaneously
+
+---
+
+### Downloads are very slow
+
+**Potential causes:**
+- Website rate-limits downloads
+- Your ISP throttles certain content
+- VPN routing is slow
+
+**Fix**:
+- Try a different time of day
+- Try without a VPN (or with a different server)
+- For YouTube, this is often temporary — retry after a few minutes
+
+---
+
+## Update Issues
+
+### App update banner keeps appearing but doesn't install
+
+**Fix**:
+1. Click **Install Update** prominently when the download completes (the button changes)
+2. If it still doesn't work, download the latest installer manually from [GitHub Releases](https://github.com/Shoaib-Akh/pnutdownloader/releases)
+
+---
+
+### yt-dlp update fails silently
+
+**Cause**: GitHub API rate limit or network issue.
+
+**Fix**:
+```bash
+# Check from terminal whether GitHub is reachable
+curl -I https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest
+```
+
+If you get a `403` or `rate limit`, wait a few minutes and restart the app.
+
+---
+
+## Checking Logs
 
 ### macOS
 
-| Issue | Solution |
-|-------|----------|
-| "Damaged app" | xattr -cr command (see above) |
-| M1/M2 issues | Use Rosetta if needed |
-| Notarization issue | Download directly from releases |
+```bash
+# Open Console app and filter by "PNUTDownloader"
+# Or check log file:
+cat ~/Library/Logs/PNUTDownloader/main.log
+```
+
+### Windows
+
+```
+%APPDATA%\PNUTDownloader\logs\main.log
+```
 
 ### Linux
 
-| Issue | Solution |
-|-------|----------|
-| AppImage won't run | chmod +x filename.AppImage |
-| Missing libraries | Install missing packages |
-| Flatpak issues | Try AppImage instead |
+```bash
+~/.config/PNUTDownloader/logs/main.log
+```
+
+### Developer Console (DevTools)
+
+In development mode: `Ctrl/Cmd + Shift + I` opens DevTools in the renderer window. You can see all console output and IPC messages.
 
 ---
 
 ## Getting More Help
 
-### Enable Debug Logging
+If none of the above solutions work:
 
-1. Go to **Settings**
-2. Enable **Debug Mode**
-3. Reproduce the issue
-4. Check logs in Help > View Logs
+1. **Search Issues**: [github.com/Shoaib-Akh/pnutdownloader/issues](https://github.com/Shoaib-Akh/pnutdownloader/issues)
+2. **Open a Bug Report**: Use the template in [CONTRIBUTING.md](./CONTRIBUTING.md#bug-report-template)
+3. **Discussions**: [GitHub Discussions](https://github.com/Shoaib-Akh/pnutdownloader/discussions)
 
-### Collect Information
-
-When asking for help, include:
-
-- App version (Help > About)
-- Operating system and version
-- The URL you're trying to download
-- Any error messages
-- Steps to reproduce
-
-### Contact Support
-
-- [Open an Issue](https://github.com/Shoaib-Akh/pnutdownloader/issues)
-- [Start a Discussion](https://github.com/Shoaib-Akh/pnutdownloader/discussions)
+When reporting, always include:
+- Your **OS** and version
+- **App version** (from About)
+- **yt-dlp version** (from About)
+- **The exact URL** you were trying to download
+- **What happened** vs. what you expected
+- Any **error messages** shown
 
 ---
 

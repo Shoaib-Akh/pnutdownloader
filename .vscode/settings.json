@@ -7,6 +7,10 @@
   },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
-  }
+  },
+  "terminal.integrated.env.osx": {
+    "OPENAI_API_KEY": "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",
+    "VITE_OPENAI_API_KEY": "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"
+  },
+  "CodeGPT.apiKey": "Ollama"
 }
-
