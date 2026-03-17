@@ -6,8 +6,11 @@ import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
+import useTheme from './hooks/useTheme'
+import './assets/theme.css'
 
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const [downloadType, setDownloadType] = useState('Video')
   const [bitrate, setBitrate] = useState('64k')
   const [quality, setQuality] = useState('1080p')
@@ -93,7 +96,7 @@ function App() {
   return (
     <ErrorBoundary fallbackTitle="App Error" fallbackMessage="An unexpected error occurred in the application.">
       <div className="vh-100" style={{
-        background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        background: 'var(--theme-bg-gradient-start)',
         minHeight: '100vh'
       }}>
         {updateAvailable && (
@@ -130,6 +133,8 @@ function App() {
               setDownloadListOpen={setDownloadListOpen}
               setAboutUs={setAboutUs}
               setFeedbackModalOpen={setFeedbackModalOpen}
+              theme={theme}
+              onThemeToggle={toggleTheme}
             />
           </div>
 

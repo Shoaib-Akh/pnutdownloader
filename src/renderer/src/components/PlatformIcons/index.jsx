@@ -1,5 +1,4 @@
 
-
 import React from "react";
 import { 
   FaYoutube, 
@@ -13,7 +12,6 @@ import {
   FaLinkedin,
 } from "react-icons/fa";
 import { SiDailymotion, SiBilibili, SiSoundcloud } from "react-icons/si";
-import "../common.css";
 
 const PlatformIcons = ({ handlePlatformClick }) => {
   const platforms = [
@@ -31,12 +29,20 @@ const PlatformIcons = ({ handlePlatformClick }) => {
     { Component: FaLinkedin, url: "https://www.linkedin.com", color: "#0077B5", bgColor: "#E5F0F5", alt: "LinkedIn", domain: "www.linkedin.com" },
   ];
 
+  // Get text color based on theme
+  
+
+  // Get secondary text color based on theme
+  const getSecondaryTextColor = () => {
+    return document.documentElement.classList.contains('dark-theme') ? '#ccc' : '#666';
+  };
+
   return (
     <div style={{ width: '100%', marginTop: '40px' }}>
       <h1 style={{
         fontSize: '32px',
         fontWeight: 'bold',
-        color: '#333',
+      color: getTextColor(),
         textAlign: 'center',
         marginBottom: '30px'
       }}>
@@ -107,3 +113,6 @@ const PlatformIcons = ({ handlePlatformClick }) => {
 };
 
 export default PlatformIcons;
+export const getTextColor = () => {
+    return document.documentElement.classList.contains('dark-theme') ? '#fff' : '#333';
+  };

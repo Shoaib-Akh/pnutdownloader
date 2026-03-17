@@ -93,6 +93,10 @@ openPath: (path) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, path),
     ipcRenderer.removeAllListeners(IPC_EVENTS.VIDEO_URL_DETECTED)
   },
 
+  // New context menu functions
+  moveFile: (sourcePath, destPath) => ipcRenderer.invoke('moveFile', sourcePath, destPath),
+  showFileInFolder: (filePath) => ipcRenderer.invoke('showFileInFolder', filePath),
+
 }
 
 // Expose API to renderer process

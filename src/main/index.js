@@ -3269,3 +3269,25 @@ ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_INFO, async (event, url) => {
     return null;
   }
 });
+
+// Additional IPC handlers for context menu functions
+ipcMain.handle('moveFile', async (event, sourcePath, destPath) => {
+  try {
+    const fs = require('fs').promises;
+    await fs.rename(sourcePath, destPath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error moving file:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('showFileInFolder', async (event, filePath) => {
+  try {
+    await shell.showItemInFolder(filePath);
+    return { success: true };
+  } catch (error) {
+    console.error('Error showing file in folder:', error);
+    return { success: false, error: error.message };
+  }
+});

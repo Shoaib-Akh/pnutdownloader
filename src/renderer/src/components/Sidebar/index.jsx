@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar } from 'react-icons/fa';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar, FaSun, FaMoon } from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
 import squirrel from '../../assets/Images/squirrel.png';
 import './Sidebar.css';
 import Logo from '../../assets/Images/logo.png';
+import LogoDark from '../../assets/Images/logoDark.png';
 
 function Sidebar({
   isOpen,
@@ -16,7 +17,9 @@ function Sidebar({
   setShowWebView,
   setDownloadListOpen,
   setAboutUs,
-  setFeedbackModalOpen
+  setFeedbackModalOpen,
+  theme,
+  onThemeToggle
 }) {
   // Set Home as auto-selected on load
   useEffect(() => {
@@ -46,6 +49,13 @@ function Sidebar({
     { icon: FaInfoCircle, label: 'About us' },
   ];
 
+  // Theme toggle item
+  const themeToggleItem = {
+    icon: theme === 'dark' ? FaSun : FaMoon,
+    label: theme === 'dark' ? 'Light Mode' : 'Dark Mode',
+    isThemeToggle: true,
+  };
+
 
 
   const handleClick = () => {
@@ -57,7 +67,7 @@ function Sidebar({
     <div className="sidebar">
       <div className="navbar-logo-container">
         <img
-          src={Logo}
+          src={theme === 'dark' ? LogoDark : Logo}
           alt="PNUT Logo"
           className="navbar-logo"
         />
@@ -96,6 +106,20 @@ function Sidebar({
       <div className="sidebar__section">
         <div className="sidebar__section-header">SYSTEM</div>
         <div className="sidebar__menu">
+          {/* Theme Toggle */}
+          <div
+            className="theme-toggle"
+            onClick={onThemeToggle}
+          >
+            <div className="theme-toggle__icon-container">
+              <themeToggleItem.icon className="sidebar__icon" />
+            </div>
+            <span className="theme-toggle__label">{themeToggleItem.label}</span>
+            <div className={`theme-toggle__switch ${theme === 'dark' ? 'theme-toggle__switch--active' : ''}`}>
+              <div className="theme-toggle__switch-thumb"></div>
+            </div>
+          </div>
+
           {systemItems.map((item, index) => (
             <div
               key={index}

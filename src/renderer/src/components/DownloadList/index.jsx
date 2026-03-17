@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaShare, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
+import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -110,20 +110,280 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   }
 
   // New handler functions for context menu
-  const handleAddToFolder = (item) => {
-    // TODO: Implement add to folder functionality
-    console.log('Add to folder:', item.title)
+  const handleAddToFolder = async (item) => {
+    try {
+      // Get the actual file path first
+      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi']
+      const audioExtensions = ['mp3', 'flac', 'wav', 'aac']
+      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions
+
+      const customSanitize = (str) => {
+        if (!str) return 'Unknown'
+        return str
+          .replace(/[<>:"/\\|?*]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .replace(/[^a-zA-Z0-9._-]/g, ' ')
+          .replace(/^[.-]+|[.-]+$/g, ' ')
+          .substring(0, 200)
+      }
+
+      const normalizeForMatch = (value) => {
+        if (!value) return ''
+        return value
+          .toString()
+          .normalize('NFD')
+          .toLowerCase()
+          .replace(/[''‛‹›""「」『』【】〔〕]/g, "'")
+          .replace(/["""„""«»‹›]/g, '"')
+          .replace(/[\s\u2000-\u200F\u2028-\u202F\u205F\u3000]+/g, ' ')
+          .trim()
+          .replace(/[_\-\s]+\d+[pP](\.[a-z0-9]+)?$/i, '')
+          .replace(/[_\-\s]+\d+[kK]$/i, '')
+          .replace(/\.[a-z0-9]{2,5}$/i, '')
+          .replace(/[\|\:\/\\]/g, '_')
+          .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u20D0-\u20FF]/g, '')
+          .replace(/[^\p{L}\p{N}._\-\s'"']/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+
+      let allPathsToSearch = []
+      if (item.saveTo && typeof item.saveTo === 'string') {
+        try {
+          await window.api.readDirectory(item.saveTo)
+          allPathsToSearch.push(item.saveTo)
+        } catch (err) {
+          console.warn(`saveTo path not accessible: ${item.saveTo}`, err)
+        }
+      }
+
+      const fallbackFolders = [await window.api.getPath('downloads'), await window.api.getPath('desktop')]
+      fallbackFolders.forEach((path) => {
+        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path)
+      })
+
+      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
+      const baseDirectories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`)
+      const playlistSubDir = item.playlistTitle ? customSanitize(item.playlistTitle) : null
+      const directories = playlistSubDir
+        ? [...baseDirectories.map((d) => `${d}/${playlistSubDir}`), ...baseDirectories]
+        : baseDirectories
+
+      const normalizedTitle = normalizeForMatch(item.filename || item.title)
+      let filePath = null
+      let sourceDir = null
+
+      for (const dir of directories) {
+        try {
+          await window.api.createDirectory(dir)
+          const files = await window.api.readDirectory(dir)
+
+          filePath = files.find((file) => {
+            const fileName = file.toLowerCase()
+            if (fileName.endsWith('.part')) return false
+            const titlePart = fileName.split('.').slice(0, -1).join('.').trim()
+            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`))
+            const normalizedFileTitle = normalizeForMatch(titlePart)
+            const isExact = normalizedFileTitle === normalizedTitle
+            const isPartial = normalizedFileTitle && normalizedTitle && (normalizedFileTitle.includes(normalizedTitle) || normalizedTitle.includes(normalizedFileTitle))
+            return hasValidExtension && (isExact || isPartial)
+          })
+
+          if (filePath) {
+            filePath = `${dir}/${filePath}`
+            sourceDir = dir
+            break
+          }
+        } catch (dirError) {
+          console.error(`Error reading directory ${dir}:`, dirError)
+        }
+      }
+
+      if (!filePath) {
+        alert('File not found. Cannot move to folder.')
+        setOpenDropdown(null)
+        return
+      }
+
+      // Let user select destination folder
+      const selectedFolder = await window.api.selectFolder()
+      if (!selectedFolder) {
+        // User cancelled the folder selection
+        setOpenDropdown(null)
+        return
+      }
+
+      // Move the file to selected folder
+      const fileName = filePath.substring(filePath.lastIndexOf('/') + 1)
+      const destinationPath = `${selectedFolder}/${fileName}`
+
+      // Check if file already exists in destination
+      try {
+        await window.api.accessFile(destinationPath)
+        const overwrite = confirm(`File "${fileName}" already exists in the destination folder. Do you want to overwrite it?`)
+        if (!overwrite) {
+          setOpenDropdown(null)
+          return
+        }
+      } catch (error) {
+        // File doesn't exist in destination, which is good
+      }
+
+      // Move the file using IPC
+      const result = await window.api.moveFile(filePath, destinationPath)
+      
+      if (result.success) {
+        alert(`File successfully moved to: ${selectedFolder}`)
+        // Update the download item's saveTo path if needed
+        const downloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
+        const updatedDownloads = downloads.map(d => {
+          if (d.id === item.id) {
+            return { ...d, saveTo: selectedFolder }
+          }
+          return d
+        })
+        localStorage.setItem('downloadList', JSON.stringify(updatedDownloads))
+        
+        // Trigger a refresh of the download list
+        window.dispatchEvent(new Event('storage', {
+          key: 'downloadList',
+          newValue: JSON.stringify(updatedDownloads)
+        }))
+      } else {
+        alert(`Failed to move file: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error moving file to folder:', error)
+      alert('Failed to move file to folder. Please check the console for details.')
+    }
     setOpenDropdown(null)
   }
 
-  const handleCopy = (item) => {
+  const handleCopy = async (item) => {
+    try {
+      await navigator.clipboard.writeText(item.url)
+      // Show visual feedback
+      const originalTitle = item.title
+      alert(`URL copied to clipboard: ${item.url}`)
+    } catch (error) {
+      console.error('Failed to copy URL:', error)
+      alert('Failed to copy URL to clipboard')
+    }
     handleCopyUrl(item)
     setOpenDropdown(null)
   }
 
-  const handleShare = (item) => {
-    // TODO: Implement share functionality
-    console.log('Share:', item.title)
+  
+  const handleShowInFinder = async (item) => {
+    try {
+      // Get the actual file path (similar to handleThumbnailClick logic)
+      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi']
+      const audioExtensions = ['mp3', 'flac', 'wav', 'aac']
+      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions
+
+      const customSanitize = (str) => {
+        if (!str) return 'Unknown'
+        return str
+          .replace(/[<>:"/\\|?*]+/g, ' ')
+          .replace(/\s+/g, ' ')
+          .replace(/[^a-zA-Z0-9._-]/g, ' ')
+          .replace(/^[.-]+|[.-]+$/g, ' ')
+          .substring(0, 200)
+      }
+
+      const normalizeForMatch = (value) => {
+        if (!value) return ''
+        return value
+          .toString()
+          .normalize('NFD')
+          .toLowerCase()
+          .replace(/[''‛‹›""「」『』【】〔〕]/g, "'")
+          .replace(/["""„""«»‹›]/g, '"')
+          .replace(/[\s\u2000-\u200F\u2028-\u202F\u205F\u3000]+/g, ' ')
+          .trim()
+          .replace(/[_\-\s]+\d+[pP](\.[a-z0-9]+)?$/i, '')
+          .replace(/[_\-\s]+\d+[kK]$/i, '')
+          .replace(/\.[a-z0-9]{2,5}$/i, '')
+          .replace(/[\|\:\/\\]/g, '_')
+          .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u20D0-\u20FF]/g, '')
+          .replace(/[^\p{L}\p{N}._\-\s'"']/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+      }
+
+      let allPathsToSearch = []
+      if (item.saveTo && typeof item.saveTo === 'string') {
+        try {
+          await window.api.readDirectory(item.saveTo)
+          allPathsToSearch.push(item.saveTo)
+        } catch (err) {
+          console.warn(`saveTo path not accessible: ${item.saveTo}`, err)
+        }
+      }
+
+      const fallbackFolders = [await window.api.getPath('downloads'), await window.api.getPath('desktop')]
+      fallbackFolders.forEach((path) => {
+        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path)
+      })
+
+      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
+      const baseDirectories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`)
+      const playlistSubDir = item.playlistTitle ? customSanitize(item.playlistTitle) : null
+      const directories = playlistSubDir
+        ? [...baseDirectories.map((d) => `${d}/${playlistSubDir}`), ...baseDirectories]
+        : baseDirectories
+
+      const normalizedTitle = normalizeForMatch(item.filename || item.title)
+      let filePath = null
+
+      for (const dir of directories) {
+        try {
+          await window.api.createDirectory(dir)
+          const files = await window.api.readDirectory(dir)
+
+          filePath = files.find((file) => {
+            const fileName = file.toLowerCase()
+            if (fileName.endsWith('.part')) return false
+            const titlePart = fileName.split('.').slice(0, -1).join('.').trim()
+            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`))
+            const normalizedFileTitle = normalizeForMatch(titlePart)
+            const isExact = normalizedFileTitle === normalizedTitle
+            const isPartial = normalizedFileTitle && normalizedTitle && (normalizedFileTitle.includes(normalizedTitle) || normalizedTitle.includes(normalizedFileTitle))
+            return hasValidExtension && (isExact || isPartial)
+          })
+
+          if (filePath) {
+            filePath = `${dir}/${filePath}`
+            break
+          }
+        } catch (dirError) {
+          console.error(`Error reading directory ${dir}:`, dirError)
+        }
+      }
+
+      if (filePath) {
+        // Show the file in system file explorer
+        if (window.api.showFileInFolder) {
+          await window.api.showFileInFolder(filePath)
+        } else {
+          // Fallback: open the containing folder
+          const folderPath = filePath.substring(0, filePath.lastIndexOf('/'))
+          if (window.api.openPath) {
+            await window.api.openPath(folderPath)
+          } else {
+            const encodedPath = encodeURI(folderPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25')
+            const folderUrl = `file:///${encodedPath}`
+            await window.api.openExternal(folderUrl)
+          }
+        }
+      } else {
+        // Fallback to opening the download folder if file not found
+        handleOpenFolder(item)
+      }
+    } catch (error) {
+      console.error('Error showing file in finder:', error)
+      alert('Failed to show file in finder. Please check the console for details.')
+    }
     setOpenDropdown(null)
   }
 
@@ -811,13 +1071,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                           }}
                         >
                           Delete <FaTrash className="me-2" />
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => {
-                            handleShare(item);
-                          }}
-                        >
-                          Share <FaShare className="me-2" />
                         </Dropdown.Item>
                       </Dropdown.Menu>
                     </Dropdown>

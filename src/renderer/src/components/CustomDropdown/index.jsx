@@ -9,7 +9,9 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
     if (typeof option === 'object') return option?.label || option?.value;
     return option;
   };
-
+  const getTextColor = () => {
+    return document.documentElement.classList.contains('dark-theme') ? "#BB4F28" : '#BB4F28;';
+  };
   return (
     <Dropdown onToggle={(isOpen) => setIsOpen(isOpen)}>
       <Dropdown.Toggle
@@ -18,7 +20,7 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
         style={{
          backgroundColor:isOpen ?  "rgb(231 231 231)":"transparent" ,
           lineHeight: "35px",
-          color: isOpen ? "black" : "#A1A1A1",
+          color: isOpen ? "black" : getTextColor(),
           padding: "0 10px",
           // border: "none",
           display:"flex",
@@ -27,14 +29,15 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
           // minWidth:width,
         }}
       >
-        <span style={{ color:  "#A1A1A1",fontSize:12,fontWeight:"500" }}>{label}:  </span>{" "}
-        <span style={{ color: "black",paddingLeft:3,fontSize:13,fontWeight:"500"}}>
+        <span style={{ color: "black",fontSize:12,fontWeight:"500" }}>{label}:  </span>{" "}
+        <span style={{ color: getTextColor(),paddingLeft:3,fontSize:13,fontWeight:"500"}}>
           {renderSelected ? renderSelected(selected) : getDisplayValue(options.find(opt => 
             (typeof opt === 'object' ? opt.value : opt) === selected) || selected
           )}
         </span>
         <FaAngleDown
           className={`ms-1 transition ${isOpen ? "rotate-180" : ""}`}
+          style={{ color: getTextColor() }}
         />
       </Dropdown.Toggle>
 
@@ -49,7 +52,7 @@ function CustomDropdown({ label, options, selected, onSelect, renderOption, rend
             <Dropdown.Item 
               key={index} 
               onClick={() => onSelect(value)}
-              style={{ fontSize: "14px" ,}}
+              style={{ fontSize: "14px" , color: getTextColor()}}
             >
               <div className="d-flex justify-content-between align-items-center w-100">
                 <span>

@@ -28,7 +28,7 @@
   bottom: 0;
   width: 100%;
   /* min-height: 85vh; */
-  background-color: #f8f9fa;
+  background-color: var(--theme-bg-secondary);
   height: 100vh;
   text-align: center;
   padding: 15px 20px 40px 20px;
@@ -45,7 +45,7 @@
 h1 {
   font-size: 22px;
   margin-bottom: 20px;
-  color: #333;
+  color: var(--theme-text-primary);
   text-align: center;
 }
 
@@ -363,14 +363,14 @@ h1 {
 
 /* FileTable.css - Modern Design */
 .table-container {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  background: var(--theme-card-bg);
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px var(--theme-card-shadow);
   position: relative;
   overflow: hidden;
   height: calc(100vh - 120px);
   width: 100%;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--theme-card-border);
   backdrop-filter: blur(10px);
 }
 
@@ -380,13 +380,13 @@ h1 {
 }
 
 .header-cell {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: var(--theme-table-header-bg);
   padding: 18px 24px;
   text-align: left;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--theme-text-primary);
   font-size: 0.9rem;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid var(--theme-border);
   text-align: center;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -400,21 +400,21 @@ h1 {
 
 .data-cell {
   padding: 16px 12px;
-  color: #475569;
+  color: var(--theme-text-secondary);
   text-align: center;
   font-size: 14px;
   font-weight: 500;
 }
 
 .data-row {
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--theme-table-border);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .data-row:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--theme-table-row-hover);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px var(--theme-card-shadow);
 }
 
 .status-cell {
@@ -455,8 +455,8 @@ h1 {
   position: absolute;
   top: 100%;
   right: 0;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--theme-dropdown-bg);
+  border: 1px solid var(--theme-dropdown-border);
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   z-index: 1000;
@@ -474,7 +474,7 @@ h1 {
   background: none;
   border: none;
   text-align: left;
-  color: #475569;
+  color: var(--theme-text-secondary);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 14px;
@@ -482,15 +482,15 @@ h1 {
 }
 
 .dropdown-item:hover {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  color: #BB4F28;
+  background: var(--theme-dropdown-hover);
+  color: var(--theme-primary);
   transform: translateX(2px);
 }
 
 .webview-container {
   position: relative;
   height: 100vh;
-  background: #f5f5f5;
+  background: var(--theme-bg-tertiary);
   border-radius: 12px;
   /* box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); */
   overflow: hidden;

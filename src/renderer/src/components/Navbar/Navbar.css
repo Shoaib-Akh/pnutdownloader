@@ -1,28 +1,28 @@
 /* Navbar Modern Styles with Gradient & Bold Design */
 
 :root {
-  --navbar-primary: #BB4F28;
-  --navbar-primary-dark: #a03d1f;
-  --navbar-primary-light: #d66b4a;
-  --navbar-gradient-start: #BB4F28;
-  --navbar-gradient-end: #d66b4a;
-  --navbar-bg: #ffffff;
-  --navbar-border: #e0e0e0;
-  --navbar-shadow: rgba(0, 0, 0, 0.08);
+  --navbar-primary: var(--theme-primary);
+  --navbar-primary-dark: var(--theme-primary-dark);
+  --navbar-primary-light: var(--theme-primary-light);
+  --navbar-gradient-start: var(--theme-primary);
+  --navbar-gradient-end: var(--theme-primary-light);
+  --navbar-bg: var(--theme-navbar-bg);
+  --navbar-border: var(--theme-navbar-border);
+  --navbar-shadow: var(--theme-card-shadow);
   --navbar-shadow-hover: rgba(187, 79, 40, 0.25);
-  --navbar-text-primary: #333333;
-  --navbar-text-secondary: #666666;
-  --navbar-input-bg: #ffffff;
-  --navbar-input-border: #ddd;
-  --navbar-input-focus: #BB4F28;
+  --navbar-text-primary: var(--theme-navbar-text);
+  --navbar-text-secondary: var(--theme-navbar-text-secondary);
+  --navbar-input-bg: var(--theme-navbar-input-bg);
+  --navbar-input-border: var(--theme-navbar-input-border);
+  --navbar-input-focus: var(--theme-primary);
 }
 
 .navbar-modern {
-  background: linear-gradient(135deg, var(--navbar-bg) 0%, #fafafa 100%);
+  background: var(--theme-navbar-bg);
   width: 85.5%;
   padding: 18px 24px;
-  border-bottom: 1px solid var(--navbar-border);
-  box-shadow: 0 2px 8px var(--navbar-shadow), 0 1px 2px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--theme-navbar-border);
+  box-shadow: 0 2px 8px var(--theme-card-shadow), 0 1px 2px rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   gap: 24px;
@@ -70,12 +70,12 @@
   flex: 1;
   gap: 0;
   min-width: 0;
-  background: var(--navbar-input-bg);
+  background: var(--theme-input-bg);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   transition: all 0.3s ease;
-  border: 1px solid var(--navbar-input-border);
+  border: 1px solid var(--theme-input-border);
 }
 
 .navbar-input-group:focus-within {
@@ -86,15 +86,15 @@
 
 /* Paste Button */
 .navbar-paste-btn {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  background: linear-gradient(135deg, var(--theme-bg-primary) 0%, var(--theme-bg-secondary) 100%);
   border: none;
-  border-right: 1px solid var(--navbar-input-border);
+  border-right: 1px solid var(--theme-input-border);
   border-radius: 12px 0 0 12px;
   padding: 12px 20px;
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--navbar-primary);
+  color: var(--theme-primary);
   font-weight: 600;
   font-size: 14px;
   white-space: nowrap;
@@ -121,8 +121,8 @@
 }
 
 .navbar-paste-btn:hover {
-  background: linear-gradient(135deg, #f8f9fa 0%, #f0f0f0 100%);
-  color: var(--navbar-primary-dark);
+  background: linear-gradient(135deg, var(--theme-bg-secondary) 0%, var(--theme-bg-tertiary) 100%);
+  color: var(--theme-primary-dark);
   transform: translateX(2px);
 }
 
@@ -150,12 +150,12 @@
   outline: none;
 
   background: transparent;
-  color: var(--navbar-text-primary);
+  color: var(--theme-text-primary);
   transition: all 0.3s ease;
 }
 
 .navbar-input::placeholder {
-  color: var(--navbar-text-secondary);
+  color: var(--theme-text-muted);
   opacity: 0.7;
   font-size: 10px;
 }
@@ -230,17 +230,13 @@
 }
 
 /* Dropdown Styling for Navbar */
-.navbar-controls .dropdown {
-  position: relative;
-}
-
 .navbar-controls .dropdown-toggle {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.9) 100%) !important;
-  border: 1px solid var(--navbar-input-border);
+  border: 1px solid var(--theme-input-border);
   border-radius: 8px;
   padding: 8px 14px;
   line-height: 1.5;
-  color: var(--navbar-text-primary) !important;
+  color: var(--theme-text-primary) !important;
   font-weight: 500;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
@@ -255,35 +251,31 @@
   background: linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(187, 79, 40, 0.1);
   transform: translateY(-1px);
-  border-color: var(--navbar-primary);
+  border-color: var(--theme-primary);
 }
 
 .navbar-controls .dropdown-toggle span:first-child {
-  color: var(--navbar-text-secondary) !important;
+  /* color: var(--theme-text-secondary) !important; */
   font-size: 12px;
   font-weight: 500;
 }
 
 .navbar-controls .dropdown-toggle span:last-child {
-  color: var(--navbar-text-primary) !important;
+  color: var(--theme-text-primary) !important;
   font-size: 13px;
   font-weight: 600;
   padding-left: 4px;
 }
 
-.navbar-controls .dropdown-toggle svg {
-  color: var(--navbar-text-secondary);
-  transition: transform 0.3s ease;
-  margin-left: 4px;
-}
+
 
 .navbar-controls .dropdown-toggle.show svg {
   transform: rotate(180deg);
 }
 
 .navbar-controls .dropdown-menu {
-  background: white;
-  border: 1px solid var(--navbar-input-border);
+  background: var(--theme-dropdown-bg);
+  border: 1px solid var(--theme-dropdown-border);
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
   padding: 6px;
@@ -307,7 +299,7 @@
   padding: 10px 14px;
   border-radius: 6px;
   font-size: 14px;
-  color: var(--navbar-text-primary);
+  color: var(--theme-text-primary);
   transition: all 0.2s ease;
   margin: 2px 0;
   display: flex;
@@ -317,13 +309,13 @@
 
 .navbar-controls .dropdown-item:hover {
   background: linear-gradient(135deg, rgba(187, 79, 40, 0.08) 0%, rgba(187, 79, 40, 0.12) 100%);
-  color: var(--navbar-primary-dark);
+  color: var(--theme-primary-dark);
   transform: translateX(2px);
 }
 
 .navbar-controls .dropdown-item.active {
   background: linear-gradient(135deg, rgba(187, 79, 40, 0.15) 0%, rgba(187, 79, 40, 0.2) 100%);
-  color: var(--navbar-primary-dark);
+  color: var(--theme-primary-dark);
   font-weight: 600;
 }
 

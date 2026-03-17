@@ -1,29 +1,30 @@
 body {
-    background-color: #F8F9FA !important;
+    background-color: var(--theme-bg-primary) !important;
     margin: 0 !important;;
     font-family: Arial, sans-serif !important;;
     overflow: hidden;
+    color: var(--theme-text-primary);
   }
   ::-webkit-scrollbar {
     width: 10px; /* Scrollbar width */
   }
   
   ::-webkit-scrollbar-track {
-    background: #f1f1f1; /* Track background */
+    background: var(--theme-scrollbar-bg); /* Track background */
     border-radius: 5px;
   }
   
   ::-webkit-scrollbar-thumb {
-    background: #BB4F28; /* Scrollbar color */
+    background: var(--theme-primary); /* Scrollbar color */
     border-radius: 5px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: #a14020; /* Darker shade on hover */
+    background: var(--theme-primary-dark); /* Darker shade on hover */
   }
   * {
     scrollbar-width: thin;
-    scrollbar-color: #BB4F28 #f1f1f1;
+    scrollbar-color: var(--theme-primary) var(--theme-scrollbar-bg);
   }
 
   /* Responsive Layout Styles */
