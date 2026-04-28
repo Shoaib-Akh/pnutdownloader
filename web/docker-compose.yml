@@ -1,0 +1,32 @@
+services:
+  pnutdownloader-web:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./server/downloads:/app/server/downloads
+      - ./server/logs:/app/server/logs
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/system/version', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add Redis for session management (if needed later)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+
+volumes:
+  # redis_data:
+  downloads:
+    driver: local

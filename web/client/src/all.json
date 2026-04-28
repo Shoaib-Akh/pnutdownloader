@@ -1,0 +1,27 @@
+{
+  "videoPatterns": [
+    "youtube\\.com\\/watch\\?v=[A-Za-z0-9_-]+",
+    "youtube\\.com\\/shorts\\/[A-Za-z0-9_-]+",
+    "music\\.youtube\\.com\\/watch\\?v=[A-Za-z0-9_-]+",
+    "youtube\\.com\\/playlist\\?list=[A-Za-z0-9_-]+",
+    "youtu\\.be\\/[A-Za-z0-9_-]+",
+    "vimeo\\.com\\/\\d+",
+    "facebook\\.com\\/watch\\/.*",
+    "facebook\\.com\\/.*\\/videos\\/\\d+",
+    "tiktok\\.com\\/@[^/]+\\/video\\/\\d+",
+    "twitter\\.com\\/[^/]+\\/status\\/\\d+",
+    "x\\.com\\/[^/]+\\/status\\/\\d+",
+    "instagram\\.com\\/p\\/[A-Za-z0-9_-]+",
+    "instagram\\.com\\/reels\\/[A-Za-z0-9_-]+",
+    "instagram\\.com\\/stories\\/[^/]+\\/\\d+",
+    "dailymotion\\.com\\/video\\/[A-Za-z0-9]+",
+    "twitch\\.tv\\/videos\\/\\d+",
+    "twitch\\.com\\/[^/]+\\/clip\\/[A-Za-z0-9_-]+",
+    "rumble\\.com\\/v[A-Za-z0-9_-]+",
+    "soundcloud\\.com\\/[A-Za-z0-9_-]+",
+    "bilibili\\.com\\/video\\/[A-Za-z0-9_-]+",
+    "reddit\\.com\\/r\\/[^/]+\\/comments\\/[A-Za-z0-9_-]+",
+    "pinterest\\.com\\/pin\\/[A-Za-z0-9_-]+",
+    "linkedin\\.com\\/posts\\/[A-Za-z0-9_-]+"
+  ]
+}

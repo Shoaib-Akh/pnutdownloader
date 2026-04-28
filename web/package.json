@@ -1,0 +1,32 @@
+{
+  "name": "pnutdownloader-web",
+  "version": "1.0.0",
+  "description": "PNUTDownloader Web Application",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"PORT=3001 npm run server:dev\" \"npm run client:dev\"",
+    "server:dev": "nodemon server/index.js",
+    "client:dev": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "PORT=3001 node server/index.js",
+    "install:all": "npm install && cd client && npm install"
+  },
+  "dependencies": {
+    "axios": "^1.15.2",
+    "child_process": "^1.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "fs-extra": "^11.1.1",
+    "multer": "^1.4.5-lts.1",
+    "path": "^0.12.7",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.8.3",
+    "tar": "^6.1.15",
+    "tree-kill": "^1.2.2",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "nodemon": "^3.0.1"
+  }
+}
