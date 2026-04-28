@@ -550,7 +550,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <span style={{ fontSize: '14px', color: '#666' }}>
+        <span style={{ fontSize: '14px', color: "#dc3545" }}>
           Total: {searchFilteredList?.length || 0}
         </span>
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>

@@ -42,7 +42,7 @@ const PlatformIcons = ({ handlePlatformClick }) => {
       <h1 style={{
         fontSize: '32px',
         fontWeight: 'bold',
-      color: getTextColor(),
+      color: "#ff6b6b",
         textAlign: 'center',
         marginBottom: '30px'
       }}>
