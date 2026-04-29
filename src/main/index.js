@@ -1584,11 +1584,16 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
   
   return new Promise((resolve, reject) => {
     const args = [
+      '--no-update',
       '-J', 
       '--no-playlist', 
       '--cookies', cookiesPath,
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      '--extractor-retries', '3', 
+      '--extractor-args', 'youtube:player_client=android',
+      '--user-agent', 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; US) gzip',
+      '--referer', 'https://www.youtube.com/',
+      '--add-header', 'Accept-Language:en-US,en;q=0.9',
+      '--extractor-retries', '3',
+      '--no-check-certificate',
       url
     ];
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
@@ -1716,12 +1721,17 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
 
   return new Promise((resolve, reject) => {
     const args = [
+      '--no-update',
       '-J',
       '--yes-playlist',
       '--cookies', cookiesPath,
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--extractor-args', 'youtube:player_client=android',
+      '--user-agent', 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; US) gzip',
+      '--referer', 'https://www.youtube.com/',
+      '--add-header', 'Accept-Language:en-US,en;q=0.9',
       '--extractor-retries', '3',
       '--js-runtimes', 'node',
+      '--no-check-certificate',
       url,
     ]
 
@@ -2252,6 +2262,7 @@ console.log("options",options);
         const isDailymotion = url.includes('dailymotion.com') || url.includes('dai.ly');
         
         const args = [
+          '--no-update', // Suppress update warnings
           '--continue',
           '--ffmpeg-location', ffmpegPath,
           '-o', downloadPath,
@@ -2262,6 +2273,7 @@ console.log("options",options);
           '--progress',
           '--extractor-retries', '3',
           '--js-runtimes', 'node',
+          '--no-check-certificate', // Bypass SSL certificate issues
         ];
 
         // Add Dailymotion-specific options for better compatibility

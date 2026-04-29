@@ -1,5 +1,5 @@
 import React from 'react'
-import { FaDownload, FaList, FaCog, FaMoon, FaSun } from 'react-icons/fa'
+import { FaDownload, FaList, FaCog, FaMoon, FaSun, FaCookie } from 'react-icons/fa'
 import { Navbar as BootstrapNavbar, Nav, Container, Button } from 'react-bootstrap'
 
 const Navbar = ({ 
@@ -18,6 +18,10 @@ const Navbar = ({
   saveTo,
   setSaveTo
 }) => {
+  
+  const openCookieExtractor = () => {
+    window.open('/cookies/extract', '_blank', 'width=800,height=700');
+  }
   return (
     <BootstrapNavbar bg="light" expand="lg" className="custom-navbar">
       <Container fluid>
@@ -115,6 +119,17 @@ const Navbar = ({
                 </select>
               </div>
             )}
+
+            {/* Cookie Extractor */}
+            <Button
+              variant="outline-warning"
+              size="sm"
+              onClick={openCookieExtractor}
+              className="me-3"
+              title="Extract YouTube cookies for high-quality downloads"
+            >
+              <FaCookie />
+            </Button>
 
             {/* Theme Toggle */}
             <Button

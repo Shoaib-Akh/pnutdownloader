@@ -11,6 +11,11 @@ const FormatGrid = ({ formats, onFormatDownload, loading }) => {
   }
 
   const getQualityLabel = (format) => {
+    // Use custom quality label if available
+    if (format.qualityLabel) {
+      return format.qualityLabel
+    }
+    // Fallback to original logic
     if (format.height) {
       return `${format.height}p${format.fps ? `@${format.fps}fps` : ''}`
     }
@@ -64,6 +69,12 @@ const FormatGrid = ({ formats, onFormatDownload, loading }) => {
   }
 
   const getCompatibilityIcon = (format) => {
+    if (format.isExactMatch) {
+      return <FaCheckCircle className="compatibility-perfect" title="Exact Quality Match" />
+    }
+    if (format.isFallback) {
+      return <FaExclamationTriangle className="compatibility-fallback" title="Using Closest Available Quality" />
+    }
     if (format.ffmpeg_supported) {
       return <FaCheckCircle className="compatibility-good" title="FFmpeg Compatible" />
     }

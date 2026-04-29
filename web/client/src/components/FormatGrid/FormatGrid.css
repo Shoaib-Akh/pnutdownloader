@@ -223,14 +223,36 @@
 }
 
 /* Compatibility Indicators */
+.compatibility-perfect {
+  color: #28a745;
+  font-size: 14px;
+  animation: pulse-green 2s infinite;
+}
+
 .compatibility-good {
   color: #28a745;
   font-size: 14px;
 }
 
+.compatibility-fallback {
+  color: #ffc107;
+  font-size: 14px;
+  animation: pulse-yellow 2s infinite;
+}
+
 .compatibility-warning {
   color: #ffc107;
   font-size: 14px;
+}
+
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes pulse-yellow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 /* Enhanced Format Details */

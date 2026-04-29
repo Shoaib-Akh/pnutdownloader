@@ -124,6 +124,9 @@ function BodySection({
     const videoFormats = formats.filter(f => f.vcodec !== 'none' && f.height)
     const audioFormats = formats.filter(f => f.acodec !== 'none' && !f.height)
     
+    // Define quality priorities (highest to lowest)
+    const qualityPriorities = [2160, 1440, 1080, 720, 480, 360, 240, 144]
+    
     // Get best format for each resolution
     const bestByResolution = {}
     videoFormats.forEach(format => {
@@ -135,6 +138,33 @@ function BodySection({
       }
     })
     
+    // Create quality-based format selection
+    const qualityFormats = []
+    qualityPriorities.forEach(targetHeight => {
+      // Find exact match first
+      if (bestByResolution[targetHeight]) {
+        const format = bestByResolution[targetHeight]
+        format.qualityLabel = `${targetHeight}p`
+        format.isExactMatch = true
+        qualityFormats.push(format)
+      } else {
+        // Find closest lower resolution
+        const availableHeights = Object.keys(bestByResolution).map(h => parseInt(h)).sort((a, b) => b - a)
+        const closestHeight = availableHeights.find(h => h <= targetHeight)
+        if (closestHeight && !qualityFormats.find(f => f.height === closestHeight)) {
+          const format = bestByResolution[closestHeight]
+          format.qualityLabel = `${targetHeight}p (using ${closestHeight}p)`
+          format.isFallback = true
+          qualityFormats.push(format)
+        }
+      }
+    })
+    
+    // Remove duplicates and sort by quality priority
+    const uniqueQualityFormats = qualityFormats.filter((format, index, self) => 
+      index === self.findIndex(f => f.format_id === format.format_id)
+    )
+    
     // Sort resolutions descending
     const sortedVideoFormats = Object.values(bestByResolution)
       .sort((a, b) => (b.height || 0) - (a.height || 0))
@@ -144,7 +174,9 @@ function BodySection({
       .sort((a, b) => (b.abr || 0) - (a.abr || 0))
       .slice(0, 3) // Show top 3 audio formats
     
-    return [...sortedVideoFormats, ...sortedAudioFormats]
+    return [...uniqueQualityFormats, ...sortedVideoFormats.filter(f => 
+      !uniqueQualityFormats.find(qf => qf.format_id === f.format_id)
+    ), ...sortedAudioFormats]
   }
 
   const checkIfDownloadable = async (urlToCheck) => {

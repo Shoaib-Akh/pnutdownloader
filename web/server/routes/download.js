@@ -57,7 +57,8 @@ router.post('/start', async (req, res) => {
       saveTo = 'Downloads',
       selectBitrate = '128k',
       title = 'video',
-      playlistTitle = null
+      playlistTitle = null,
+      formatId = null
     } = req.body;
 
     if (!url) {
@@ -72,7 +73,8 @@ router.post('/start', async (req, res) => {
       saveTo,
       selectBitrate,
       title,
-      playlistTitle
+      playlistTitle,
+      formatId
     });
 
     res.json({ success: true, downloadId });
