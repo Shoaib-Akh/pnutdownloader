@@ -30,13 +30,30 @@ class DownloadService {
       playlistTitle = null
     } = options;
 
+    console.log('🎬 [DOWNLOAD] Fetching video info before download...');
+    console.log('🔗 [DOWNLOAD] URL:', url);
+
+    // Fetch video info first
+    let videoInfo = null;
+    try {
+      videoInfo = await this.ytdlpService.fetchVideoInfo(url);
+      console.log('✅ [DOWNLOAD] Video info fetched successfully');
+      console.log('📹 [DOWNLOAD] Title:', videoInfo.title);
+      console.log('⏱️ [DOWNLOAD] Duration:', videoInfo.duration);
+      console.log('📊 [DOWNLOAD] View count:', videoInfo.view_count);
+    } catch (error) {
+      console.error('❌ [DOWNLOAD] Failed to fetch video info:', error.message);
+      // Continue with download even if info fetch fails
+    }
+
     // Create user-specific download directory
     const userDownloadsDir = path.join(this.downloadsDir, saveTo);
     await fs.ensureDir(userDownloadsDir);
 
-    // Generate output filename
+    // Use video title from info if available, otherwise use provided title
+    const videoTitle = videoInfo ? videoInfo.title : title;
+    const sanitizedTitle = videoTitle.replace(/[^\w\s.-]/g, '_').substring(0, 100);
     const extension = isAudioOnly ? 'mp3' : selectedFormat.toLowerCase();
-    const sanitizedTitle = title.replace(/[^\w\s.-]/g, '_').substring(0, 100);
     const outputPath = path.join(userDownloadsDir, `${sanitizedTitle}.${extension}`);
 
     const downloadOptions = {
@@ -49,18 +66,35 @@ class DownloadService {
       id: downloadId
     };
 
-    // Store download info
+    // Store download info with video metadata
     const downloadInfo = {
       id: downloadId,
       url,
-      title,
-      status: 'starting',
+      title: videoTitle,
+      status: 'fetching-info',
       progress: 0,
       outputPath,
-      createdAt: new Date()
+      createdAt: new Date(),
+      videoInfo: videoInfo ? {
+        title: videoInfo.title,
+        duration: videoInfo.duration,
+        viewCount: videoInfo.view_count,
+        uploader: videoInfo.uploader,
+        thumbnail: videoInfo.thumbnail,
+        description: videoInfo.description ? videoInfo.description.substring(0, 200) + '...' : null,
+        uploadDate: videoInfo.upload_date,
+        webpageUrl: videoInfo.webpage_url
+      } : null
     };
     
     this.activeDownloads.set(downloadId, downloadInfo);
+    
+    // Broadcast initial info
+    this.io.emit('download-progress', downloadInfo);
+
+    // Update status to starting download
+    downloadInfo.status = 'starting';
+    this.io.emit('download-progress', downloadInfo);
 
     // Start download with progress tracking
     const ytdlpId = this.ytdlpService.download(downloadOptions, (progress) => {
@@ -68,6 +102,7 @@ class DownloadService {
       downloadInfo.progress = progress.progress;
       downloadInfo.speed = progress.speed;
       downloadInfo.eta = progress.eta;
+      downloadInfo.error = progress.error || null;
       
       // Broadcast progress to all connected clients
       this.io.emit('download-progress', downloadInfo);

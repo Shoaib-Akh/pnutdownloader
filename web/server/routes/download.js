@@ -13,6 +13,39 @@ router.use((req, res, next) => {
   next();
 });
 
+// Get video info
+router.post('/info', async (req, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const videoInfo = await downloadService.ytdlpService.fetchVideoInfo(url);
+    
+    // Return relevant video information
+    const sanitizedInfo = {
+      title: videoInfo.title,
+      duration: videoInfo.duration,
+      viewCount: videoInfo.view_count,
+      uploader: videoInfo.uploader,
+      thumbnail: videoInfo.thumbnail,
+      description: videoInfo.description ? videoInfo.description.substring(0, 500) : null,
+      uploadDate: videoInfo.upload_date,
+      webpageUrl: videoInfo.webpage_url,
+      formats: videoInfo.formats ? videoInfo.formats.slice(0, 10) : null, // Limit formats to reduce payload
+      isLive: videoInfo.is_live,
+      availability: videoInfo.availability
+    };
+
+    res.json({ success: true, videoInfo: sanitizedInfo });
+  } catch (error) {
+    console.error('Video info fetch error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start download
 router.post('/start', async (req, res) => {
   try {

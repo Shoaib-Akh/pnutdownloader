@@ -3,6 +3,7 @@ services:
     build: .
     ports:
       - "3000:3000"
+      - "5174:5174"
     volumes:
       - ./server/downloads:/app/server/downloads
       - ./server/logs:/app/server/logs
