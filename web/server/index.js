@@ -9,6 +9,7 @@ const fs = require('fs-extra');
 const downloadRoutes = require('./routes/download');
 const videoRoutes = require('./routes/video');
 const systemRoutes = require('./routes/system');
+const cookieRoutes = require('./routes/cookies');
 
 const app = express();
 const server = http.createServer(app);
@@ -34,6 +35,7 @@ app.set('io', io);
 app.use('/api/download', downloadRoutes);
 app.use('/api/video', videoRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/cookies', cookieRoutes);
 
 // Serve static files from client build
 app.use(express.static(path.join(__dirname, '../client/dist')));

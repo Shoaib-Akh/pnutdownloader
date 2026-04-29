@@ -16,13 +16,13 @@ router.use((req, res, next) => {
 // Get video info
 router.post('/info', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, useCookies = true } = req.body;
 
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const videoInfo = await downloadService.ytdlpService.fetchVideoInfo(url);
+    const videoInfo = await downloadService.ytdlpService.fetchVideoInfo(url, useCookies);
     
     // Return relevant video information
     const sanitizedInfo = {
@@ -57,7 +57,8 @@ router.post('/start', async (req, res) => {
       saveTo = 'Downloads',
       selectBitrate = '128k',
       title = 'video',
-      playlistTitle = null
+      playlistTitle = null,
+      useCookies = true
     } = req.body;
 
     if (!url) {
@@ -72,7 +73,8 @@ router.post('/start', async (req, res) => {
       saveTo,
       selectBitrate,
       title,
-      playlistTitle
+      playlistTitle,
+      useCookies
     });
 
     res.json({ success: true, downloadId });

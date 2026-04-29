@@ -1,12 +1,14 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
+const CookieService = require('./CookieService');
 
 class YtdlpService {
   constructor() {
     this.ytdlpPath = this.getYtdlpPath();
     this.downloadsDir = path.join(__dirname, '../downloads');
     this.activeProcesses = new Map();
+    this.cookieService = new CookieService();
   }
 
   getYtdlpPath() {
@@ -62,13 +64,22 @@ class YtdlpService {
     });
   }
 
-  async fetchVideoInfo(url) {
+  async fetchVideoInfo(url, useCookies = true) {
     return new Promise((resolve, reject) => {
-      const process = spawn(this.ytdlpPath, [
+      const args = [
         '--dump-json',
         '--no-download',
         url
-      ]);
+      ];
+
+      // Add cookies if available and enabled
+      if (useCookies && this.cookieService.hasValidCookies()) {
+        const cookiePath = this.cookieService.getCookiePath();
+        args.push('--cookies', cookiePath);
+        console.log('🍪 [YTDLP] Using cookies for video info fetch');
+      }
+
+      const process = spawn(this.ytdlpPath, args);
       
       let output = '';
       let errorOutput = '';
@@ -141,7 +152,8 @@ class YtdlpService {
       isAudioOnly = false,
       bitrate = null,
       id = null,
-      formatId = null
+      formatId = null,
+      useCookies = true
     } = options;
 
     console.log('🚀 [YTDLP] Starting download with options:', options);
@@ -156,8 +168,15 @@ class YtdlpService {
       // Audio-only download
       formatSelector = 'bestaudio';
     } else {
-      // Video download with quality preference
-      formatSelector = `bestvideo[height<=${quality.replace('p', '')}]+bestaudio/best`;
+      // Video download with quality preference - use simpler format selection
+      const height = quality.replace('p', '');
+      if (height === '1920' || height === '1080') {
+        formatSelector = 'best[height<=1080]'; // Simpler format for 1080p
+      } else if (height === '720') {
+        formatSelector = 'best[height<=720]'; // Simpler format for 720p
+      } else {
+        formatSelector = 'best'; // Fallback to best available
+      }
     }
 
     const args = [
@@ -167,6 +186,15 @@ class YtdlpService {
       '--embed-metadata', // Embed metadata using FFmpeg
       '--embed-chapters' // Embed chapters if available
     ];
+
+    // Add cookies if available and enabled
+    if (useCookies && this.cookieService.hasValidCookies()) {
+      const cookiePath = this.cookieService.getCookiePath();
+      args.push('--cookies', cookiePath);
+      console.log('🍪 [YTDLP] Using cookies for download');
+    } else if (useCookies) {
+      console.log('⚠️ [YTDLP] Cookies requested but not available or invalid, proceeding without cookies');
+    }
 
     // Add FFmpeg post-processing based on format
     if (isAudioOnly) {
@@ -286,21 +314,6 @@ class YtdlpService {
         return true;
       } catch (error) {
         console.error('Failed to resume download:', error);
-        return false;
-      }
-    }
-    return false;
-  }
-
-  cancelDownload(downloadId) {
-    const process = this.activeProcesses.get(downloadId);
-    if (process) {
-      try {
-        process.kill();
-        this.activeProcesses.delete(downloadId);
-        return true;
-      } catch (error) {
-        console.error('Failed to cancel download:', error);
         return false;
       }
     }
