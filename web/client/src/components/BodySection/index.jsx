@@ -13,8 +13,11 @@ import {
   FaArrowCircleRight
 } from 'react-icons/fa'
 import '../common.css'
+import './FormatMessage.css'
 import PlatformIcons from '../PlatformIcons'
 import DownloadList from '../DownloadList'
+import VideoInfoPreview from '../VideoInfoPreview'
+import FormatGrid from '../FormatGrid'
 import { OverlayTrigger, Tooltip } from 'react-bootstrap'
 import alljson from '../../all.json'
 import AboutUs from '../AboutUs'
@@ -53,6 +56,9 @@ function BodySection({
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false)
   const [playlistModalLoading, setPlaylistModalLoading] = useState(false)
   const [playlistData, setPlaylistData] = useState(null)
+  const [videoInfo, setVideoInfo] = useState(null)
+  const [loadingVideoInfo, setLoadingVideoInfo] = useState(false)
+  const [availableFormats, setAvailableFormats] = useState([])
 
   const {
     enqueueDownload,
@@ -78,11 +84,67 @@ function BodySection({
       })
   }
 
-  const handleGo = () => {
+  const handleGo = async () => {
     if (currentUrl) {
       setUrl(currentUrl)
       checkIfDownloadable(currentUrl)
+      await fetchVideoInfo(currentUrl)
     }
+  }
+
+  const fetchVideoInfo = async (url) => {
+    if (!url || !isDownloadable) return
+    
+    setLoadingVideoInfo(true)
+    try {
+      console.log('🎬 [VIDEO] Fetching video info for:', url)
+      const response = await videoAPI.getInfo(url)
+      const info = response.data.videoInfo || response.data
+      
+      console.log('📊 [VIDEO] Video info received:', info)
+      setVideoInfo(info)
+      
+      // Process and set available formats
+      if (info.formats && Array.isArray(info.formats)) {
+        const processedFormats = processFormats(info.formats)
+        console.log('🎞️ [VIDEO] Processed formats:', processedFormats)
+        setAvailableFormats(processedFormats)
+      }
+    } catch (error) {
+      console.error('❌ [VIDEO] Error fetching video info:', error)
+      setVideoInfo(null)
+      setAvailableFormats([])
+    } finally {
+      setLoadingVideoInfo(false)
+    }
+  }
+
+  const processFormats = (formats) => {
+    // Filter and organize formats
+    const videoFormats = formats.filter(f => f.vcodec !== 'none' && f.height)
+    const audioFormats = formats.filter(f => f.acodec !== 'none' && !f.height)
+    
+    // Get best format for each resolution
+    const bestByResolution = {}
+    videoFormats.forEach(format => {
+      const resolution = format.height
+      if (!bestByResolution[resolution] || 
+          (format.fps > bestByResolution[resolution].fps) ||
+          (format.fps === bestByResolution[resolution].fps && format.filesize > bestByResolution[resolution].filesize)) {
+        bestByResolution[resolution] = format
+      }
+    })
+    
+    // Sort resolutions descending
+    const sortedVideoFormats = Object.values(bestByResolution)
+      .sort((a, b) => (b.height || 0) - (a.height || 0))
+    
+    // Add audio formats
+    const sortedAudioFormats = audioFormats
+      .sort((a, b) => (b.abr || 0) - (a.abr || 0))
+      .slice(0, 3) // Show top 3 audio formats
+    
+    return [...sortedVideoFormats, ...sortedAudioFormats]
   }
 
   const checkIfDownloadable = async (urlToCheck) => {
@@ -100,57 +162,21 @@ function BodySection({
   const handleDownload = async () => {
     if (!url || downloading) return
 
-    setDownloading(true)
-    try {
-      setDownloading(true)
-      console.log('🚀 [DOWNLOAD] Starting download process')
-      console.log('📥 [DOWNLOAD] URL:', url)
-      console.log('⚙️ [DOWNLOAD] Format:', format)
-      console.log('📊 [DOWNLOAD] Quality:', quality)
-      console.log('🎵 [DOWNLOAD] Download type:', downloadType)
-      console.log('🔊 [DOWNLOAD] Bitrate:', bitrate)
-      console.log('💾 [DOWNLOAD] Save to:', saveTo)
-      
-      // Check if it's a playlist
-      const playlistRegex = /(youtube\.com\/playlist\?list=|youtube\.com\/.*\&list=)/
-      if (playlistRegex.test(url)) {
-        console.log('📋 [DOWNLOAD] Detected playlist URL')
-        setPlaylistModalLoading(true)
-        const response = await videoAPI.getPlaylist(url)
-        setPlaylistData(response.data)
-        setPlaylistModalOpen(true)
-      } else {
-        console.log('🎬 [DOWNLOAD] Starting single video download')
-        const downloadOptions = {
-          url: url,
-          title: 'video',
-          isAudioOnly: downloadType === 'Audio',
-          selectedFormat: format,
-          selectedQuality: quality,
-          saveTo,
-          selectBitrate: bitrate
-        }
-        console.log('📦 [DOWNLOAD] Download options:', downloadOptions)
-        
-        await enqueueDownload(downloadOptions)
-        console.log('✅ [DOWNLOAD] Download enqueued successfully')
-        
-        setPastLinkUrl(url)
-      }
-    } catch (error) {
-      console.error('❌ [DOWNLOAD] Download error:', error)
-      console.error('❌ [DOWNLOAD] Error details:', {
-        message: error.message,
-        stack: error.stack,
-        url: url,
-        format: format,
-        quality: quality,
-        downloadType: downloadType
-      })
-    } finally {
-      setDownloading(false)
-      console.log('🏁 [DOWNLOAD] Download process completed')
-      setPlaylistModalLoading(false)
+    // For single videos, just fetch video info (already done by handleGo)
+    // The actual download should happen via format selection
+    if (!videoInfo) {
+      await fetchVideoInfo(url)
+    }
+    
+    // If we have video info but no formats selected, show a message
+    if (videoInfo && availableFormats.length === 0) {
+      console.log('� [DOWNLOAD] Please select a format from the options below')
+      return
+    }
+    
+    if (videoInfo && availableFormats.length > 0) {
+      console.log('📋 [DOWNLOAD] Please select a specific format to download')
+      return
     }
   }
 
@@ -173,10 +199,53 @@ function BodySection({
     }
   }
 
+  const handleFormatDownload = async (format) => {
+    if (!url || downloading) return
+
+    setDownloading(true)
+    try {
+      console.log('🎯 [FORMAT] Starting format-specific download')
+      console.log('📥 [FORMAT] URL:', url)
+      console.log('🎞️ [FORMAT] Selected format:', format)
+      
+      const downloadOptions = {
+        url: url,
+        title: videoInfo?.title || 'video',
+        isAudioOnly: !format.height, // Audio-only if no height
+        selectedFormat: format.ext || 'mp4',
+        selectedQuality: format.height ? `${format.height}p` : quality,
+        saveTo,
+        selectBitrate: format.abr ? `${format.abr}k` : bitrate,
+        formatId: format.format_id // Pass the specific format ID
+      }
+      
+      console.log('📦 [FORMAT] Download options:', downloadOptions)
+      
+      await enqueueDownload(downloadOptions)
+      console.log('✅ [FORMAT] Format download enqueued successfully')
+      
+      setPastLinkUrl(url)
+    } catch (error) {
+      console.error('❌ [FORMAT] Format download error:', error)
+      console.error('❌ [FORMAT] Error details:', {
+        message: error.message,
+        stack: error.stack,
+        url: url,
+        format: format
+      })
+    } finally {
+      setDownloading(false)
+      console.log('🏁 [FORMAT] Format download process completed')
+    }
+  }
+
   const handleUrlChange = (newUrl) => {
     setCurrentUrl(newUrl)
     setUrl(newUrl)
     checkIfDownloadable(newUrl)
+    // Reset video info when URL changes
+    setVideoInfo(null)
+    setAvailableFormats([])
   }
 
   const handleZoomIn = () => {
@@ -261,10 +330,15 @@ function BodySection({
                     <FaSync className="spinning" />
                     Processing...
                   </>
+                ) : videoInfo && availableFormats.length > 0 ? (
+                  <>
+                    <FaDownload />
+                    Select Format Below
+                  </>
                 ) : (
                   <>
                     <FaDownload />
-                    Download {downloadType}
+                    Get Formats
                   </>
                 )}
               </button>
@@ -279,6 +353,31 @@ function BodySection({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Video Info Preview */}
+      {currentUrl && isDownloadable && (
+        <VideoInfoPreview 
+          videoInfo={videoInfo} 
+          loading={loadingVideoInfo} 
+        />
+      )}
+
+      {/* Format Selection Message */}
+      {videoInfo && availableFormats.length > 0 && (
+        <div className="format-selection-message">
+          <h4>📋 Select a format to download:</h4>
+          <p>Choose from the available formats below. Each format includes different quality levels and codecs optimized for various use cases.</p>
+        </div>
+      )}
+
+      {/* Format Grid */}
+      {currentUrl && isDownloadable && availableFormats.length > 0 && (
+        <FormatGrid 
+          formats={availableFormats}
+          onFormatDownload={handleFormatDownload}
+          loading={loadingVideoInfo}
+        />
       )}
 
       {/* Playlist Selection Modal */}

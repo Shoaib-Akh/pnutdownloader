@@ -32,6 +32,7 @@ const useDownloadManager = ({
 
   const enqueueDownload = useCallback(async (options) => {
     try {
+      console.log('🚀 [DOWNLOAD MANAGER] Enqueueing download with options:', options)
       const response = await downloadAPI.start(options)
       const downloadId = response.data.downloadId
       
@@ -44,9 +45,10 @@ const useDownloadManager = ({
         createdAt: new Date()
       }])
       
+      console.log('✅ [DOWNLOAD MANAGER] Download enqueued successfully:', downloadId)
       return downloadId
     } catch (error) {
-      console.error('Failed to start download:', error)
+      console.error('❌ [DOWNLOAD MANAGER] Failed to start download:', error)
       throw error
     }
   }, [])

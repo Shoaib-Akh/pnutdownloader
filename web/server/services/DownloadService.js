@@ -63,7 +63,8 @@ class DownloadService {
       quality: selectedQuality,
       isAudioOnly,
       bitrate: selectBitrate,
-      id: downloadId
+      id: downloadId,
+      formatId: options.formatId // Pass formatId if provided
     };
 
     // Store download info with video metadata

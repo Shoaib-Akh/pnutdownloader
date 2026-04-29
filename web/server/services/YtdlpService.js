@@ -140,29 +140,45 @@ class YtdlpService {
       quality = '1080p',
       isAudioOnly = false,
       bitrate = null,
-      id = null
+      id = null,
+      formatId = null
     } = options;
 
     console.log('🚀 [YTDLP] Starting download with options:', options);
     console.log('🔧 [YTDLP] Using yt-dlp path:', this.ytdlpPath);
 
+    let formatSelector;
+    if (formatId) {
+      // Use specific format ID
+      formatSelector = formatId;
+      console.log('🎯 [YTDLP] Using specific format ID:', formatId);
+    } else if (isAudioOnly) {
+      // Audio-only download
+      formatSelector = 'bestaudio';
+    } else {
+      // Video download with quality preference
+      formatSelector = `bestvideo[height<=${quality.replace('p', '')}]+bestaudio/best`;
+    }
+
     const args = [
-      '-f', isAudioOnly ? 'bestaudio' : 'bestvideo+bestaudio/best',
+      '-f', formatSelector,
       '-o', outputPath,
-      '--merge-output-format', 'mp4'
+      '--merge-output-format', 'mp4',
+      '--embed-metadata', // Embed metadata using FFmpeg
+      '--embed-chapters' // Embed chapters if available
     ];
 
-    // Add audio-only options
+    // Add FFmpeg post-processing based on format
     if (isAudioOnly) {
       args.push('-x', '--audio-format', 'mp3');
       if (bitrate) {
         args.push('--audio-quality', bitrate);
       }
-    }
-
-    // Add quality selection
-    if (!isAudioOnly && quality) {
-      args.push('-f', `${format}[height<=${quality.replace('p', '')}]+bestaudio/best`);
+      // Add FFmpeg audio processing for better quality
+      args.push('--postprocessor-args', '-c:a libmp3lame -q:a 2');
+    } else {
+      // Add FFmpeg video processing for better compatibility and quality
+      args.push('--postprocessor-args', '-c:v libx264 -preset medium -crf 23 -c:a aac -b:a 128k');
     }
 
     args.push(url);
