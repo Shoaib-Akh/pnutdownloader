@@ -1,14 +1,14 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs-extra');
-const CookieService = require('./CookieService');
 
 class YtdlpService {
   constructor() {
     this.ytdlpPath = this.getYtdlpPath();
     this.downloadsDir = path.join(__dirname, '../downloads');
     this.activeProcesses = new Map();
-    this.cookieService = new CookieService();
+    this.retryAttempts = new Map();
+    this.cookieFile = path.join(__dirname, '../cookies.txt');
   }
 
   getYtdlpPath() {
@@ -64,19 +64,20 @@ class YtdlpService {
     });
   }
 
-  async fetchVideoInfo(url, useCookies = true) {
+  async fetchVideoInfo(url) {
     return new Promise((resolve, reject) => {
       const args = [
         '--dump-json',
         '--no-download',
+        '--socket-timeout', '30',
+        '--extractor-args', 'youtube:player_client=web',
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         url
       ];
 
-      // Add cookies if available and enabled
-      if (useCookies && this.cookieService.hasValidCookies()) {
-        const cookiePath = this.cookieService.getCookiePath();
-        args.push('--cookies', cookiePath);
-        console.log('🍪 [YTDLP] Using cookies for video info fetch');
+      // Add cookies if file exists
+      if (fs.existsSync(this.cookieFile)) {
+        args.unshift('--cookies', this.cookieFile);
       }
 
       const process = spawn(this.ytdlpPath, args);
@@ -101,9 +102,23 @@ class YtdlpService {
             reject(new Error('Failed to parse video info'));
           }
         } else {
+          console.error('🔴 [YTDLP] Fetch error details:', errorOutput);
           reject(new Error(errorOutput || 'Failed to fetch video info'));
         }
       });
+
+      process.on('error', (error) => {
+        console.error('💥 [YTDLP] Process error:', error.message);
+        reject(error);
+      });
+
+      // Timeout after 60 seconds
+      setTimeout(() => {
+        if (process && !process.killed) {
+          process.kill();
+          reject(new Error('Video info fetch timeout'));
+        }
+      }, 60000);
     });
   }
 
@@ -152,60 +167,89 @@ class YtdlpService {
       isAudioOnly = false,
       bitrate = null,
       id = null,
-      formatId = null,
-      useCookies = true
+      formatId = null
     } = options;
 
     console.log('🚀 [YTDLP] Starting download with options:', options);
     console.log('🔧 [YTDLP] Using yt-dlp path:', this.ytdlpPath);
 
+    const downloadId = id || Date.now().toString();
+    const retryCount = this.retryAttempts.get(downloadId) || 0;
+
+    this.executeDownload(downloadId, {
+      url,
+      outputPath,
+      format,
+      quality,
+      isAudioOnly,
+      bitrate,
+      formatId,
+      retryCount
+    }, onProgress);
+
+    return downloadId;
+  }
+
+  executeDownload(downloadId, options, onProgress) {
+    const {
+      url,
+      outputPath,
+      quality,
+      isAudioOnly,
+      bitrate,
+      formatId,
+      retryCount
+    } = options;
+
     let formatSelector;
     if (formatId) {
-      // Use specific format ID
       formatSelector = formatId;
       console.log('🎯 [YTDLP] Using specific format ID:', formatId);
     } else if (isAudioOnly) {
-      // Audio-only download
       formatSelector = 'bestaudio';
     } else {
-      // Video download with quality preference - use simpler format selection
-      const height = quality.replace('p', '');
-      if (height === '1920' || height === '1080') {
-        formatSelector = 'best[height<=1080]'; // Simpler format for 1080p
-      } else if (height === '720') {
-        formatSelector = 'best[height<=720]'; // Simpler format for 720p
-      } else {
-        formatSelector = 'best'; // Fallback to best available
+      // Use fallback quality on retry
+      const qualityValue = quality.replace('p', '');
+      const fallbackQuality = retryCount > 0 ? Math.max(360, parseInt(qualityValue) - 360) : qualityValue;
+      formatSelector = `bestvideo[height<=${fallbackQuality}]+bestaudio/best`;
+      
+      if (retryCount > 0) {
+        console.log(`⚠️ [YTDLP] Retry attempt ${retryCount} - Using fallback quality: ${fallbackQuality}p`);
       }
     }
 
+    // Build arguments with enhanced YouTube bypass
     const args = [
       '-f', formatSelector,
       '-o', outputPath,
+      '--socket-timeout', '30',
+      '--extractor-args', 'youtube:player_client=web;youtube:skip=hls,dash',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--merge-output-format', 'mp4',
-      '--embed-metadata', // Embed metadata using FFmpeg
-      '--embed-chapters' // Embed chapters if available
+      '--no-playlist',
+      '--continue',
+      '--no-warnings',
+      '--progress',
+      '--quiet'
     ];
 
-    // Add cookies if available and enabled
-    if (useCookies && this.cookieService.hasValidCookies()) {
-      const cookiePath = this.cookieService.getCookiePath();
-      args.push('--cookies', cookiePath);
-      console.log('🍪 [YTDLP] Using cookies for download');
-    } else if (useCookies) {
-      console.log('⚠️ [YTDLP] Cookies requested but not available or invalid, proceeding without cookies');
+    // Add cookies if available
+    if (fs.existsSync(this.cookieFile)) {
+      args.unshift('--cookies', this.cookieFile);
+      console.log('🍪 [YTDLP] Using cookies from:', this.cookieFile);
     }
 
-    // Add FFmpeg post-processing based on format
+    // Add metadata embedding
+    args.push('--embed-metadata', '--embed-chapters');
+
+    // Add FFmpeg post-processing
     if (isAudioOnly) {
       args.push('-x', '--audio-format', 'mp3');
       if (bitrate) {
         args.push('--audio-quality', bitrate);
       }
-      // Add FFmpeg audio processing for better quality
       args.push('--postprocessor-args', '-c:a libmp3lame -q:a 2');
     } else {
-      // Add FFmpeg video processing for better compatibility and quality
       args.push('--postprocessor-args', '-c:v libx264 -preset medium -crf 23 -c:a aac -b:a 128k');
     }
 
@@ -213,11 +257,13 @@ class YtdlpService {
 
     console.log('📋 [YTDLP] Command args:', args);
     console.log('🎯 [YTDLP] Spawning yt-dlp process...');
-
-    const process = spawn(this.ytdlpPath, args);
-    const downloadId = id || Date.now().toString();
-    
     console.log('🆔 [YTDLP] Download ID:', downloadId);
+
+    const process = spawn(this.ytdlpPath, args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      detached: false
+    });
+
     this.activeProcesses.set(downloadId, process);
 
     let progressData = {
@@ -230,8 +276,11 @@ class YtdlpService {
       downloadedBytes: null
     };
 
+    let errorOutput = '';
+
     process.stderr.on('data', (data) => {
       const output = data.toString();
+      errorOutput += output;
       
       // Parse progress from yt-dlp output
       const progressMatch = output.match(/(\d+(?:\.\d+)?)%/);
@@ -261,10 +310,28 @@ class YtdlpService {
         console.log('✅ [YTDLP] Download completed successfully');
         progressData.status = 'completed';
         progressData.progress = 100;
+        this.retryAttempts.delete(downloadId);
       } else {
-        console.log(`❌ [YTDLP] Download failed with code ${code}`);
-        progressData.status = 'error';
-        progressData.error = `Download failed with code ${code}`;
+        console.error(`❌ [YTDLP] Download failed with code ${code}`);
+        console.error('📝 [YTDLP] Error output:', errorOutput);
+        
+        // Retry logic with different strategies
+        if ((errorOutput.includes('403') || errorOutput.includes('HTTP Error')) && options.retryCount < 3) {
+          console.log(`🔄 [YTDLP] Retrying download (attempt ${options.retryCount + 1}/3)...`);
+          this.retryAttempts.set(downloadId, options.retryCount + 1);
+          
+          // Wait longer between retries
+          setTimeout(() => {
+            this.executeDownload(downloadId, {
+              ...options,
+              retryCount: options.retryCount + 1
+            }, onProgress);
+          }, 3000 + (options.retryCount * 2000));
+        } else {
+          progressData.status = 'error';
+          progressData.error = errorOutput.substring(0, 500) || `Download failed with code ${code}`;
+          this.retryAttempts.delete(downloadId);
+        }
       }
       
       if (onProgress) {
@@ -277,11 +344,20 @@ class YtdlpService {
       this.activeProcesses.delete(downloadId);
       progressData.status = 'error';
       progressData.error = error.message;
+      this.retryAttempts.delete(downloadId);
       
       if (onProgress) {
         onProgress(progressData);
       }
     });
+
+    // Global timeout after 15 minutes
+    setTimeout(() => {
+      if (this.activeProcesses.has(downloadId) && !process.killed) {
+        console.log('⏱️ [YTDLP] Download timeout - killing process');
+        process.kill('SIGTERM');
+      }
+    }, 15 * 60 * 1000);
 
     return downloadId;
   }
@@ -314,6 +390,21 @@ class YtdlpService {
         return true;
       } catch (error) {
         console.error('Failed to resume download:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  cancelDownload(downloadId) {
+    const process = this.activeProcesses.get(downloadId);
+    if (process) {
+      try {
+        process.kill();
+        this.activeProcesses.delete(downloadId);
+        return true;
+      } catch (error) {
+        console.error('Failed to cancel download:', error);
         return false;
       }
     }

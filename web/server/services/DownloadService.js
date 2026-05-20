@@ -27,8 +27,7 @@ class DownloadService {
       saveTo = 'Downloads',
       selectBitrate = '128k',
       title = 'video',
-      playlistTitle = null,
-      useCookies = true
+      playlistTitle = null
     } = options;
 
     console.log('🎬 [DOWNLOAD] Fetching video info before download...');
@@ -37,14 +36,13 @@ class DownloadService {
     // Fetch video info first
     let videoInfo = null;
     try {
-      videoInfo = await this.ytdlpService.fetchVideoInfo(url, useCookies);
+      videoInfo = await this.ytdlpService.fetchVideoInfo(url);
       console.log('✅ [DOWNLOAD] Video info fetched successfully');
       console.log('📹 [DOWNLOAD] Title:', videoInfo.title);
       console.log('⏱️ [DOWNLOAD] Duration:', videoInfo.duration);
       console.log('📊 [DOWNLOAD] View count:', videoInfo.view_count);
     } catch (error) {
       console.error('❌ [DOWNLOAD] Failed to fetch video info:', error.message);
-      // Continue with download even if info fetch fails
     }
 
     // Create user-specific download directory
@@ -65,8 +63,7 @@ class DownloadService {
       isAudioOnly,
       bitrate: selectBitrate,
       id: downloadId,
-      formatId: options.formatId, // Pass formatId if provided
-      useCookies
+      formatId: options.formatId
     };
 
     // Store download info with video metadata
@@ -78,6 +75,8 @@ class DownloadService {
       progress: 0,
       outputPath,
       createdAt: new Date(),
+      retryCount: 0,
+      maxRetries: 3,
       videoInfo: videoInfo ? {
         title: videoInfo.title,
         duration: videoInfo.duration,
@@ -99,19 +98,33 @@ class DownloadService {
     downloadInfo.status = 'starting';
     this.io.emit('download-progress', downloadInfo);
 
-    // Start download with progress tracking
-    const ytdlpId = this.ytdlpService.download(downloadOptions, (progress) => {
-      downloadInfo.status = progress.status;
-      downloadInfo.progress = progress.progress;
-      downloadInfo.speed = progress.speed;
-      downloadInfo.eta = progress.eta;
-      downloadInfo.error = progress.error || null;
-      
-      // Broadcast progress to all connected clients
-      this.io.emit('download-progress', downloadInfo);
-    });
+    // Start download with retry logic
+    this.executeDownloadWithRetry(downloadId, downloadOptions, downloadInfo);
 
     return downloadId;
+  }
+
+  async executeDownloadWithRetry(downloadId, downloadOptions, downloadInfo) {
+    try {
+      // Start download with progress tracking
+      const ytdlpId = this.ytdlpService.download(downloadOptions, (progress) => {
+        downloadInfo.status = progress.status;
+        downloadInfo.progress = progress.progress;
+        downloadInfo.speed = progress.speed;
+        downloadInfo.eta = progress.eta;
+        downloadInfo.error = progress.error || null;
+        
+        console.log(`📊 [DOWNLOAD] ${downloadId} - Status: ${progress.status}, Progress: ${progress.progress}%`);
+        
+        // Broadcast progress to all connected clients
+        this.io.emit('download-progress', downloadInfo);
+      });
+    } catch (error) {
+      console.error(`❌ [DOWNLOAD] Error starting download ${downloadId}:`, error.message);
+      downloadInfo.error = error.message;
+      downloadInfo.status = 'error';
+      this.io.emit('download-progress', downloadInfo);
+    }
   }
 
   pauseDownload(downloadId) {

@@ -1,0 +1,52 @@
+### Get Video Info
+POST http://localhost:3001/api/download/info
+Content-Type: application/json
+
+{
+  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "useCookies": false
+}
+
+###
+
+### Start Video Download
+POST http://localhost:3001/api/download/start
+Content-Type: application/json
+
+{
+  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "isAudioOnly": false,
+  "selectedFormat": "mp4",
+  "selectedQuality": "1080p",
+  "saveTo": "Downloads",
+  "selectBitrate": "128k",
+  "title": "video",
+  "useCookies": false
+}
+
+###
+
+### Start Audio Download
+POST http://localhost:3001/api/download/start
+Content-Type: application/json
+
+{
+  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "isAudioOnly": true,
+  "selectedFormat": "mp3",
+  "selectedQuality": "1080p",
+  "saveTo": "Downloads",
+  "selectBitrate": "192k",
+  "title": "audio",
+  "useCookies": false
+}
+
+###
+
+### Get Download Status
+GET http://localhost:3001/api/download/status/14ea158b-df12-4395-aa47-735e1846eb3a
+
+###
+
+### Get Active Downloads
+GET http://localhost:3001/api/download/active
