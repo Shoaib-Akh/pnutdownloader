@@ -4,7 +4,8 @@ Content-Type: application/json
 
 {
   "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  "useCookies": false
+  "useCookies": false,
+  "proxy": "http://127.0.0.1:8080"
 }
 
 ###
@@ -21,7 +22,8 @@ Content-Type: application/json
   "saveTo": "Downloads",
   "selectBitrate": "128k",
   "title": "video",
-  "useCookies": false
+  "useCookies": false,
+  "proxy": "http://127.0.0.1:8080"
 }
 
 ###
@@ -38,7 +40,8 @@ Content-Type: application/json
   "saveTo": "Downloads",
   "selectBitrate": "192k",
   "title": "audio",
-  "useCookies": false
+  "useCookies": false,
+  "proxy": "http://127.0.0.1:8080"
 }
 
 ###

@@ -54,9 +54,9 @@ export const downloadAPI = {
 
 // Video API
 export const videoAPI = {
-  getInfo: (url) => api.post('/video/info', { url }),
-  getPlaylist: (url) => api.post('/video/playlist', { url }),
-  getYoutubeInfo: (url) => api.post('/video/youtube', { url }),
+  getInfo: (url, options = {}) => api.post('/video/info', { url, ...options }),
+  getPlaylist: (url, options = {}) => api.post('/video/playlist', { url, ...options }),
+  getYoutubeInfo: (url, options = {}) => api.post('/video/youtube', { url, ...options }),
 };
 
 // System API

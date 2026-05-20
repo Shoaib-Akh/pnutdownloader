@@ -8,7 +8,58 @@ class YtdlpService {
     this.downloadsDir = path.join(__dirname, '../downloads');
     this.activeProcesses = new Map();
     this.retryAttempts = new Map();
-    this.cookieFile = path.join(__dirname, '../cookies.txt');
+    this.cookieCandidates = [
+      path.join(__dirname, '../cookies/youtube.com.txt'),
+      path.join(__dirname, '../cookies/cookies.txt'),
+      path.join(__dirname, '../cookies.txt')
+    ];
+    this.defaultProxy = this.getDefaultProxyFromEnv();
+  }
+
+  getDefaultProxyFromEnv() {
+    const envProxy = process.env.YTDLP_PROXY || process.env.HTTPS_PROXY || process.env.HTTP_PROXY || '';
+    if (!envProxy) {
+      return null;
+    }
+
+    const normalizedProxy = this.normalizeProxy(envProxy);
+    if (!normalizedProxy) {
+      console.warn('⚠️ [YTDLP] Invalid proxy in environment, ignoring it. Expected http(s):// or socks:// format');
+      return null;
+    }
+
+    console.log('🌐 [YTDLP] Default proxy configured from environment');
+    return normalizedProxy;
+  }
+
+  normalizeProxy(proxy) {
+    if (typeof proxy !== 'string') {
+      return null;
+    }
+
+    const trimmed = proxy.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const validPattern = /^(https?|socks5h?|socks4a?):\/\/\S+$/i;
+    return validPattern.test(trimmed) ? trimmed : null;
+  }
+
+  resolveProxy(proxy) {
+    const hasRequestProxy = typeof proxy === 'string' && proxy.trim().length > 0;
+    if (!hasRequestProxy) {
+      return this.defaultProxy;
+    }
+
+    const normalizedProxy = this.normalizeProxy(proxy);
+    if (!normalizedProxy) {
+      throw new Error(
+        'Invalid proxy URL. Use formats like http://host:port, https://host:port, socks5://host:port'
+      );
+    }
+
+    return normalizedProxy;
   }
 
   getYtdlpPath() {
@@ -64,23 +115,57 @@ class YtdlpService {
     });
   }
 
-  async fetchVideoInfo(url) {
+  getCookieFilePath() {
+    return this.cookieCandidates.find((cookiePath) => fs.existsSync(cookiePath)) || null;
+  }
+
+  appendCookieArgs(args, useCookies = true) {
+    if (!useCookies) {
+      console.log('🍪 [YTDLP] Cookies disabled for this request');
+      return;
+    }
+
+    const cookieFilePath = this.getCookieFilePath();
+    if (!cookieFilePath) {
+      console.log('ℹ️ [YTDLP] No cookie file found, continuing without cookies');
+      return;
+    }
+
+    args.unshift('--cookies', cookieFilePath);
+    console.log('🍪 [YTDLP] Using cookies from:', cookieFilePath);
+  }
+
+  appendProxyArgs(args, proxy = null) {
+    const resolvedProxy = this.resolveProxy(proxy);
+    if (!resolvedProxy) {
+      return;
+    }
+
+    args.unshift('--proxy', resolvedProxy);
+    console.log('🌐 [YTDLP] Proxy enabled for request');
+  }
+
+  async fetchVideoInfo(url, useCookies = true, proxy = null) {
     return new Promise((resolve, reject) => {
       const args = [
         '--dump-json',
         '--no-download',
         '--socket-timeout', '30',
-        '--extractor-args', 'youtube:player_client=web',
+        '--extractor-args', 'youtube:player_client=default',
         '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         url
       ];
 
-      // Add cookies if file exists
-      if (fs.existsSync(this.cookieFile)) {
-        args.unshift('--cookies', this.cookieFile);
-      }
+      this.appendCookieArgs(args, useCookies);
+      this.appendProxyArgs(args, proxy);
 
       const process = spawn(this.ytdlpPath, args);
+      const timeoutId = setTimeout(() => {
+        if (process && !process.killed) {
+          process.kill();
+          reject(new Error('Video info fetch timeout'));
+        }
+      }, 60000);
       
       let output = '';
       let errorOutput = '';
@@ -94,6 +179,7 @@ class YtdlpService {
       });
       
       process.on('close', (code) => {
+        clearTimeout(timeoutId);
         if (code === 0) {
           try {
             const info = JSON.parse(output);
@@ -108,28 +194,26 @@ class YtdlpService {
       });
 
       process.on('error', (error) => {
+        clearTimeout(timeoutId);
         console.error('💥 [YTDLP] Process error:', error.message);
         reject(error);
       });
-
-      // Timeout after 60 seconds
-      setTimeout(() => {
-        if (process && !process.killed) {
-          process.kill();
-          reject(new Error('Video info fetch timeout'));
-        }
-      }, 60000);
     });
   }
 
-  async fetchPlaylistEntries(url) {
+  async fetchPlaylistEntries(url, useCookies = true, proxy = null) {
     return new Promise((resolve, reject) => {
-      const process = spawn(this.ytdlpPath, [
+      const args = [
         '--dump-json',
         '--flat-playlist',
         '--no-download',
         url
-      ]);
+      ];
+
+      this.appendCookieArgs(args, useCookies);
+      this.appendProxyArgs(args, proxy);
+
+      const process = spawn(this.ytdlpPath, args);
       
       let output = '';
       let errorOutput = '';
@@ -167,7 +251,9 @@ class YtdlpService {
       isAudioOnly = false,
       bitrate = null,
       id = null,
-      formatId = null
+      formatId = null,
+      useCookies = true,
+      proxy = null
     } = options;
 
     console.log('🚀 [YTDLP] Starting download with options:', options);
@@ -184,7 +270,9 @@ class YtdlpService {
       isAudioOnly,
       bitrate,
       formatId,
-      retryCount
+      retryCount,
+      useCookies,
+      proxy
     }, onProgress);
 
     return downloadId;
@@ -198,7 +286,9 @@ class YtdlpService {
       isAudioOnly,
       bitrate,
       formatId,
-      retryCount
+      retryCount,
+      useCookies,
+      proxy
     } = options;
 
     let formatSelector;
@@ -223,7 +313,7 @@ class YtdlpService {
       '-f', formatSelector,
       '-o', outputPath,
       '--socket-timeout', '30',
-      '--extractor-args', 'youtube:player_client=web;youtube:skip=hls,dash',
+      '--extractor-args', 'youtube:player_client=default',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--merge-output-format', 'mp4',
       '--no-playlist',
@@ -233,11 +323,8 @@ class YtdlpService {
       '--quiet'
     ];
 
-    // Add cookies if available
-    if (fs.existsSync(this.cookieFile)) {
-      args.unshift('--cookies', this.cookieFile);
-      console.log('🍪 [YTDLP] Using cookies from:', this.cookieFile);
-    }
+    this.appendCookieArgs(args, useCookies);
+    this.appendProxyArgs(args, proxy);
 
     // Add metadata embedding
     args.push('--embed-metadata', '--embed-chapters');

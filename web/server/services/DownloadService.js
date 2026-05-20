@@ -27,7 +27,9 @@ class DownloadService {
       saveTo = 'Downloads',
       selectBitrate = '128k',
       title = 'video',
-      playlistTitle = null
+      playlistTitle = null,
+      useCookies = true,
+      proxy = null
     } = options;
 
     console.log('🎬 [DOWNLOAD] Fetching video info before download...');
@@ -36,7 +38,7 @@ class DownloadService {
     // Fetch video info first
     let videoInfo = null;
     try {
-      videoInfo = await this.ytdlpService.fetchVideoInfo(url);
+      videoInfo = await this.ytdlpService.fetchVideoInfo(url, useCookies, proxy);
       console.log('✅ [DOWNLOAD] Video info fetched successfully');
       console.log('📹 [DOWNLOAD] Title:', videoInfo.title);
       console.log('⏱️ [DOWNLOAD] Duration:', videoInfo.duration);
@@ -63,7 +65,9 @@ class DownloadService {
       isAudioOnly,
       bitrate: selectBitrate,
       id: downloadId,
-      formatId: options.formatId
+      formatId: options.formatId,
+      useCookies,
+      proxy
     };
 
     // Store download info with video metadata

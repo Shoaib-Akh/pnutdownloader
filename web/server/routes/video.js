@@ -20,14 +20,14 @@ router.use((req, res, next) => {
 // Fetch video info
 router.post('/info', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, useCookies = true, proxy = null } = req.body;
     
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
     console.log('🎬 [VIDEO INFO] Fetching comprehensive video info for:', url);
-    const info = await ytdlpService.fetchVideoInfo(url);
+    const info = await ytdlpService.fetchVideoInfo(url, useCookies, proxy);
     
     // Get FFmpeg information
     let ffmpegVersion = 'Unknown';
@@ -205,13 +205,13 @@ router.post('/info', async (req, res) => {
 // Fetch playlist entries
 router.post('/playlist', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, useCookies = true, proxy = null } = req.body;
     
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const entries = await ytdlpService.fetchPlaylistEntries(url);
+    const entries = await ytdlpService.fetchPlaylistEntries(url, useCookies, proxy);
     res.json(entries);
   } catch (error) {
     console.error('Playlist entries error:', error);
@@ -222,13 +222,13 @@ router.post('/playlist', async (req, res) => {
 // Get YouTube-specific info (maintains compatibility with existing frontend)
 router.post('/youtube', async (req, res) => {
   try {
-    const { url } = req.body;
+    const { url, useCookies = true, proxy = null } = req.body;
     
     if (!url) {
       return res.status(400).json({ error: 'URL is required' });
     }
 
-    const info = await ytdlpService.fetchVideoInfo(url);
+    const info = await ytdlpService.fetchVideoInfo(url, useCookies, proxy);
     
     // Transform to match expected format from frontend
     const transformedInfo = {

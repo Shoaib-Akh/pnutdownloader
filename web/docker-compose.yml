@@ -7,6 +7,7 @@ services:
     volumes:
       - ./server/downloads:/app/server/downloads
       - ./server/logs:/app/server/logs
+      - ./server/cookies:/app/server/cookies
     environment:
       - NODE_ENV=production
       - PORT=3000

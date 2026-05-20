@@ -93,7 +93,7 @@ function BodySection({
   }
 
   const fetchVideoInfo = async (url) => {
-    if (!url || !isDownloadable) return
+    if (!url || !isSupportedUrl(url)) return
     
     setLoadingVideoInfo(true)
     try {
@@ -120,39 +120,48 @@ function BodySection({
   }
 
   const processFormats = (formats) => {
-    // Filter and organize formats
-    const videoFormats = formats.filter(f => f.vcodec !== 'none' && f.height)
-    const audioFormats = formats.filter(f => f.acodec !== 'none' && !f.height)
-    
-    // Get best format for each resolution
-    const bestByResolution = {}
-    videoFormats.forEach(format => {
-      const resolution = format.height
-      if (!bestByResolution[resolution] || 
-          (format.fps > bestByResolution[resolution].fps) ||
-          (format.fps === bestByResolution[resolution].fps && format.filesize > bestByResolution[resolution].filesize)) {
-        bestByResolution[resolution] = format
-      }
+    const downloadableFormats = formats
+      .filter((f) => f?.format_id && (f.vcodec !== 'none' || f.acodec !== 'none'))
+      .filter((f) => f.ext !== 'mhtml')
+      .map((f) => ({
+        ...f,
+        filesize: f.filesize || f.filesize_approx || null
+      }))
+
+    const streamTypePriority = (format) => {
+      const hasVideo = format.vcodec && format.vcodec !== 'none'
+      const hasAudio = format.acodec && format.acodec !== 'none'
+      if (hasVideo && hasAudio) return 3
+      if (hasVideo) return 2
+      if (hasAudio) return 1
+      return 0
+    }
+
+    return downloadableFormats.sort((a, b) => {
+      const streamPriority = streamTypePriority(b) - streamTypePriority(a)
+      if (streamPriority !== 0) return streamPriority
+
+      const heightDelta = (b.height || 0) - (a.height || 0)
+      if (heightDelta !== 0) return heightDelta
+
+      const fpsDelta = (b.fps || 0) - (a.fps || 0)
+      if (fpsDelta !== 0) return fpsDelta
+
+      const audioBitrateDelta = (b.abr || 0) - (a.abr || 0)
+      if (audioBitrateDelta !== 0) return audioBitrateDelta
+
+      return (b.tbr || 0) - (a.tbr || 0)
     })
-    
-    // Sort resolutions descending
-    const sortedVideoFormats = Object.values(bestByResolution)
-      .sort((a, b) => (b.height || 0) - (a.height || 0))
-    
-    // Add audio formats
-    const sortedAudioFormats = audioFormats
-      .sort((a, b) => (b.abr || 0) - (a.abr || 0))
-      .slice(0, 3) // Show top 3 audio formats
-    
-    return [...sortedVideoFormats, ...sortedAudioFormats]
+  }
+
+  const isSupportedUrl = (urlToCheck) => {
+    const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|tiktok\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|vimeo\.com|dailymotion\.com|twitch\.tv)/i
+    return urlPattern.test(urlToCheck || '')
   }
 
   const checkIfDownloadable = async (urlToCheck) => {
     try {
-      // For web version, we'll check if it's a valid URL we can process
-      const urlPattern = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|tiktok\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|vimeo\.com|dailymotion\.com|twitch\.tv)/i
-      const isDownloadable = urlPattern.test(urlToCheck)
-      setIsDownloadable(isDownloadable)
+      setIsDownloadable(isSupportedUrl(urlToCheck))
     } catch (error) {
       console.error('Error checking URL:', error)
       setIsDownloadable(false)
@@ -211,7 +220,7 @@ function BodySection({
       const downloadOptions = {
         url: url,
         title: videoInfo?.title || 'video',
-        isAudioOnly: !format.height, // Audio-only if no height
+        isAudioOnly: format.vcodec === 'none' && format.acodec !== 'none',
         selectedFormat: format.ext || 'mp4',
         selectedQuality: format.height ? `${format.height}p` : quality,
         saveTo,

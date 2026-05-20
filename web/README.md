@@ -116,6 +116,24 @@ web/
 ### Environment Variables
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment (development/production)
+- `YTDLP_PROXY` - Optional default proxy for yt-dlp (for example `http://127.0.0.1:8080` or `socks5://127.0.0.1:1080`)
+
+### Proxy and Cookies
+- You can set proxy per request using `proxy` in API payload.
+- If `proxy` is omitted, server uses `YTDLP_PROXY` / `HTTPS_PROXY` / `HTTP_PROXY` if present.
+- Supported proxy schemes: `http://`, `https://`, `socks5://`, `socks5h://`, `socks4://`, `socks4a://`.
+- Cookies must be valid Netscape-format cookies from a real logged-in session. Fake/forged cookies are not supported.
+
+Example payload for download start:
+
+```json
+{
+  "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+  "selectedQuality": "1080p",
+  "useCookies": true,
+  "proxy": "http://127.0.0.1:8080"
+}
+```
 
 ### Docker Configuration
 - Downloads are stored in `./server/downloads`
