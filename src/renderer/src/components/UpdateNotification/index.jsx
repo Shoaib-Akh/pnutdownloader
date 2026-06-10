@@ -86,8 +86,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
         <div className="modal-content">
           <div className="modal-header border-bottom-0">
             <h5 className="modal-title w-100 text-center fs-4">
-              <span role="img" aria-label="Update" className="me-2">🔄</span>
-              Application Update
+              App update
             </h5>
           </div>
 
@@ -100,21 +99,19 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
 
             {isDownloaded ? (
               <>
-                <p className="lead mb-3 text-dark fw-semibold">Update Ready to Install!</p>
+                <p className="lead mb-3 text-dark fw-semibold">Update downloaded</p>
                 <p className="text-muted mb-0">
-                  The new version has been downloaded and is ready to use. 
-                  Please restart to complete the installation.
+                  Restart the app to install the new version.
                 </p>
               </>
             ) : (
               <>
-                <p className="lead mb-3 text-dark fw-semibold">New Version Available</p>
+                <p className="lead mb-3 text-dark fw-semibold">New version available</p>
                 {isDownloading ? (
                   <DownloadLoader />
                 ) : (
                   <p className="text-muted mb-4">
-                    Enhancements and new features are waiting. Download now for 
-                    the best experience.
+                    A new version is ready to download.
                   </p>
                 )}
               </>
@@ -129,7 +126,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
                   style={{backgroundColor:"#BB4F28"}}
                   onClick={handleDownload}
                 >
-                  Download Now
+                  Download update
                 </button>
               )
             )}
@@ -139,8 +136,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
                 onClick={onInstall}
                 style={{backgroundColor:"green"}}
               >
-                Install & Restart
-                <span role="img" aria-label="Rocket" className="ms-2">🚀</span>
+                Install and restart
               </button>
             )}
           </div>

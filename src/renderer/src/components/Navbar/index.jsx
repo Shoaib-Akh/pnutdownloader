@@ -280,8 +280,8 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           value={urlInput}
           onChange={handleInputChange}
           onKeyPress={handleInputKeyPress}
-          placeholder="Paste the video URL"
-          aria-label="Video URL input"
+          placeholder="Paste a video link"
+          aria-label="Video link input"
           autoComplete="off"
           spellCheck="false"
         />

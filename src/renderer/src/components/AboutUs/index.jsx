@@ -90,11 +90,10 @@ function AboutUs() {
           <img src={Logo} alt="PNUT Downloader Logo" style={{ height: '50px', marginBottom: '10px' }} />
         </div>
         <h1 className="display-4 fw-bold text-dark mb-2" style={{ fontSize: 22, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          About PNUT Downloader
+          About PNUT
         </h1>
         <h4 className="lead text-muted col-md-10 mx-auto" style={{ fontSize: 15, lineHeight: 1.4 }}>
-          We're passionate about making media downloading simple, fast, and reliable for everyone.
-          Join thousands of users who trust PNUT Downloader for their media needs.
+          PNUT Downloader helps you save videos, music, and playlists from supported sites.
         </h4>
       </div>
 
@@ -123,11 +122,9 @@ function AboutUs() {
               <div className="mb-2">
                 <FaRocket style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
               </div>
-              <h2 className="h5 fw-semibold text-dark mb-2">Our Mission</h2>
+              <h2 className="h5 fw-semibold text-dark mb-2">Mission</h2>
               <p className="text-muted small" style={{ lineHeight: 1.6 }}>
-                At PNUT Downloader, we strive to empower users by providing a seamless experience
-                to access and manage audio, video, and playlist content. Our goal is to simplify
-                the downloading process while ensuring quality and reliability.
+                Make downloading media simple, fast, and clear without hiding important settings.
               </p>
             </div>
           </div>
@@ -139,11 +136,9 @@ function AboutUs() {
               <div className="mb-2">
                 <FaUsers style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
               </div>
-              <h2 className="h5 fw-semibold text-dark mb-2">Who We Are</h2>
+              <h2 className="h5 fw-semibold text-dark mb-2">Built for</h2>
               <p className="text-muted small" style={{ lineHeight: 1.6 }}>
-                We are a dedicated team of developers and designers committed to creating
-                innovative tools for media enthusiasts. Our focus is on user satisfaction and
-                cutting-edge technology.
+                Creators, students, and everyday users who need a reliable desktop downloader.
               </p>
             </div>
           </div>
@@ -153,9 +148,9 @@ function AboutUs() {
       <div className="mt-3 row align-items-start">
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center">
           <h2 className="h5 fw-semibold text-dark mt-2" style={{ fontSize: 18, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-            Connect With Us
+            Community
           </h2>
-          <p className="text-muted mb-2 small">Join our community and stay updated!</p>
+          <p className="text-muted mb-2 small">Join the community and stay updated.</p>
           <h3 className="mb-2" style={{ fontSize: 14, color: '#BB4F28' }}>
             Current Version: <b>{appVersion}</b>
           </h3>
@@ -255,7 +250,7 @@ function AboutUs() {
               }}
             >
               <FaEnvelope className="me-2" />
-              Contact Us
+              Contact us
             </button>
             <button
               className="btn px-3"
@@ -299,7 +294,7 @@ function AboutUs() {
               }}
             >
               <FaFileContract className="me-2" />
-              Terms and Conditions
+              Terms and conditions
             </button>
           </div>
         </div>

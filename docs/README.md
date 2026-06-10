@@ -12,6 +12,7 @@ Welcome to the official documentation for **PNUTDownloader** — a powerful, cro
 | [INSTALLATION.md](./INSTALLATION.md) | System setup and installation | End Users / Developers |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design & architecture deep-dive | Developers |
 | [API_REFERENCE.md](./API_REFERENCE.md) | Full IPC channels and services API | Developers |
+| [GENZ_APP_REDESIGN.md](./GENZ_APP_REDESIGN.md) | Professional Gen Z UI/UX redesign spec with no functionality changes | Designers / Developers |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | How to contribute to the project | Contributors |
 | [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) | Common issues and solutions | All |
 | [QUICKSTART.md](./QUICKSTART.md) | 5-minute getting started guide | All |

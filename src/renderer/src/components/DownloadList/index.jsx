@@ -495,28 +495,70 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     return `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}`;
   };
 
+  const screenMeta = {
+    'All Files': {
+      title: 'Library',
+      eyebrow: 'All downloads',
+      subtitle: 'Track every video, music file, playlist, and active download in one place.',
+      empty: 'Your downloads will show here.',
+    },
+    'All File': {
+      title: 'Library',
+      eyebrow: 'All downloads',
+      subtitle: 'Track every video, music file, playlist, and active download in one place.',
+      empty: 'Your downloads will show here.',
+    },
+    Video: {
+      title: 'Videos',
+      eyebrow: 'Video files',
+      subtitle: 'Browse downloaded videos and active video downloads.',
+      empty: 'No videos yet. Download one from a link or Explore.',
+    },
+    Audio: {
+      title: 'Music',
+      eyebrow: 'Audio files',
+      subtitle: 'Browse downloaded audio and music files.',
+      empty: 'No music yet. Switch Type to Audio and download a link.',
+    },
+    Playlist: {
+      title: 'Playlists',
+      eyebrow: 'Playlist downloads',
+      subtitle: 'Track playlist groups and multi-video downloads.',
+      empty: 'No playlists yet. Paste a playlist link to choose videos.',
+    },
+  }[selectedItem] || {
+    title: selectedItem || 'Library',
+    eyebrow: 'Downloads',
+    subtitle: 'Search, manage, and open your downloads.',
+    empty: 'Your downloads will show here.',
+  }
+
   return (
-    <div className="container-fluid p-0" style={{ padding: '30px 20px 20px 20px' }}>
+    <div className="download-library container-fluid p-0" style={{ padding: '30px 20px 20px 20px' }}>
       {/* Header Section */}
-      <div style={{
+      <div className="download-library__header" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '30px',
         paddingTop: '20px'
       }}>
-        <h2 style={{
+        <div>
+          <p className="pnut-eyebrow">{screenMeta.eyebrow}</p>
+          <h2 style={{
           fontSize: '24px',
           fontWeight: 'bold',
           color: '#333',
           margin: 0
         }}>
-          Recent downloaded
-        </h2>
+            {screenMeta.title}
+          </h2>
+          <p className="download-library__subtitle">{screenMeta.subtitle}</p>
+        </div>
       </div>
 
       {/* Search Bar */}
-      <div style={{
+      <div className="download-library__search" style={{
         marginBottom: '20px',
         display: 'flex',
         alignItems: 'center',
@@ -529,9 +571,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         <FaSearch style={{ color: '#999', marginRight: '10px' }} />
         <input
           type="text"
-          placeholder="Search"
+          placeholder="Search downloads"
           value={searchQuery}
           onChange={handleSearchChange}
+          className="download-library__search-input"
           style={{
             border: 'none',
             outline: 'none',
@@ -544,20 +587,21 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       </div>
 
       {/* Total and Select Button */}
-      <div style={{
+      <div className="download-library__toolbar" style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <span style={{ fontSize: '14px', color: "#dc3545" }}>
-          Total: {searchFilteredList?.length || 0}
+        <span className="download-library__count" style={{ fontSize: '14px', color: "#dc3545" }}>
+          {searchFilteredList?.length || 0} item{searchFilteredList?.length === 1 ? '' : 's'}
         </span>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="download-library__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {isSelectMode && (
             <>
               <button
                 onClick={handleSelectAll}
+                className="pnut-button"
                 style={{
                   padding: '6px 12px',
                   border: '1px solid #ddd',
@@ -591,6 +635,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
               {selectedItems.size > 0 && (
                 <button
                   onClick={handleDeleteSelectedItems}
+                  className="pnut-button pnut-button--danger"
                   style={{
                     padding: '6px 12px',
                     border: '1px solid #dc3545',
@@ -611,6 +656,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           )}
           <button
             onClick={handleSelectModeToggle}
+            className="pnut-button"
             style={{
               padding: '6px 12px',
               border: isSelectMode ? '1px solid #0ea5e9' : '1px solid #ddd',
@@ -630,7 +676,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       </div>
 
       {/* Download List - Card Layout */}
-      <div style={{
+      <div className="download-library__list" style={{
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
@@ -652,11 +698,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             const remainingTime = calculateRemainingTime(item.duration, progress);
             const formattedRemainingTime = formatTime(remainingTime);
             const duration = formatTime(convertISODurationToSeconds(item.duration));
-                      {console.log("item.statusitem.status111",item.status)}
-
             return (
               <div
                 key={item.id}
+                className={`download-row ${activeDownloads?.has(item.id) ? 'download-row--active' : ''} ${selectedItems.has(item.id) ? 'download-row--selected' : ''}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -704,7 +749,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                       borderRadius: '50%',
                       animation: 'blink 1.5s infinite'
                     }}></div>
-                    ACTIVE
+                    Active
                   </div>
                 )}
                 {/* Checkbox for select mode */}
@@ -735,7 +780,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     color: '#666',
                     minWidth: '30px'
                   }}>
-                    {index + 1}.
+                    {index + 1}
                   </span>
                 )}
 
@@ -754,7 +799,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                         fontWeight: '600',
                         textAlign: 'center'
                       }}>
-                        {item.status === 'Fetching Info...' ? 'Loading...' : 'Queued'}
+                        {item.status === 'Fetching Info...' ? 'Getting info' : 'In queue'}
                       </div>
                     </div>
                   ) : (
@@ -854,7 +899,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 </div>
 
                 {/* Content Section */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                <div className="download-row__content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
                   {/* Title */}
                   <h3 style={{
                     fontSize: '15px',
@@ -936,7 +981,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                         fontSize: '11px',
                         fontWeight: '600'
                       }}>
-                      {console.log("item.status",item.status)}
                         {item.status === "Downloading" ? (
                           <>
                             Downloading
@@ -944,6 +988,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                             <span className="dot-animate">.</span>
                             <span className="dot-animate">.</span>
                           </>
+                        ) : item.status === 'Queued' ? (
+                          'In queue'
+                        ) : item.status === 'Fetching Info...' ? (
+                          'Getting info'
                         ) : (
                           item.status
                         )}
@@ -972,8 +1020,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     }}>
                       {getFormattedDate(item)}
                     </span>
-                      {console.log("item.statusitem.status",item.title)}
-
                     {/* Progress Bar for Downloading */}
                     {!item.isCompleted && item.status !== 'Completed' && item.status === 'Downloading' && progress > 0 && (
                       <div style={{ width: '100%', marginTop: '4px' }}>
@@ -1001,10 +1047,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
 
                 {/* Action Buttons */}
                 {!isSelectMode && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                  <div className="download-row__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     <button
                       type="button"
-                      className="btn"
+                      className="btn pnut-button pnut-button--icon"
                       onClick={() => handleOpenFolderClick(item)}
                       title="Open folder"
                       style={{
@@ -1024,6 +1070,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     >
                       <Dropdown.Toggle
                         as="button"
+                        className="download-row__menu-button"
                         style={{
                           background: 'transparent',
                           border: 'none',
@@ -1042,28 +1089,28 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                             if (typeof onRetry === 'function') onRetry(item.id)
                           }}
                         >
-                          Retry Download <FaRedoAlt className="me-2" />
+                          Retry <FaRedoAlt className="me-2" />
                         </Dropdown.Item>
                         <Dropdown.Item
                           onClick={() => {
                             handleAddToFolder(item);
                           }}
                         >
-                          Add to Folder <FaFolderOpen className="me-2" />
+                          Move to folder <FaFolderOpen className="me-2" />
                         </Dropdown.Item>
                         <Dropdown.Item
                           onClick={() => {
                             handleCopy(item);
                           }}
                         >
-                          Copy Url <FaCopy className="me-2" />
+                          Copy link <FaCopy className="me-2" />
                         </Dropdown.Item>
                         <Dropdown.Item
                           onClick={() => {
                             handleShowInFinder(item);
                           }}
                         >
-                          Show in Finder <FaExternalLinkAlt className="me-2" />
+                          Show in folder <FaExternalLinkAlt className="me-2" />
                         </Dropdown.Item>
                         <Dropdown.Item
                           onClick={() => {
@@ -1087,7 +1134,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             fontWeight: 'bold',
             color: 'gray'
           }}>
-            No Data Found
+            {searchQuery ? 'No matches found.' : screenMeta.empty}
           </div>
         )}
       </div>

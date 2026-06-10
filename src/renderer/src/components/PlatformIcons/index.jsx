@@ -38,77 +38,50 @@ const PlatformIcons = ({ handlePlatformClick }) => {
   };
 
   return (
-    <div style={{ width: '100%', marginTop: '40px' }}>
-      <h1 style={{
-        fontSize: '32px',
-        fontWeight: 'bold',
-      color: "#ff6b6b",
-        textAlign: 'center',
-        marginBottom: '30px'
-      }}>
-        Popular Sites
-      </h1>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '20px',
-        width: '100%',
-        padding: '0 20px'
-      }}>
+    <section className="download-hub">
+      <div className="download-hub__header">
+        <div>
+          <p className="pnut-eyebrow">Download Hub</p>
+          <h1 className="download-hub__title">Paste a link or start from a platform</h1>
+          <p className="download-hub__subtitle">
+            Choose a site, find your media, then download with the settings above.
+          </p>
+        </div>
+        <div className="download-hub__hint">
+          Video, music, and playlists
+        </div>
+      </div>
+
+      <div className="platform-grid">
         {platforms.map(({ Component, url, color, bgColor, alt, domain }, index) => (
           <div
             key={index}
             onClick={() => handlePlatformClick(url)}
+            className="platform-card"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handlePlatformClick(url);
+              }
+            }}
             style={{
-              background: bgColor || '#f8f9fa',
-              borderRadius: '12px',
-              padding: '20px',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              border: '1px solid rgba(0,0,0,0.05)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '12px',
-              minHeight: '140px',
-              justifyContent: 'center'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
+              '--platform-color': color,
+              '--platform-bg': bgColor || '#f8f9fa',
             }}
           >
-            <Component
-              style={{
-                fontSize: '48px',
-                color: color,
-              }}
-            />
-            <div style={{ textAlign: 'center' }}>
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: '600',
-                color: '#333',
-                margin: '0 0 4px 0'
-              }}>
-                {alt}
-              </h3>
-              <p style={{
-                fontSize: '12px',
-                color: '#666',
-                margin: 0
-              }}>
-                {domain}
-              </p>
+            <div className="platform-card__icon">
+              <Component />
+            </div>
+            <div className="platform-card__text">
+              <h3>{alt}</h3>
+              <p>{domain}</p>
             </div>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 };
 

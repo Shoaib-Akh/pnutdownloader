@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
 import './assets/theme.css'
+import './assets/redesign.css'
 
 function App() {
   const { theme, toggleTheme } = useTheme()
@@ -95,10 +96,7 @@ function App() {
 
   return (
     <ErrorBoundary fallbackTitle="App Error" fallbackMessage="An unexpected error occurred in the application.">
-      <div className="vh-100" style={{
-        background: 'var(--theme-bg-gradient-start)',
-        minHeight: '100vh'
-      }}>
+      <div className="pnut-app vh-100">
         {updateAvailable && (
           <UpdateNotification
             updateInfo={updateInfo}
@@ -116,13 +114,8 @@ function App() {
           isLoading={isUrlDownloading}
         />
 
-        <div className="d-flex" style={{ 
-          paddingTop: '0', 
-          borderTop: '1px solid #e2e8f0',
-          height: 'calc(100vh - 60px)',
-          overflow: 'hidden'
-        }}>
-          <div style={{ width: '16%' }}>
+        <div className={`app-shell ${showWebView ? 'app-shell--browser' : ''}`}>
+          <aside className="app-sidebar-panel">
             <Sidebar
               setSelectedItem={setSelectedItem}
               selectedItem={selectedItem}
@@ -136,48 +129,50 @@ function App() {
               theme={theme}
               onThemeToggle={toggleTheme}
             />
-          </div>
+          </aside>
 
           <div style={{ display: 'none' }}>
             <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
           </div>
-          {!showWebView && <Navbar
-            bitrate={bitrate}
-            setBitrate={setBitrate}
-            downloadType={downloadType}
-            setDownloadType={setDownloadType}
-            quality={quality}
-            setQuality={setQuality}
-            format={format}
-            setFormat={setFormat}
-            saveTo={saveTo}
-            setSaveTo={setSaveTo}
-            isSidebarOpen={isSidebarOpen}
-            setPastLinkUrl={setPastLinkUrl}
-          />}
-          <BodySection
-            setPastLinkUrl={setPastLinkUrl}
-            bitrate={bitrate}
-            setBitrate={setBitrate}
-            downloadType={downloadType}
-            quality={quality}
-            format={format}
-            saveTo={saveTo}
-            selectedItem={selectedItem}
-            setIsSidebarOpen={setIsSidebarOpen}
-            isSidebarOpen={isSidebarOpen}
-            setSelectedItem={setSelectedItem}
-            setDownload={setDownload}
-            download={download}
-            setShowWebView={setShowWebView}
-            showWebView={showWebView}
-            downloadListOpen={downloadListOpen}
-            setDownloadListOpen={setDownloadListOpen}
-            pastLinkUrl={pastLinkUrl}
-            aboutUs={aboutUs}
-            updateInfo={updateInfo}
-            setAboutUs={setAboutUs}
-          />
+          <main className="app-main-panel">
+            {!showWebView && <Navbar
+              bitrate={bitrate}
+              setBitrate={setBitrate}
+              downloadType={downloadType}
+              setDownloadType={setDownloadType}
+              quality={quality}
+              setQuality={setQuality}
+              format={format}
+              setFormat={setFormat}
+              saveTo={saveTo}
+              setSaveTo={setSaveTo}
+              isSidebarOpen={isSidebarOpen}
+              setPastLinkUrl={setPastLinkUrl}
+            />}
+            <BodySection
+              setPastLinkUrl={setPastLinkUrl}
+              bitrate={bitrate}
+              setBitrate={setBitrate}
+              downloadType={downloadType}
+              quality={quality}
+              format={format}
+              saveTo={saveTo}
+              selectedItem={selectedItem}
+              setIsSidebarOpen={setIsSidebarOpen}
+              isSidebarOpen={isSidebarOpen}
+              setSelectedItem={setSelectedItem}
+              setDownload={setDownload}
+              download={download}
+              setShowWebView={setShowWebView}
+              showWebView={showWebView}
+              downloadListOpen={downloadListOpen}
+              setDownloadListOpen={setDownloadListOpen}
+              pastLinkUrl={pastLinkUrl}
+              aboutUs={aboutUs}
+              updateInfo={updateInfo}
+              setAboutUs={setAboutUs}
+            />
+          </main>
         </div>
       </div>
     </ErrorBoundary>

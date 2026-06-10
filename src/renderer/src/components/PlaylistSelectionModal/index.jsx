@@ -56,7 +56,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
     >
       <Modal.Header className="custom-modal-header">
         <Modal.Title id="playlist-selection-modal-title" className="custom-modal-title">
-          Playlist
+          Choose playlist items
         </Modal.Title>
         <button
           type="button"
@@ -73,7 +73,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
           <div style={{ fontWeight: 600 }}>{playlist?.playlistTitle || playlist?.title || 'Playlist'}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 13, color: '#666' }}>{`Select All (${selectedCount}/${totalCount})`}</div>
+            <div style={{ fontSize: 13, color: '#666' }}>{`Select all (${selectedCount}/${totalCount})`}</div>
             <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={isLoading || totalCount === 0} />
           </div>
         </div>
@@ -125,7 +125,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
           Cancel
         </Button>
         <Button onClick={handleConfirm} disabled={isLoading || selectedIds.size === 0} className="custom-login-button">
-          Download
+          Download selected
         </Button>
       </Modal.Footer>
     </Modal>

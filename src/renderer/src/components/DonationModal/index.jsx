@@ -33,7 +33,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
     >
       <Modal.Header className="custom-modal-header">
         <Modal.Title id="donation-modal-title" className="custom-modal-title">
-          Support PNUTDownloader
+          Support PNUT
         </Modal.Title>
         <button
           type="button"
@@ -46,8 +46,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
       </Modal.Header>
       <Modal.Body className="custom-modal-body">
         <p className="modal-message">
-          Your download is complete! If this app helps you, you can buy me a coffee or make a
-          small donation to support future development.
+          Your download is done. If PNUT helps you, you can support future updates.
         </p>
         <p className="modal-quote">
           {quote}
@@ -68,7 +67,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
           aria-label="Donate"
           variant="primary"
         >
-          ☕ Donate
+          Support
         </Button>
       </Modal.Footer>
     </Modal>

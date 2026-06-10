@@ -29,12 +29,12 @@ function Sidebar({
   }, [selectedItem, setSelectedItem]);
 
   const myFilesItems = [
-    { icon: FaHome, label: 'Home' },
-    { icon: FaFolderOpen, label: 'All Files' },
-    { icon: FaMusic, label: 'Audio' },
-    { icon: FaVideo, label: 'Video' },
-    { icon: FaList, label: 'Playlist' },
-    { icon: FaGlobe, label: 'Browser' },
+    { icon: FaHome, label: 'Home', displayLabel: 'Download Hub' },
+    { icon: FaFolderOpen, label: 'All Files', displayLabel: 'Library' },
+    { icon: FaVideo, label: 'Video', displayLabel: 'Videos' },
+    { icon: FaMusic, label: 'Audio', displayLabel: 'Music' },
+    { icon: FaList, label: 'Playlist', displayLabel: 'Playlists' },
+    { icon: FaGlobe, label: 'Browser', displayLabel: 'Explore' },
   ];
 
   const systemItems = [
@@ -44,9 +44,10 @@ function Sidebar({
       badge: 'NEW',
       color: '#4285F4',
       isHighlighted: true,
-      description: 'Help us improve'
+      description: 'Help us improve',
+      displayLabel: 'Feedback',
     },
-    { icon: FaInfoCircle, label: 'About us' },
+    { icon: FaInfoCircle, label: 'About us', displayLabel: 'About PNUT' },
   ];
 
   // Theme toggle item
@@ -82,6 +83,7 @@ function Sidebar({
               key={index}
               className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
                 }`}
+              title={item.displayLabel || item.label}
               onClick={() => {
                 setSelectedItem(item.label);
                 setDownload(false);
@@ -96,7 +98,7 @@ function Sidebar({
               <div className="sidebar__icon-container">
                 <item.icon className="sidebar__icon" />
               </div>
-              <span className="sidebar__label">{item.label}</span>
+              <span className="sidebar__label">{item.displayLabel || item.label}</span>
             </div>
           ))}
         </div>
@@ -126,6 +128,7 @@ function Sidebar({
               className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
                 } ${item.isHighlighted ? 'sidebar__menu-item--highlighted' : ''
                 }`}
+              title={item.displayLabel || item.label}
               onClick={() => {
                 setSelectedItem(item.label);
                 setDownload(false);
@@ -151,7 +154,7 @@ function Sidebar({
                 )}
               </div>
               <div className="sidebar__text-container">
-                <span className="sidebar__label">{item.label}</span>
+                <span className="sidebar__label">{item.displayLabel || item.label}</span>
                 {item.description && (
                   <span className="sidebar__description">{item.description}</span>
                 )}
@@ -170,7 +173,7 @@ function Sidebar({
           <img src={squirrel} alt="PNUT Logo" className="sidebar__logo" />
           <button className="sidebar__buy-nuts-button" onClick={handleClick}>
             <FaHandHoldingHeart style={{ marginRight: 10 }} />
-            Support us
+            Support PNUT
           </button>
         </>
       </div>

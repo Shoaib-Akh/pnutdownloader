@@ -332,9 +332,9 @@ function BodySection({
     retryDownload(id)
   };
   return (
-    <div style={{ width: !showWebView ? '90%' : '100%' }}>
+    <div className={`app-content ${showWebView ? 'app-content--browser' : 'app-content--standard'}`}>
       {aboutUs ? (
-        <div style={{ height: '70vh' }}>
+        <div className="about-page-wrap">
           <AboutUs updateInfo={updateInfo} />
         </div>
       ) : !showWebView ? (
@@ -358,7 +358,7 @@ function BodySection({
               <OverlayTrigger
                 placement="top"
                 overlay={
-                  <Tooltip id="close-tooltip">{lastUrl ? 'Resume Browser' : 'Back'}</Tooltip>
+                  <Tooltip id="close-tooltip">{lastUrl ? 'Resume Explore' : 'Back'}</Tooltip>
                 }
               >
                 <button
@@ -371,7 +371,7 @@ function BodySection({
                 >
                   {lastUrl ? <FaGlobe size={20} /> : <FaArrowLeft size={20} />}
                   <span className="ms-2 fw-medium" style={{ whiteSpace: 'nowrap' }}>
-                    {lastUrl ? 'Resume Browser' : 'Back'}
+                    {lastUrl ? 'Resume Explore' : 'Back'}
                   </span>
                 </button>
               </OverlayTrigger>
@@ -382,7 +382,7 @@ function BodySection({
               {lastUrl && (
                 <OverlayTrigger
                   placement="top"
-                  overlay={<Tooltip id="close-tooltip">Resume Browser</Tooltip>}
+                  overlay={<Tooltip id="close-tooltip">Resume Explore</Tooltip>}
                 >
                   <button
                     className="btn btn-danger   d-flex align-items-center justify-content-center shadow close-webview-btn"
@@ -391,7 +391,7 @@ function BodySection({
                   >
                     <FaGlobe size={20} />
                     <span className="ms-2 fw-medium" style={{ whiteSpace: 'nowrap' }}>
-                      Resume Browser
+                      Resume Explore
                     </span>
                   </button>
                 </OverlayTrigger>
@@ -463,7 +463,7 @@ function BodySection({
               />
               <OverlayTrigger
                 placement="top"
-                overlay={<Tooltip id="copy-tooltip">Copy URL</Tooltip>}
+              overlay={<Tooltip id="copy-tooltip">Copy URL</Tooltip>}
               >
                 <button className="url-btn" onClick={handleCopyUrl}>
                   <FaCopy size={16} />
@@ -477,7 +477,7 @@ function BodySection({
             </div>
             <OverlayTrigger
               placement="top"
-              overlay={<Tooltip id="close-tooltip">Close Browser</Tooltip>}
+              overlay={<Tooltip id="close-tooltip">Close Explore</Tooltip>}
             >
               <button
                 className="btn btn-danger d-flex align-items-center justify-content-center shadow close-webview-btn"
@@ -502,10 +502,10 @@ function BodySection({
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
               {downloading ? (
-                'Downloading...'
+                'Adding...'
               ) : (
                 <>
-                  <FaDownload /> Download
+                  <FaDownload /> Download this
                 </>
               )}
             </button>

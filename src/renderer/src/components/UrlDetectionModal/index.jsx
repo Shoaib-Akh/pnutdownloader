@@ -85,7 +85,7 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
       <Modal.Header className="url-detection-modal-header">
         <Modal.Title id="url-detection-modal-title" className="url-detection-modal-title">
           <FaDownload className="modal-icon" />
-          New Video Detected!
+          Link detected
         </Modal.Title>
         <button
           type="button"
@@ -103,14 +103,14 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
               {getPlatformIcon(detectedPlatform)}
             </div>
             <h4>{platformName !== 'Unknown' ? `${platformName} Link Detected` : 'Video URL Detected'}</h4>
-            <p>We found a new {platformName !== 'Unknown' ? platformName : 'video'} link that you can download!</p>
+            <p>We found a supported {platformName !== 'Unknown' ? platformName : 'video'} link.</p>
           </div>
           <div className="url-display">
-            <label>URL:</label>
+            <label>Link</label>
             <div className="url-text">{url}</div>
           </div>
           <div className="url-detection-prompt">
-            <p>Are you interested in downloading this content?</p>
+            <p>Want to download it with your current settings?</p>
           </div>
         </div>
       </Modal.Body>
@@ -121,7 +121,7 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
           className="url-detection-cancel-button"
           disabled={isLoading}
         >
-          Not Now
+          Not now
         </Button>
         <Button
           onClick={handleDownloadClick}
@@ -131,12 +131,12 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
           {isLoading ? (
             <>
               <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-              Processing...
+              Adding...
             </>
           ) : (
             <>
               <FaDownload className="me-2" />
-              Download {platformName !== 'Unknown' ? platformName : 'Video'}
+              Download
             </>
           )}
         </Button>

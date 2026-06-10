@@ -260,6 +260,124 @@
   }
 }
 
+/* Redesign overrides */
+.url-detection-modal .modal-content {
+  border: 1px solid var(--pnut-border) !important;
+  border-radius: var(--pnut-radius-lg) !important;
+  background: var(--pnut-surface) !important;
+  box-shadow: var(--pnut-shadow-md) !important;
+}
+
+.url-detection-modal-header {
+  background: var(--pnut-surface) !important;
+  border-bottom: 1px solid var(--pnut-border) !important;
+  padding: 20px 24px !important;
+}
+
+.url-detection-modal-header::before,
+.modal-icon {
+  animation: none !important;
+}
+
+.url-detection-modal-title {
+  color: var(--pnut-text) !important;
+  font-size: 20px !important;
+  font-weight: 780 !important;
+}
+
+.modal-icon {
+  color: var(--pnut-brand) !important;
+}
+
+.url-detection-close-button {
+  top: 17px !important;
+  right: 18px !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: var(--pnut-radius) !important;
+  background: var(--pnut-surface-raised) !important;
+  border: 1px solid var(--pnut-border) !important;
+  color: var(--pnut-muted) !important;
+}
+
+.url-detection-close-button:hover {
+  color: var(--pnut-danger) !important;
+  transform: none !important;
+}
+
+.url-detection-modal-body,
+.url-detection-modal-footer {
+  background: var(--pnut-surface) !important;
+}
+
+.url-detection-modal-body {
+  padding: 26px !important;
+}
+
+.url-detection-message h4 {
+  color: var(--pnut-text) !important;
+  font-size: 18px !important;
+  font-weight: 760 !important;
+}
+
+.url-detection-message p,
+.url-detection-prompt p {
+  color: var(--pnut-muted) !important;
+  font-size: 14px !important;
+}
+
+.url-display {
+  border: 1px solid var(--pnut-border) !important;
+  border-radius: var(--pnut-radius-lg) !important;
+  background: var(--pnut-surface-raised) !important;
+  padding: 16px !important;
+}
+
+.url-display label {
+  color: var(--pnut-brand) !important;
+  letter-spacing: 0 !important;
+}
+
+.url-text {
+  border: 1px solid var(--pnut-border) !important;
+  background: var(--pnut-surface) !important;
+  color: var(--pnut-text-soft) !important;
+}
+
+.url-detection-modal-footer {
+  border-top: 1px solid var(--pnut-border) !important;
+  padding: 18px 24px !important;
+}
+
+.url-detection-cancel-button,
+.url-detection-download-button {
+  border-radius: var(--pnut-radius) !important;
+  box-shadow: none !important;
+}
+
+.url-detection-cancel-button {
+  border: 1px solid var(--pnut-border-strong) !important;
+  background: var(--pnut-surface) !important;
+  color: var(--pnut-text-soft) !important;
+}
+
+.url-detection-cancel-button:hover:not(:disabled) {
+  background: var(--pnut-brand-soft) !important;
+  color: var(--pnut-brand) !important;
+  transform: none !important;
+}
+
+.url-detection-download-button {
+  border: 1px solid var(--pnut-brand) !important;
+  background: var(--pnut-brand) !important;
+  color: #ffffff !important;
+}
+
+.url-detection-download-button:hover:not(:disabled) {
+  background: var(--pnut-brand-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
 /* Animation for modal entrance */
 .url-detection-modal .modal-dialog {
   animation: modalSlideIn 0.4s ease-out;

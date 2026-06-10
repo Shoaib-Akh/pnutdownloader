@@ -18,7 +18,7 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
     >
       <Modal.Header className="custom-modal-header">
         <Modal.Title id="login-modal-title" className="custom-modal-title">
-          Login Required
+          YouTube sign in needed
         </Modal.Title>
         <button
           type="button"
@@ -31,10 +31,10 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
       </Modal.Header>
       <Modal.Body className="custom-modal-body">
         <p className="modal-message">
-          YouTube has restricted downloads.<br/> Please log in to YouTube to resume downloading your content.
+          YouTube needs you to sign in before this download can continue.
         </p>
         <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
-          Click "Log in to YouTube" to open YouTube in the browser. Sign in with your Google account, then you can download.
+          Open YouTube, sign in with your Google account, then retry the download.
         </p>
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer">
@@ -45,7 +45,7 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
           aria-label="Log in to YouTube"
           variant="primary"
         >
-          Log in to YouTube
+          Open YouTube sign in
         </Button>
       </Modal.Footer>
     </Modal>
