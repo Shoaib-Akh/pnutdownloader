@@ -128,6 +128,18 @@ function BodySection({
             setPastLinkUrl('')
             return
           }
+          if (result?.unsupported) {
+            if (window.api?.showMessageBox) {
+              window.api.showMessageBox({
+                type: 'warning',
+                title: 'Download Not Supported',
+                message: result.message || 'This URL is not supported for download.',
+              })
+            } else {
+              alert(result.message || 'This URL is not supported for download.')
+            }
+            return
+          }
           if (result?.playlist) {
             setPlaylistModalLoading(true)
             setPlaylistData(result.playlist)

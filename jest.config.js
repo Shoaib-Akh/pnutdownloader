@@ -3,7 +3,9 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
-  transform: {},
+  transform: {
+    '^.+\\.js$': '<rootDir>/tests/esmToCjsTransformer.cjs'
+  },
   moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
   collectCoverageFrom: [
     'src/shared/**/*.js',

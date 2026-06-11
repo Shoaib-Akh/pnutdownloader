@@ -121,6 +121,19 @@ describe('PlatformService', () => {
     })
   })
 
+  // ==================== Snapchat Tests ====================
+  describe('Snapchat Platform Detection', () => {
+    it('should detect Snapchat Spotlight URLs', () => {
+      expect(detectPlatform('https://www.snapchat.com/spotlight/abc123xyz')).toBe(PLATFORMS.SNAPCHAT)
+      expect(detectPlatform('https://snapchat.com/spotlight/Snap123')).toBe(PLATFORMS.SNAPCHAT)
+    })
+
+    it('should detect Snapchat story URLs', () => {
+      expect(detectPlatform('https://www.snapchat.com/stories/publisher/abc123')).toBe(PLATFORMS.SNAPCHAT)
+      expect(detectPlatform('https://story.snapchat.com/p/abc123')).toBe(PLATFORMS.SNAPCHAT)
+    })
+  })
+
   // ==================== TikTok Tests ====================
   describe('TikTok Platform Detection', () => {
     it('should detect TikTok video URLs', () => {
@@ -237,6 +250,19 @@ describe('PlatformService', () => {
     })
   })
 
+  // ==================== Spotify Tests ====================
+  describe('Spotify Platform Detection', () => {
+    it('should detect Spotify media URLs', () => {
+      expect(detectPlatform('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC')).toBe(PLATFORMS.SPOTIFY)
+      expect(detectPlatform('https://open.spotify.com/episode/5V9n8WGY1jR9b1zA3abcde')).toBe(PLATFORMS.SPOTIFY)
+      expect(detectPlatform('https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M')).toBe(PLATFORMS.SPOTIFY)
+    })
+
+    it('should detect Spotify short links', () => {
+      expect(detectPlatform('https://spotify.link/abc123xyz')).toBe(PLATFORMS.SPOTIFY)
+    })
+  })
+
   // ==================== Vimeo Tests ====================
   describe('Vimeo Platform Detection', () => {
     it('should detect Vimeo URLs', () => {
@@ -311,6 +337,7 @@ describe('PlatformService', () => {
       expect(getPlatformName(PLATFORMS.YOUTUBE_KIDS)).toBe('YouTube Kids')
       expect(getPlatformName(PLATFORMS.FACEBOOK)).toBe('Facebook')
       expect(getPlatformName(PLATFORMS.INSTAGRAM)).toBe('Instagram')
+      expect(getPlatformName(PLATFORMS.SNAPCHAT)).toBe('Snapchat')
       expect(getPlatformName(PLATFORMS.TIKTOK)).toBe('TikTok')
       expect(getPlatformName(PLATFORMS.TWITTER)).toBe('Twitter')
       expect(getPlatformName(PLATFORMS.TWITCH)).toBe('Twitch')
@@ -320,6 +347,7 @@ describe('PlatformService', () => {
       expect(getPlatformName(PLATFORMS.PINTEREST)).toBe('Pinterest')
       expect(getPlatformName(PLATFORMS.LINKEDIN)).toBe('LinkedIn')
       expect(getPlatformName(PLATFORMS.SOUNDCLOUD)).toBe('SoundCloud')
+      expect(getPlatformName(PLATFORMS.SPOTIFY)).toBe('Spotify')
       expect(getPlatformName(PLATFORMS.VIMEO)).toBe('Vimeo')
       expect(getPlatformName(PLATFORMS.RUMBLE)).toBe('Rumble')
       expect(getPlatformName(PLATFORMS.BITCHUTE)).toBe('BitChute')
@@ -340,8 +368,10 @@ describe('PlatformService', () => {
       expect(getPlatformUrl(PLATFORMS.YOUTUBE_KIDS)).toBe('https://www.youtubekids.com')
       expect(getPlatformUrl(PLATFORMS.FACEBOOK)).toBe('https://www.facebook.com')
       expect(getPlatformUrl(PLATFORMS.INSTAGRAM)).toBe('https://www.instagram.com')
+      expect(getPlatformUrl(PLATFORMS.SNAPCHAT)).toBe('https://www.snapchat.com/spotlight')
       expect(getPlatformUrl(PLATFORMS.TIKTOK)).toBe('https://www.tiktok.com')
       expect(getPlatformUrl(PLATFORMS.TWITTER)).toBe('https://twitter.com')
+      expect(getPlatformUrl(PLATFORMS.SPOTIFY)).toBe('https://open.spotify.com')
     })
 
     it('should return null for unknown platform', () => {
@@ -426,6 +456,12 @@ describe('PlatformService', () => {
       expect(isDownloadableVideoUrl('https://instagr.am/p/abc123')).toBe(true)
     })
 
+    it('should return true for Snapchat public media URLs', () => {
+      expect(isDownloadableVideoUrl('https://www.snapchat.com/spotlight/abc123xyz')).toBe(true)
+      expect(isDownloadableVideoUrl('https://www.snapchat.com/stories/publisher/abc123')).toBe(true)
+      expect(isDownloadableVideoUrl('https://story.snapchat.com/p/abc123')).toBe(true)
+    })
+
     it('should return true for TikTok URLs', () => {
       expect(isDownloadableVideoUrl('https://www.tiktok.com/@user/video/123')).toBe(true)
       expect(isDownloadableVideoUrl('https://vm.tiktok.com/ZMabc123')).toBe(true)
@@ -457,9 +493,20 @@ describe('PlatformService', () => {
       expect(isDownloadableVideoUrl('https://www.linkedin.com/posts/user_123456')).toBe(true)
     })
 
+    it('should return true for Spotify media URLs', () => {
+      expect(isDownloadableVideoUrl('https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC')).toBe(true)
+      expect(isDownloadableVideoUrl('https://open.spotify.com/episode/5V9n8WGY1jR9b1zA3abcde')).toBe(true)
+      expect(isDownloadableVideoUrl('https://open.spotify.com/show/1abc234def567ghi890jkl')).toBe(true)
+      expect(isDownloadableVideoUrl('https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M')).toBe(true)
+      expect(isDownloadableVideoUrl('https://open.spotify.com/album/1ATL5GLyefJaxhQzSPVrLX')).toBe(true)
+      expect(isDownloadableVideoUrl('https://spotify.link/abc123xyz')).toBe(true)
+    })
+
     it('should return false for non-video URLs', () => {
       expect(isDownloadableVideoUrl('https://example.com')).toBe(false)
       expect(isDownloadableVideoUrl('https://google.com')).toBe(false)
+      expect(isDownloadableVideoUrl('https://www.snapchat.com/add/someuser')).toBe(false)
+      expect(isDownloadableVideoUrl('https://open.spotify.com')).toBe(false)
       expect(isDownloadableVideoUrl('')).toBe(false)
     })
 

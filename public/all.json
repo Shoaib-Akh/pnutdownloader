@@ -14,11 +14,16 @@
     "instagram\\.com\\/p\\/[A-Za-z0-9_-]+",
     "instagram\\.com\\/reels\\/[A-Za-z0-9_-]+",
     "instagram\\.com\\/stories\\/[^/]+\\/\\d+",
+    "snapchat\\.com\\/spotlight\\/[A-Za-z0-9_-]+",
+    "snapchat\\.com\\/stories\\/[^/]+\\/[A-Za-z0-9_-]+",
+    "story\\.snapchat\\.com\\/(p|spotlight|story)\\/[A-Za-z0-9_-]+",
     "dailymotion\\.com\\/video\\/[A-Za-z0-9]+",
     "twitch\\.tv\\/videos\\/\\d+",
     "twitch\\.com\\/[^/]+\\/clip\\/[A-Za-z0-9_-]+",
     "rumble\\.com\\/v[A-Za-z0-9_-]+",
     "bitchute\\.com\\/video\\/[A-Za-z0-9_-]+",
-    "youtubekids\\.com\\/watch\\?v=[A-Za-z0-9_-]+"
+    "youtubekids\\.com\\/watch\\?v=[A-Za-z0-9_-]+",
+    "open\\.spotify\\.com\\/(track|episode|show|playlist|album)\\/[A-Za-z0-9]+",
+    "spotify\\.link\\/[A-Za-z0-9]+"
   ]
 }

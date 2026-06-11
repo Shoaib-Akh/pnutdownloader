@@ -13,6 +13,7 @@ import {
   FaPlayCircle,
   FaVideo, 
   FaMusic,
+  FaSpotify,
   FaRedo 
 } from 'react-icons/fa';
 
@@ -30,6 +31,7 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
     reddit: <FaReddit className="iconstyle" style={{ color: '#FF4500' }} />,
     whatsapp: <FaWhatsapp className="iconstyle" style={{ color: '#25D366' }} />,
     twitch: <FaTwitch className="iconstyle" style={{ color: '#9146FF' }} />,
+    spotify: <FaSpotify className="iconstyle" style={{ color: '#1DB954' }} />,
   };
 
   const platform = Object.keys(socialIcons).find((key) => url?.includes(key));

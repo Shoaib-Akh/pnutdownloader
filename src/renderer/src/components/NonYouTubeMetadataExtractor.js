@@ -1,6 +1,9 @@
 // Non-YouTube metadata extractor using file data and time-based information
 import { detectPlatform } from './platformUtils';
 
+const SPOTIFY_TRACK_UNSUPPORTED_MESSAGE = 'Spotify track downloads are not supported because Spotify tracks are DRM-protected.';
+const isSpotifyTrackUrl = (url) => /open\.spotify\.com\/track\/|spotify\.com\/track\//i.test(url || '');
+
 class NonYouTubeMetadataExtractor {
   constructor() {
     this.platformConfigs = {
@@ -11,6 +14,15 @@ class NonYouTubeMetadataExtractor {
           /instagram\.com\/reel\/([^\/]+)/
         ],
         metadataExtractor: this.extractInstagramMetadata.bind(this)
+      },
+      snapchat: {
+        name: 'Snapchat',
+        patterns: [
+          /snapchat\.com\/spotlight\/([^\/?#]+)/,
+          /snapchat\.com\/stories\/[^\/]+\/([^\/?#]+)/,
+          /story\.snapchat\.com\/(?:p|spotlight|story)\/([^\/?#]+)/
+        ],
+        metadataExtractor: this.extractSnapchatMetadata.bind(this)
       },
       facebook: {
         name: 'Facebook',
@@ -72,6 +84,14 @@ class NonYouTubeMetadataExtractor {
           /soundcloud\.com\/[^\/]+\/([^\/?#]+)/
         ],
         metadataExtractor: this.extractSoundCloudMetadata.bind(this)
+      },
+      spotify: {
+        name: 'Spotify',
+        patterns: [
+          /open\.spotify\.com\/(?:track|episode|show|playlist|album)\/([^\/?#]+)/,
+          /spotify\.link\/([^\/?#]+)/
+        ],
+        metadataExtractor: this.extractSpotifyMetadata.bind(this)
       },
       bilibili: {
         name: 'Bilibili',
@@ -135,6 +155,8 @@ class NonYouTubeMetadataExtractor {
         return null;
       }
 
+      const platform = this.detectPlatformFromUrl(url);
+
       // Extract thumbnail from yt-dlp response
       let thumbnail = '';
       if (Array.isArray(info.thumbnails) && info.thumbnails.length > 0) {
@@ -145,8 +167,6 @@ class NonYouTubeMetadataExtractor {
 
       // Format duration from seconds to ISO format
       const duration = this.formatDuration(info.duration);
-      
-      const platform = this.detectPlatformFromUrl(url);
 
       return {
         videoUrl: url,
@@ -155,6 +175,8 @@ class NonYouTubeMetadataExtractor {
         duration: duration || 'PT0S',
         platform: platform || 'Unknown',
         resourceId: info.id || this.extractResourceId(url)?.id || null,
+        unsupportedDownload: Boolean(info.unsupportedDownload),
+        unsupportedReason: info.unsupportedReason || null,
         metadata: {
           uploader: info.uploader || 'Unknown User',
           description: info.description || '',
@@ -246,6 +268,44 @@ class NonYouTubeMetadataExtractor {
       resourceId: videoId,
       metadata: {
         videoId,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async extractSnapchatMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'Snapchat Video',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('snapchat'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'Snapchat',
+          resourceId: this.extractResourceId(url)?.id || null,
+          metadata: {
+            uploader: info.uploader || 'Unknown Creator',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for Snapchat:', error);
+    }
+
+    const resourceId = this.extractResourceId(url)?.id || 'unknown';
+
+    return {
+      videoUrl: url,
+      title: `Snapchat Video - ${resourceId.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('snapchat'),
+      duration: 'PT0S',
+      platform: 'Snapchat',
+      resourceId,
+      metadata: {
+        resourceId,
         extractedAt: new Date().toISOString()
       }
     };
@@ -564,6 +624,48 @@ class NonYouTubeMetadataExtractor {
     };
   }
 
+  async extractSpotifyMetadata(url) {
+    try {
+      const info = await window.api?.fetchVideoInfo(url);
+      if (info) {
+        return {
+          videoUrl: url,
+          title: this.sanitizeTitle(info.title) || 'Spotify Audio',
+          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('spotify'),
+          duration: this.formatDuration(info.duration) || 'PT0S',
+          platform: 'Spotify',
+          resourceId: this.extractResourceId(url)?.id || null,
+          unsupportedDownload: Boolean(info.unsupportedDownload),
+          unsupportedReason: info.unsupportedReason || (isSpotifyTrackUrl(url) ? SPOTIFY_TRACK_UNSUPPORTED_MESSAGE : null),
+          metadata: {
+            uploader: info.uploader || info.artist || 'Unknown Artist',
+            description: info.description || '',
+            uploadDate: info.upload_date || null
+          }
+        };
+      }
+    } catch (error) {
+      console.warn('yt-dlp extraction failed for Spotify:', error);
+    }
+
+    const resourceId = this.extractResourceId(url)?.id || 'unknown';
+
+    return {
+      videoUrl: url,
+      title: `Spotify Audio - ${resourceId.substring(0, 8)}`,
+      thumbnail: this.generatePlaceholderThumbnail('spotify'),
+      duration: 'PT0S',
+      platform: 'Spotify',
+      resourceId,
+      unsupportedDownload: isSpotifyTrackUrl(url),
+      unsupportedReason: isSpotifyTrackUrl(url) ? SPOTIFY_TRACK_UNSUPPORTED_MESSAGE : null,
+      metadata: {
+        resourceId,
+        extractedAt: new Date().toISOString()
+      }
+    };
+  }
+
   generateGenericMetadata(url, platform = 'Unknown') {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace('www.', '');
@@ -587,10 +689,12 @@ class NonYouTubeMetadataExtractor {
     const svgTemplates = {
       instagram: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ig" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#E4405F"/><stop offset="100%" style="stop-color:#833AB4"/></linearGradient></defs><rect width="120" height="70" fill="url(#ig)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Instagram</text></svg>`,
       facebook: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fb" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1877F2"/><stop offset="100%" style="stop-color:#0C63D4"/></linearGradient></defs><rect width="120" height="70" fill="url(#fb)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Facebook</text></svg>`,
+      snapchat: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><rect width="120" height="70" fill="#FFFC00"/><text x="60" y="40" text-anchor="middle" fill="#111111" font-family="Arial" font-size="10" font-weight="bold">Snapchat</text></svg>`,
       twitter: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tw" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1DA1F2"/><stop offset="100%" style="stop-color:#1A91DA"/></linearGradient></defs><rect width="120" height="70" fill="url(#tw)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Twitter/X</text></svg>`,
       tiktok: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tt" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#000000"/><stop offset="50%" style="stop-color:#FF0050"/><stop offset="100%" style="stop-color:#00F2EA"/></linearGradient></defs><rect width="120" height="70" fill="url(#tt)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">TikTok</text></svg>`,
       vimeo: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vm" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ADFF"/><stop offset="100%" style="stop-color:#0066CC"/></linearGradient></defs><rect width="120" height="70" fill="url(#vm)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Vimeo</text></svg>`,
       dailymotion: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dm" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00A3E0"/><stop offset="100%" style="stop-color:#006699"/></linearGradient></defs><rect width="120" height="70" fill="url(#dm)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Dailymotion</text></svg>`,
+      spotify: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sp" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1DB954"/><stop offset="100%" style="stop-color:#0B7D38"/></linearGradient></defs><rect width="120" height="70" fill="url(#sp)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Spotify</text></svg>`,
       generic: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gen" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#667eea"/><stop offset="100%" style="stop-color:#764ba2"/></linearGradient></defs><rect width="120" height="70" fill="url(#gen)"/><text x="60" y="35" text-anchor="middle" fill="white" font-family="Arial" font-size="8" font-weight="bold">Video</text><text x="60" y="45" text-anchor="middle" fill="white" font-family="Arial" font-size="6">Loading...</text></svg>`
     };
 

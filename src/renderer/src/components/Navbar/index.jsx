@@ -199,7 +199,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
       if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
         setUrlInput(clipboardText);
         if (!isValidPlatformUrl(clipboardText)) {
-          alert('The URL is not from a supported platform (YouTube, Facebook, Instagram, TikTok, etc.)');
+          alert('The URL is not from a supported platform (YouTube, Facebook, Instagram, TikTok, Snapchat, Spotify, etc.)');
           return;
         }
 

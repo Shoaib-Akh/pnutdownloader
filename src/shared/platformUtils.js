@@ -11,6 +11,7 @@ export const PLATFORMS = {
   YOUTUBE_KIDS: 'youtube_kids',
   FACEBOOK: 'facebook',
   INSTAGRAM: 'instagram',
+  SNAPCHAT: 'snapchat',
   TIKTOK: 'tiktok',
   TWITTER: 'twitter',
   TWITCH: 'twitch',
@@ -20,6 +21,7 @@ export const PLATFORMS = {
   PINTEREST: 'pinterest',
   LINKEDIN: 'linkedin',
   SOUNDCLOUD: 'soundcloud',
+  SPOTIFY: 'spotify',
   VIMEO: 'vimeo',
   RUMBLE: 'rumble',
   BITCHUTE: 'bitchute',
@@ -73,6 +75,11 @@ export const detectPlatform = (url) => {
     return PLATFORMS.INSTAGRAM
   }
 
+  // Snapchat
+  if (urlLower.includes('snapchat.com')) {
+    return PLATFORMS.SNAPCHAT
+  }
+
   // TikTok
   if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
     return PLATFORMS.TIKTOK
@@ -101,6 +108,11 @@ export const detectPlatform = (url) => {
   // SoundCloud
   if (urlLower.includes('soundcloud.com')) {
     return PLATFORMS.SOUNDCLOUD
+  }
+
+  // Spotify
+  if (urlLower.includes('open.spotify.com') || urlLower.includes('spotify.link') || urlLower.includes('spotify.com')) {
+    return PLATFORMS.SPOTIFY
   }
 
   // Vimeo
@@ -154,6 +166,7 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.YOUTUBE_KIDS]: 'YouTube Kids',
     [PLATFORMS.FACEBOOK]: 'Facebook',
     [PLATFORMS.INSTAGRAM]: 'Instagram',
+    [PLATFORMS.SNAPCHAT]: 'Snapchat',
     [PLATFORMS.TIKTOK]: 'TikTok',
     [PLATFORMS.TWITTER]: 'Twitter',
     [PLATFORMS.TWITCH]: 'Twitch',
@@ -163,6 +176,7 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.PINTEREST]: 'Pinterest',
     [PLATFORMS.LINKEDIN]: 'LinkedIn',
     [PLATFORMS.SOUNDCLOUD]: 'SoundCloud',
+    [PLATFORMS.SPOTIFY]: 'Spotify',
     [PLATFORMS.VIMEO]: 'Vimeo',
     [PLATFORMS.RUMBLE]: 'Rumble',
     [PLATFORMS.BITCHUTE]: 'BitChute',
@@ -183,6 +197,7 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.YOUTUBE_KIDS]: 'https://www.youtubekids.com',
     [PLATFORMS.FACEBOOK]: 'https://www.facebook.com',
     [PLATFORMS.INSTAGRAM]: 'https://www.instagram.com',
+    [PLATFORMS.SNAPCHAT]: 'https://www.snapchat.com/spotlight',
     [PLATFORMS.TIKTOK]: 'https://www.tiktok.com',
     [PLATFORMS.TWITTER]: 'https://twitter.com',
     [PLATFORMS.TWITCH]: 'https://www.twitch.tv',
@@ -192,6 +207,7 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.PINTEREST]: 'https://www.pinterest.com',
     [PLATFORMS.LINKEDIN]: 'https://www.linkedin.com',
     [PLATFORMS.SOUNDCLOUD]: 'https://soundcloud.com',
+    [PLATFORMS.SPOTIFY]: 'https://open.spotify.com',
     [PLATFORMS.VIMEO]: 'https://vimeo.com',
     [PLATFORMS.RUMBLE]: 'https://rumble.com',
     [PLATFORMS.BITCHUTE]: 'https://www.bitchute.com'
@@ -237,6 +253,13 @@ export const isDownloadableVideoUrl = (url) => {
       urlLower.includes('instagr.am/')) {
     return true
   }
+
+  // Snapchat public media patterns
+  if (urlLower.includes('snapchat.com/spotlight/') ||
+      urlLower.includes('snapchat.com/stories/') ||
+      urlLower.includes('story.snapchat.com/')) {
+    return true
+  }
   
   // TikTok patterns
   if ((urlLower.includes('tiktok.com/@') && urlLower.includes('/video/')) ||
@@ -271,6 +294,16 @@ export const isDownloadableVideoUrl = (url) => {
       urlLower.includes('reddit.com/') ||
       urlLower.includes('pinterest.com/') ||
       urlLower.includes('linkedin.com/')) {
+    return true
+  }
+
+  // Spotify audio and playlist patterns
+  if (urlLower.includes('open.spotify.com/track/') ||
+      urlLower.includes('open.spotify.com/episode/') ||
+      urlLower.includes('open.spotify.com/show/') ||
+      urlLower.includes('open.spotify.com/playlist/') ||
+      urlLower.includes('open.spotify.com/album/') ||
+      urlLower.includes('spotify.link/')) {
     return true
   }
   

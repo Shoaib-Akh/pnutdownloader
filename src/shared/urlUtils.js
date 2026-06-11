@@ -1,4 +1,6 @@
 export const extractVideoId = (url) => {
+  if (!url || typeof url !== 'string') return null
+
   const fullUrlMatch = url.match(/[?&]v=([^&]+)/)
   if (fullUrlMatch) return fullUrlMatch[1]
 

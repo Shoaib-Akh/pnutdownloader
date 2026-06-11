@@ -12,6 +12,8 @@ import {
   FaReddit,
   FaPinterest,
   FaLinkedin,
+  FaSnapchat,
+  FaSpotify,
   FaGlobe
 } from 'react-icons/fa';
 import { SiDailymotion, SiBilibili, SiSoundcloud } from 'react-icons/si';
@@ -46,6 +48,8 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
         return <FaFacebook style={{ ...iconStyle, color: '#1877F2' }} />;
       case PLATFORMS.INSTAGRAM:
         return <FaInstagram style={{ ...iconStyle, color: '#E4405F' }} />;
+      case PLATFORMS.SNAPCHAT:
+        return <FaSnapchat style={{ ...iconStyle, color: '#FFFC00' }} />;
       case PLATFORMS.TIKTOK:
         return <FaTiktok style={{ ...iconStyle, color: '#000000' }} />;
       case PLATFORMS.TWITTER:
@@ -64,6 +68,8 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
         return <FaLinkedin style={{ ...iconStyle, color: '#0077B5' }} />;
       case PLATFORMS.SOUNDCLOUD:
         return <SiSoundcloud style={{ ...iconStyle, color: '#FF5500' }} />;
+      case PLATFORMS.SPOTIFY:
+        return <FaSpotify style={{ ...iconStyle, color: '#1DB954' }} />;
       default:
         return <FaGlobe style={{ ...iconStyle, color: '#666' }} />;
     }

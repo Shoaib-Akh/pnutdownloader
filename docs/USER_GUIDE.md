@@ -158,12 +158,14 @@ PNUTDownloader supports **1700+ websites** via yt-dlp. The following platforms h
 | YouTube Kids | `youtubekids.com` | |
 | Facebook | `facebook.com/videos/`, `/reel/`, `fb.watch` | |
 | Instagram | `instagram.com/p/`, `/reels/`, `/stories/` | |
+| Snapchat | `snapchat.com/spotlight/`, `snapchat.com/stories/`, `story.snapchat.com` | Public Spotlight/story media |
 | TikTok | `tiktok.com/@.../video/`, `vm.tiktok.com` | |
 | Twitter / X | `twitter.com/.../status/`, `x.com` | |
 | Twitch | `twitch.tv/videos/`, `/clip/` | |
 | Dailymotion | `dailymotion.com/video/`, `dai.ly` | |
 | Vimeo | `vimeo.com/` | |
 | SoundCloud | `soundcloud.com/` | Audio |
+| Spotify | `open.spotify.com/track/`, `/episode/`, `/show/`, `/playlist/`, `/album/`, `spotify.link` | Audio |
 | Bilibili | `bilibili.com/`, `b23.tv` | |
 | Reddit | `reddit.com/` | |
 | Pinterest | `pinterest.com/`, `pin.it` | |

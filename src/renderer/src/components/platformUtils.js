@@ -8,6 +8,7 @@ export const PLATFORMS = {
   YOUTUBE_KIDS: 'youtube_kids',
   FACEBOOK: 'facebook',
   INSTAGRAM: 'instagram',
+  SNAPCHAT: 'snapchat',
   TIKTOK: 'tiktok',
   TWITTER: 'twitter',
   TWITCH: 'twitch',
@@ -17,6 +18,10 @@ export const PLATFORMS = {
   PINTEREST: 'pinterest',
   LINKEDIN: 'linkedin',
   SOUNDCLOUD: 'soundcloud',
+  SPOTIFY: 'spotify',
+  VIMEO: 'vimeo',
+  RUMBLE: 'rumble',
+  BITCHUTE: 'bitchute',
   UNKNOWN: 'unknown'
 }
 
@@ -47,6 +52,11 @@ export const detectPlatform = (url) => {
     return PLATFORMS.INSTAGRAM
   }
 
+  // Snapchat
+  if (urlLower.includes('snapchat.com')) {
+    return PLATFORMS.SNAPCHAT
+  }
+
   // TikTok
   if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
     return PLATFORMS.TIKTOK
@@ -68,7 +78,7 @@ export const detectPlatform = (url) => {
   }
 
   // Bilibili
-  if (urlLower.includes('bilibili.com')) {
+  if (urlLower.includes('bilibili.com') || urlLower.includes('b23.tv')) {
     return PLATFORMS.BILIBILI
   }
 
@@ -90,6 +100,26 @@ export const detectPlatform = (url) => {
   // SoundCloud
   if (urlLower.includes('soundcloud.com')) {
     return PLATFORMS.SOUNDCLOUD
+  }
+
+  // Spotify
+  if (urlLower.includes('open.spotify.com') || urlLower.includes('spotify.link') || urlLower.includes('spotify.com')) {
+    return PLATFORMS.SPOTIFY
+  }
+
+  // Vimeo
+  if (urlLower.includes('vimeo.com')) {
+    return PLATFORMS.VIMEO
+  }
+
+  // Rumble
+  if (urlLower.includes('rumble.com')) {
+    return PLATFORMS.RUMBLE
+  }
+
+  // BitChute
+  if (urlLower.includes('bitchute.com')) {
+    return PLATFORMS.BITCHUTE
   }
 
   return PLATFORMS.UNKNOWN
@@ -128,6 +158,7 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.YOUTUBE_KIDS]: 'YouTube Kids',
     [PLATFORMS.FACEBOOK]: 'Facebook',
     [PLATFORMS.INSTAGRAM]: 'Instagram',
+    [PLATFORMS.SNAPCHAT]: 'Snapchat',
     [PLATFORMS.TIKTOK]: 'TikTok',
     [PLATFORMS.TWITTER]: 'Twitter',
     [PLATFORMS.TWITCH]: 'Twitch',
@@ -137,6 +168,10 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.PINTEREST]: 'Pinterest',
     [PLATFORMS.LINKEDIN]: 'LinkedIn',
     [PLATFORMS.SOUNDCLOUD]: 'SoundCloud',
+    [PLATFORMS.SPOTIFY]: 'Spotify',
+    [PLATFORMS.VIMEO]: 'Vimeo',
+    [PLATFORMS.RUMBLE]: 'Rumble',
+    [PLATFORMS.BITCHUTE]: 'BitChute',
     [PLATFORMS.UNKNOWN]: 'Unknown'
   }
   return names[platform] || 'Unknown'
@@ -154,6 +189,7 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.YOUTUBE_KIDS]: 'https://www.youtubekids.com',
     [PLATFORMS.FACEBOOK]: 'https://www.facebook.com',
     [PLATFORMS.INSTAGRAM]: 'https://www.instagram.com',
+    [PLATFORMS.SNAPCHAT]: 'https://www.snapchat.com/spotlight',
     [PLATFORMS.TIKTOK]: 'https://www.tiktok.com',
     [PLATFORMS.TWITTER]: 'https://twitter.com',
     [PLATFORMS.TWITCH]: 'https://www.twitch.tv',
@@ -162,8 +198,11 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.REDDIT]: 'https://www.reddit.com',
     [PLATFORMS.PINTEREST]: 'https://www.pinterest.com',
     [PLATFORMS.LINKEDIN]: 'https://www.linkedin.com',
-    [PLATFORMS.SOUNDCLOUD]: 'https://soundcloud.com'
+    [PLATFORMS.SOUNDCLOUD]: 'https://soundcloud.com',
+    [PLATFORMS.SPOTIFY]: 'https://open.spotify.com',
+    [PLATFORMS.VIMEO]: 'https://vimeo.com',
+    [PLATFORMS.RUMBLE]: 'https://rumble.com',
+    [PLATFORMS.BITCHUTE]: 'https://www.bitchute.com'
   }
   return urls[platform] || null
 }
-

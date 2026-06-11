@@ -206,7 +206,7 @@ Downloads are **sequential** — only one active download at a time to prevent b
 
 ### `platformUtils.js`
 
-- `PLATFORMS` — constants for all 17 supported platforms
+- `PLATFORMS` — constants for all 19 supported platforms
 - `detectPlatform(url)` — returns the platform string from a URL
 - `isDownloadableVideoUrl(url)` — strict check (specific path patterns per platform)
 - `isValidPlatformUrl(url)` — any recognized platform

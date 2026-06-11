@@ -30,6 +30,69 @@ try {
 const https = require('https');
  const treeKill = require('tree-kill');
 
+const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
+const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
+const SPOTIFY_TRACK_UNSUPPORTED_MESSAGE = 'Spotify track downloads are not supported because Spotify tracks are DRM-protected.';
+const SPOTIFY_TRACK_UNSUPPORTED_DETAILS = 'yt-dlp reports Spotify tracks as DRM-protected and cannot download full songs. Use a direct media URL supported by yt-dlp.';
+
+const isSpotifyTrackUrl = (url) => /open\.spotify\.com\/track\/|spotify\.com\/track\//i.test(url || '');
+
+const getLogSafeYtdlpArgs = (args) => {
+  const redactValueAfter = new Set(['--cookies']);
+  return args.map((arg, index) => {
+    const previousArg = args[index - 1];
+    if (redactValueAfter.has(previousArg)) {
+      return '[redacted]';
+    }
+    return arg;
+  });
+};
+
+const logYtdlpCommand = (label, executable, args) => {
+  console.log(`[${label}] yt-dlp executable: ${executable}`);
+  console.log(`[${label}] yt-dlp args: ${getLogSafeYtdlpArgs(args).join(' ')}`);
+};
+
+const killProcessTree = (proc, label, signal = 'SIGKILL') => {
+  if (!proc?.pid) return;
+
+  treeKill(proc.pid, signal, (err) => {
+    if (err) {
+      console.warn(`[${label}] Failed to kill process tree ${proc.pid}: ${err.message}`);
+    } else {
+      console.warn(`[${label}] Killed process tree ${proc.pid} with ${signal}`);
+    }
+  });
+};
+
+const createYtdlpTimeout = ({ proc, label, timeoutMs, onTimeout }) => {
+  let timedOut = false;
+  let timeout = null;
+
+  const arm = () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      timedOut = true;
+      const message = `${label} timed out after ${Math.round(timeoutMs / 1000)}s`;
+      console.error(`[${label}] ${message}`);
+      if (typeof onTimeout === 'function') {
+        onTimeout(message);
+      }
+      killProcessTree(proc, label);
+    }, timeoutMs);
+  };
+
+  arm();
+
+  return {
+    clear: () => clearTimeout(timeout),
+    reset: arm,
+    get timedOut() {
+      return timedOut;
+    }
+  };
+};
+
 // Platform detection utilities
 const getPlatformExecutableName = (baseName) => {
   if (process.platform === 'win32') {
@@ -1561,7 +1624,22 @@ ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_COOKIES, async () => {
 });
 
 ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
-  console.log("url",url);
+  const requestId = `fetch-video-info:${Date.now()}`;
+  console.log(`[${requestId}] url:`, url);
+
+  if (isSpotifyTrackUrl(url)) {
+    const resourceId = (url.match(/\/track\/([^/?#]+)/i) || [])[1] || 'unknown';
+    console.warn(`[${requestId}] Spotify track URLs are metadata-only in this app; full track download is not supported.`);
+    return {
+      title: `Spotify Track - ${resourceId.substring(0, 8)}`,
+      thumbnail: '',
+      filename: `spotify_track_${resourceId}`,
+      duration: 0,
+      thumbnails: [],
+      unsupportedDownload: true,
+      unsupportedReason: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE
+    };
+  }
   
   // Update cookies before fetching video info (important for Dailymotion and other platforms)
   try {
@@ -1580,7 +1658,7 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
   };
 
   const currentYtdlpPath = getYtdlpPath();
-  console.log('Using yt-dlp path for video info:', currentYtdlpPath);
+  console.log(`[${requestId}] Using yt-dlp path for video info:`, currentYtdlpPath);
   
   return new Promise((resolve, reject) => {
     const args = [
@@ -1592,20 +1670,40 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
       url
     ];
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+    logYtdlpCommand(requestId, currentYtdlpPath, args);
+    const startedAt = Date.now();
     const proc = spawn(currentYtdlpPath, args, spawnOptions);
 
     let stdout = '';
     let stderr = '';
+    let settled = false;
+    const timeout = createYtdlpTimeout({
+      proc,
+      label: requestId,
+      timeoutMs: YTDLP_INFO_TIMEOUT_MS,
+      onTimeout: (message) => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(message));
+      }
+    });
 
     proc.stdout.on('data', (data) => {
       stdout += data.toString();
+      console.log(`[${requestId}] yt-dlp stdout chunk: ${data.length} bytes`);
     });
 
     proc.stderr.on('data', (data) => {
-      stderr += data.toString();
+      const text = data.toString();
+      stderr += text;
+      console.error(`[${requestId}] yt-dlp stderr:`, text.trim());
     });
 
     proc.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      timeout.clear();
+      console.log(`[${requestId}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms (stdout=${stdout.length} chars, stderr=${stderr.length} chars)`);
       if (code !== 0) {
         // Check if this is a Twitch authentication error
         const isTwitchError = stderr.includes('[twitch]') && (
@@ -1687,6 +1785,10 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
     });
 
     proc.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      timeout.clear();
+      console.error(`[${requestId}] Failed to spawn yt-dlp:`, err.message);
       reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
     });
   });
@@ -1799,10 +1901,32 @@ const startDownload = async (event, options) => {
       }
 
       const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
-console.log("options",options);
+      const downloadLogId = downloadId || `download:${Date.now()}`;
+      console.log(`[${downloadLogId}] Download request:`, {
+        url,
+        isAudioOnly,
+        selectedFormat,
+        selectedQuality,
+        saveTo,
+        selectBitrate,
+        titleFromOptions,
+        playlistTitleFromOptions,
+        forceSingle
+      });
 
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
+      }
+
+      if (isSpotifyTrackUrl(url)) {
+        console.warn(`[${downloadLogId}] ${SPOTIFY_TRACK_UNSUPPORTED_MESSAGE}`);
+        event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+          downloadId,
+          error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
+          details: SPOTIFY_TRACK_UNSUPPORTED_DETAILS,
+          unsupportedPlatform: 'spotify-track'
+        });
+        return reject(new Error(SPOTIFY_TRACK_UNSUPPORTED_MESSAGE));
       }
 
       if (activeDownloads[downloadId]) {
@@ -1899,24 +2023,54 @@ console.log("options",options);
 
           const currentYtdlpPath = getYtdlpPath();
           const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+          const titleLabel = `${downloadLogId}:title`;
+          logYtdlpCommand(titleLabel, currentYtdlpPath, titleArgs);
+          const startedAt = Date.now();
           const titleProcess = spawn(currentYtdlpPath, titleArgs, spawnOptions);
           let titleData = '';
+          let titleStderr = '';
+          let settled = false;
+          const timeout = createYtdlpTimeout({
+            proc: titleProcess,
+            label: titleLabel,
+            timeoutMs: YTDLP_INFO_TIMEOUT_MS,
+            onTimeout: (message) => {
+              if (settled) return;
+              settled = true;
+              titleReject(new Error(message));
+            }
+          });
 
           titleProcess.stdout.on('data', (data) => {
             titleData += data.toString().trim();
+            console.log(`[${titleLabel}] yt-dlp stdout chunk: ${data.length} bytes`);
           });
 
           titleProcess.stderr.on('data', (data) => {
-            titleReject(new Error(`Failed to fetch title: ${data.toString().trim()}`));
+            const text = data.toString();
+            titleStderr += text;
+            console.error(`[${titleLabel}] yt-dlp stderr:`, text.trim());
           });
 
           titleProcess.on('close', (code) => {
+            if (settled) return;
+            settled = true;
+            timeout.clear();
+            console.log(`[${titleLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms (stdout=${titleData.length} chars, stderr=${titleStderr.length} chars)`);
             if (code === 0 && titleData) {
               const titles = titleData.split('\n').filter(Boolean);
               titleResolve(titles[0] || 'Unknown');
             } else {
-              titleReject(new Error('Failed to fetch title'));
+              titleReject(new Error(titleStderr.trim() || 'Failed to fetch title'));
             }
+          });
+
+          titleProcess.on('error', (err) => {
+            if (settled) return;
+            settled = true;
+            timeout.clear();
+            console.error(`[${titleLabel}] Failed to spawn yt-dlp:`, err.message);
+            titleReject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
           });
         });
       };
@@ -1951,23 +2105,43 @@ console.log("options",options);
             url
           ];
 
-          console.log(`[${downloadId}] Running yt-dlp info extraction with args:`, args.join(' '));
+          const infoLabel = `${downloadLogId}:info`;
+          logYtdlpCommand(infoLabel, currentYtdlpPath, args);
 
           const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+          const startedAt = Date.now();
           const proc = spawn(currentYtdlpPath, args, spawnOptions);
 
           let stdout = '';
           let stderr = '';
+          let settled = false;
+          const timeout = createYtdlpTimeout({
+            proc,
+            label: infoLabel,
+            timeoutMs: YTDLP_INFO_TIMEOUT_MS,
+            onTimeout: (message) => {
+              if (settled) return;
+              settled = true;
+              reject(new Error(message));
+            }
+          });
 
           proc.stdout.on('data', (data) => {
             stdout += data.toString();
+            console.log(`[${infoLabel}] yt-dlp stdout chunk: ${data.length} bytes`);
           });
 
           proc.stderr.on('data', (data) => {
-            stderr += data.toString();
+            const text = data.toString();
+            stderr += text;
+            console.error(`[${infoLabel}] yt-dlp stderr:`, text.trim());
           });
 
           proc.on('close', (code) => {
+            if (settled) return;
+            settled = true;
+            timeout.clear();
+            console.log(`[${infoLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms (stdout=${stdout.length} chars, stderr=${stderr.length} chars)`);
             if (code !== 0) {
               console.error(`[${downloadId}] yt-dlp info extraction failed with code ${code}`);
               console.error(`[${downloadId}] stderr:`, stderr);
@@ -1992,6 +2166,9 @@ console.log("options",options);
           });
 
           proc.on('error', (err) => {
+            if (settled) return;
+            settled = true;
+            timeout.clear();
             console.error(`[${downloadId}] Failed to spawn yt-dlp:`, err.message);
             reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
           });
@@ -2136,6 +2313,9 @@ console.log("options",options);
         if (urlLower.includes('reddit.com') || urlLower.includes('redd.it')) {
           return 'reddit'
         }
+        if (urlLower.includes('open.spotify.com') || urlLower.includes('spotify.link') || urlLower.includes('spotify.com')) {
+          return 'spotify'
+        }
         
         return 'unknown'
       };
@@ -2274,8 +2454,6 @@ console.log("options",options);
         args.push(url);
         args.push(shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist');
 
-        console.log('Downloading with args:', args);
-
   const getYtdlpPath = () => {
     if (app.isPackaged) {
       return join(process.resourcesPath, getYtdlpExecutableName());
@@ -2285,16 +2463,32 @@ console.log("options",options);
   };
 
         const currentYtdlpPath = getYtdlpPath();
-        console.log('Using yt-dlp path:', currentYtdlpPath);
+        const downloadLabel = `${downloadLogId}:download`;
+        logYtdlpCommand(downloadLabel, currentYtdlpPath, args);
 
         const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
+        const startedAt = Date.now();
         downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
         activeDownloads[downloadId] = true;
 
         let resolvedDownloadPath = downloadPath;
+        const stallTimeout = createYtdlpTimeout({
+          proc: downloadProcess,
+          label: downloadLabel,
+          timeoutMs: YTDLP_DOWNLOAD_STALL_TIMEOUT_MS,
+          onTimeout: (message) => {
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+              downloadId,
+              error: 'Download stalled with no output from yt-dlp.',
+              details: message
+            });
+          }
+        });
 
         downloadProcess.stdout.on('data', (data) => {
+          stallTimeout.reset();
           const line = data.toString().trim();
+          console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
           
           // Capture actual filename from yt-dlp output if we used a template
           // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
@@ -2321,8 +2515,9 @@ console.log("options",options);
         });
 
         downloadProcess.stderr.on('data', (data) => {
+          stallTimeout.reset();
           const errorMessage = data.toString().trim();
-          console.error(`[${downloadId}] yt-dlp stderr:`, errorMessage);
+          console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
           
           // Check if this is a Twitch authentication error
           const isTwitchError = errorMessage.includes('[twitch]') && (
@@ -2337,6 +2532,10 @@ console.log("options",options);
             errorMessage.includes('Forbidden') ||
             errorMessage.includes('No video formats found') ||
             errorMessage.includes('Failed to download m3u8')
+          );
+
+          const isSpotifyError = errorMessage.includes('[spotify]') || (
+            url.toLowerCase().includes('spotify') && errorMessage.toLowerCase().includes('spotify')
           );
           
           // Check for YouTube-specific errors
@@ -2361,6 +2560,13 @@ console.log("options",options);
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
               isAuthError: true,
               details: errorMessage
+            });
+          } else if (isSpotifyError) {
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+              downloadId,
+              error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
+              details: SPOTIFY_TRACK_UNSUPPORTED_DETAILS,
+              isAuthError: false
             });
           } else if (isDailymotionError) {
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
@@ -2410,6 +2616,7 @@ console.log("options",options);
         });
 
         downloadProcess.on('error', async (err) => {
+          stallTimeout.clear();
           delete activeDownloads[downloadId];
           downloadProcess = null;
           
@@ -2422,14 +2629,16 @@ console.log("options",options);
         });
 
         downloadProcess.on('close', async (code) => {
+          stallTimeout.clear();
           delete activeDownloads[downloadId];
           downloadProcess = null;
+          console.log(`[${downloadLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms`);
 
           if (code === 0) {
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
             resolve();
           } else {
-            console.error(`[${downloadId}] Download process exited with code ${code}`);
+            console.error(`[${downloadLogId}] Download process exited with code ${code}`);
             
             // Clean up partial file on download failure
             if (resolvedDownloadPath) {
@@ -2439,26 +2648,35 @@ console.log("options",options);
             // Provide more specific error messages based on common exit codes
             let errorMessage = `Download failed with code ${code}`;
             let errorDetails = '';
+
+            if (stallTimeout.timedOut) {
+              errorMessage = 'Download stalled with no output from yt-dlp';
+              errorDetails = `yt-dlp produced no stdout/stderr for ${Math.round(YTDLP_DOWNLOAD_STALL_TIMEOUT_MS / 1000)} seconds.`;
+            } else if (isSpotifyTrackUrl(url)) {
+              errorMessage = SPOTIFY_TRACK_UNSUPPORTED_MESSAGE;
+              errorDetails = SPOTIFY_TRACK_UNSUPPORTED_DETAILS;
+            } else {
             
-            switch (code) {
-              case 1:
-                errorMessage = 'Download failed - General error';
-                errorDetails = 'This could be due to network issues, invalid URL, or video not available.';
-                break;
-              case 2:
-                errorMessage = 'Download failed - No video formats found';
-                errorDetails = 'The video may not be available in the requested format or quality.';
-                break;
-              case 3:
-                errorMessage = 'Download failed - Network error';
-                errorDetails = 'Check your internet connection and try again.';
-                break;
-              case 4:
-                errorMessage = 'Download failed - Authentication required';
-                errorDetails = 'This video may require login or cookies to access.';
-                break;
-              default:
-                errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+              switch (code) {
+                case 1:
+                  errorMessage = 'Download failed - General error';
+                  errorDetails = 'This could be due to network issues, invalid URL, or video not available.';
+                  break;
+                case 2:
+                  errorMessage = 'Download failed - No video formats found';
+                  errorDetails = 'The video may not be available in the requested format or quality.';
+                  break;
+                case 3:
+                  errorMessage = 'Download failed - Network error';
+                  errorDetails = 'Check your internet connection and try again.';
+                  break;
+                case 4:
+                  errorMessage = 'Download failed - Authentication required';
+                  errorDetails = 'This video may require login or cookies to access.';
+                  break;
+                default:
+                  errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+              }
             }
             
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
