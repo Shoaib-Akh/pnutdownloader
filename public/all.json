@@ -22,8 +22,6 @@
     "twitch\\.com\\/[^/]+\\/clip\\/[A-Za-z0-9_-]+",
     "rumble\\.com\\/v[A-Za-z0-9_-]+",
     "bitchute\\.com\\/video\\/[A-Za-z0-9_-]+",
-    "youtubekids\\.com\\/watch\\?v=[A-Za-z0-9_-]+",
-    "open\\.spotify\\.com\\/(track|episode|show|playlist|album)\\/[A-Za-z0-9]+",
-    "spotify\\.link\\/[A-Za-z0-9]+"
+    "youtubekids\\.com\\/watch\\?v=[A-Za-z0-9_-]+"
   ]
 }

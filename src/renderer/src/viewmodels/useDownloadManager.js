@@ -8,24 +8,6 @@ import { saveDownload, saveDownloadError } from '../utils/firestoreService'
 
 const DOWNLOAD_STORAGE_KEY = 'downloadList'
 const DOWNLOAD_COUNT_KEY = 'downloadCount'
-const SPOTIFY_TRACK_UNSUPPORTED_MESSAGE = 'Spotify track downloads are not supported because Spotify tracks are DRM-protected.'
-
-const isSpotifyTrackUrl = (url) => /open\.spotify\.com\/track\/|spotify\.com\/track\//i.test(url || '')
-
-const showUnsupportedDownloadMessage = (message = SPOTIFY_TRACK_UNSUPPORTED_MESSAGE) => {
-  if (typeof window !== 'undefined' && window.api?.showMessageBox) {
-    window.api.showMessageBox({
-      type: 'warning',
-      title: 'Download Not Supported',
-      message,
-    })
-    return
-  }
-
-  if (typeof window !== 'undefined') {
-    window.alert(message)
-  }
-}
 
 const sanitizeTitle = (str) => {
   if (!str) return 'Unknown'
@@ -185,25 +167,6 @@ const useDownloadManager = ({
       }
 
       const item = storedDownloads[itemIndex]
-
-      if (isSpotifyTrackUrl(item.url)) {
-        storedDownloads[itemIndex] = {
-          ...item,
-          status: 'Failed',
-          isFailed: true,
-          unsupportedDownload: true,
-          error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
-        }
-        setStoredDownloads(storedDownloads)
-        saveDownloadError(storedDownloads[itemIndex], SPOTIFY_TRACK_UNSUPPORTED_MESSAGE)
-        showUnsupportedDownloadMessage()
-        setActiveDownloads((prev) => {
-          const next = new Set(prev)
-          next.delete(currentId)
-          return next
-        })
-        return
-      }
 
       storedDownloads[itemIndex].status = 'Fetching Info...'
       setStoredDownloads(storedDownloads)
@@ -427,12 +390,6 @@ const useDownloadManager = ({
   const enqueueDownload = useCallback(
     async (rawUrl, options = {}) => {
       const normalizedUrl = normalizeYouTubeUrlForSingleVideo(rawUrl)
-      if (isSpotifyTrackUrl(normalizedUrl)) {
-        return {
-          unsupported: true,
-          message: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
-        }
-      }
 
       const stored = getStoredDownloads()
       const duplicate = isDuplicateDownload(stored, normalizedUrl, format, quality, saveTo, downloadType, bitrate)
@@ -568,18 +525,6 @@ const useDownloadManager = ({
       if (itemIndex === -1) return
       const item = storedDownloads[itemIndex]
       if (item.status !== 'Failed') return
-      if (isSpotifyTrackUrl(item.url)) {
-        storedDownloads[itemIndex] = {
-          ...item,
-          status: 'Failed',
-          isFailed: true,
-          unsupportedDownload: true,
-          error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
-        }
-        setStoredDownloads(storedDownloads)
-        showUnsupportedDownloadMessage()
-        return { unsupported: true, message: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE }
-      }
 
       storedDownloads[itemIndex] = {
         ...item,

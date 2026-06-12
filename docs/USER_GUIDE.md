@@ -165,7 +165,6 @@ PNUTDownloader supports **1700+ websites** via yt-dlp. The following platforms h
 | Dailymotion | `dailymotion.com/video/`, `dai.ly` | |
 | Vimeo | `vimeo.com/` | |
 | SoundCloud | `soundcloud.com/` | Audio |
-| Spotify | `open.spotify.com/track/`, `/episode/`, `/show/`, `/playlist/`, `/album/`, `spotify.link` | Audio |
 | Bilibili | `bilibili.com/`, `b23.tv` | |
 | Reddit | `reddit.com/` | |
 | Pinterest | `pinterest.com/`, `pin.it` | |

@@ -82,7 +82,7 @@ pnutdownloader/
 
 PNUTDownloader supports **1700+ websites** via yt-dlp, with native first-class support for:
 
-YouTube · YouTube Music · YouTube Kids · Facebook · Instagram · Snapchat · TikTok · Twitter/X · Twitch · Dailymotion · Vimeo · SoundCloud · Spotify · Bilibili · Reddit · Pinterest · LinkedIn · Rumble · BitChute · and many more.
+YouTube · YouTube Music · YouTube Kids · Facebook · Instagram · Snapchat · TikTok · Twitter/X · Twitch · Dailymotion · Vimeo · SoundCloud · Bilibili · Reddit · Pinterest · LinkedIn · Rumble · BitChute · and many more.
 
 ---
 

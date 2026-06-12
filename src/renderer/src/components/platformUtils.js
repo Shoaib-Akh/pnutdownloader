@@ -18,7 +18,6 @@ export const PLATFORMS = {
   PINTEREST: 'pinterest',
   LINKEDIN: 'linkedin',
   SOUNDCLOUD: 'soundcloud',
-  SPOTIFY: 'spotify',
   VIMEO: 'vimeo',
   RUMBLE: 'rumble',
   BITCHUTE: 'bitchute',
@@ -102,11 +101,6 @@ export const detectPlatform = (url) => {
     return PLATFORMS.SOUNDCLOUD
   }
 
-  // Spotify
-  if (urlLower.includes('open.spotify.com') || urlLower.includes('spotify.link') || urlLower.includes('spotify.com')) {
-    return PLATFORMS.SPOTIFY
-  }
-
   // Vimeo
   if (urlLower.includes('vimeo.com')) {
     return PLATFORMS.VIMEO
@@ -168,7 +162,6 @@ export const getPlatformName = (platform) => {
     [PLATFORMS.PINTEREST]: 'Pinterest',
     [PLATFORMS.LINKEDIN]: 'LinkedIn',
     [PLATFORMS.SOUNDCLOUD]: 'SoundCloud',
-    [PLATFORMS.SPOTIFY]: 'Spotify',
     [PLATFORMS.VIMEO]: 'Vimeo',
     [PLATFORMS.RUMBLE]: 'Rumble',
     [PLATFORMS.BITCHUTE]: 'BitChute',
@@ -199,7 +192,6 @@ export const getPlatformUrl = (platform) => {
     [PLATFORMS.PINTEREST]: 'https://www.pinterest.com',
     [PLATFORMS.LINKEDIN]: 'https://www.linkedin.com',
     [PLATFORMS.SOUNDCLOUD]: 'https://soundcloud.com',
-    [PLATFORMS.SPOTIFY]: 'https://open.spotify.com',
     [PLATFORMS.VIMEO]: 'https://vimeo.com',
     [PLATFORMS.RUMBLE]: 'https://rumble.com',
     [PLATFORMS.BITCHUTE]: 'https://www.bitchute.com'

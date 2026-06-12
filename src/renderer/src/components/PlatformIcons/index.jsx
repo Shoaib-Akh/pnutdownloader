@@ -11,7 +11,6 @@ import {
   FaPinterest,
   FaLinkedin,
   FaSnapchat,
-  FaSpotify,
 } from "react-icons/fa";
 import { SiDailymotion, SiBilibili, SiSoundcloud } from "react-icons/si";
 
@@ -26,7 +25,6 @@ const PlatformIcons = ({ handlePlatformClick }) => {
     { Component: FaTwitch, url: "https://www.twitch.tv", color: "#9146FF", alt: "Twitch", domain: "www.twitch.tv" },
     { Component: SiDailymotion, url: "https://www.dailymotion.com", color: "#0066DC", alt: "Dailymotion", domain: "dailymotion.com" },
     { Component: SiSoundcloud, url: "https://soundcloud.com", color: "#FF5500", alt: "SoundCloud", domain: "soundcloud.com" },
-    { Component: FaSpotify, url: "https://open.spotify.com", color: "#1DB954", alt: "Spotify", domain: "open.spotify.com" },
     { Component: SiBilibili, url: "https://www.bilibili.com", color: "#FB7299", alt: "Bilibili", domain: "bilibili.com" },
     { Component: FaReddit, url: "https://www.reddit.com", color: "#FF4500", alt: "Reddit", domain: "www.reddit.com" },
     { Component: FaPinterest, url: "https://www.pinterest.com", color: "#BD081C", alt: "Pinterest", domain: "www.pinterest.com" },

@@ -13,7 +13,6 @@ import {
   FaPinterest,
   FaLinkedin,
   FaSnapchat,
-  FaSpotify,
   FaGlobe
 } from 'react-icons/fa';
 import { SiDailymotion, SiBilibili, SiSoundcloud } from 'react-icons/si';
@@ -68,8 +67,6 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
         return <FaLinkedin style={{ ...iconStyle, color: '#0077B5' }} />;
       case PLATFORMS.SOUNDCLOUD:
         return <SiSoundcloud style={{ ...iconStyle, color: '#FF5500' }} />;
-      case PLATFORMS.SPOTIFY:
-        return <FaSpotify style={{ ...iconStyle, color: '#1DB954' }} />;
       default:
         return <FaGlobe style={{ ...iconStyle, color: '#666' }} />;
     }

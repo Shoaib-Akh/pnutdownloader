@@ -32,10 +32,6 @@ const https = require('https');
 
 const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
-const SPOTIFY_TRACK_UNSUPPORTED_MESSAGE = 'Spotify track downloads are not supported because Spotify tracks are DRM-protected.';
-const SPOTIFY_TRACK_UNSUPPORTED_DETAILS = 'yt-dlp reports Spotify tracks as DRM-protected and cannot download full songs. Use a direct media URL supported by yt-dlp.';
-
-const isSpotifyTrackUrl = (url) => /open\.spotify\.com\/track\/|spotify\.com\/track\//i.test(url || '');
 
 const getLogSafeYtdlpArgs = (args) => {
   const redactValueAfter = new Set(['--cookies']);
@@ -1626,20 +1622,6 @@ ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_COOKIES, async () => {
 ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
   const requestId = `fetch-video-info:${Date.now()}`;
   console.log(`[${requestId}] url:`, url);
-
-  if (isSpotifyTrackUrl(url)) {
-    const resourceId = (url.match(/\/track\/([^/?#]+)/i) || [])[1] || 'unknown';
-    console.warn(`[${requestId}] Spotify track URLs are metadata-only in this app; full track download is not supported.`);
-    return {
-      title: `Spotify Track - ${resourceId.substring(0, 8)}`,
-      thumbnail: '',
-      filename: `spotify_track_${resourceId}`,
-      duration: 0,
-      thumbnails: [],
-      unsupportedDownload: true,
-      unsupportedReason: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE
-    };
-  }
   
   // Update cookies before fetching video info (important for Dailymotion and other platforms)
   try {
@@ -1916,17 +1898,6 @@ const startDownload = async (event, options) => {
 
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
-      }
-
-      if (isSpotifyTrackUrl(url)) {
-        console.warn(`[${downloadLogId}] ${SPOTIFY_TRACK_UNSUPPORTED_MESSAGE}`);
-        event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-          downloadId,
-          error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
-          details: SPOTIFY_TRACK_UNSUPPORTED_DETAILS,
-          unsupportedPlatform: 'spotify-track'
-        });
-        return reject(new Error(SPOTIFY_TRACK_UNSUPPORTED_MESSAGE));
       }
 
       if (activeDownloads[downloadId]) {
@@ -2313,9 +2284,6 @@ const startDownload = async (event, options) => {
         if (urlLower.includes('reddit.com') || urlLower.includes('redd.it')) {
           return 'reddit'
         }
-        if (urlLower.includes('open.spotify.com') || urlLower.includes('spotify.link') || urlLower.includes('spotify.com')) {
-          return 'spotify'
-        }
         
         return 'unknown'
       };
@@ -2533,10 +2501,6 @@ const startDownload = async (event, options) => {
             errorMessage.includes('No video formats found') ||
             errorMessage.includes('Failed to download m3u8')
           );
-
-          const isSpotifyError = errorMessage.includes('[spotify]') || (
-            url.toLowerCase().includes('spotify') && errorMessage.toLowerCase().includes('spotify')
-          );
           
           // Check for YouTube-specific errors
           const isYouTubeUnavailable = errorMessage.includes('[youtube]') && (
@@ -2560,13 +2524,6 @@ const startDownload = async (event, options) => {
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
               isAuthError: true,
               details: errorMessage
-            });
-          } else if (isSpotifyError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              error: SPOTIFY_TRACK_UNSUPPORTED_MESSAGE,
-              details: SPOTIFY_TRACK_UNSUPPORTED_DETAILS,
-              isAuthError: false
             });
           } else if (isDailymotionError) {
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
@@ -2652,9 +2609,6 @@ const startDownload = async (event, options) => {
             if (stallTimeout.timedOut) {
               errorMessage = 'Download stalled with no output from yt-dlp';
               errorDetails = `yt-dlp produced no stdout/stderr for ${Math.round(YTDLP_DOWNLOAD_STALL_TIMEOUT_MS / 1000)} seconds.`;
-            } else if (isSpotifyTrackUrl(url)) {
-              errorMessage = SPOTIFY_TRACK_UNSUPPORTED_MESSAGE;
-              errorDetails = SPOTIFY_TRACK_UNSUPPORTED_DETAILS;
             } else {
             
               switch (code) {

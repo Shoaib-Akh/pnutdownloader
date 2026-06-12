@@ -424,7 +424,6 @@ export const PLATFORMS = {
   PINTEREST: 'pinterest',
   LINKEDIN: 'linkedin',
   SOUNDCLOUD: 'soundcloud',
-  SPOTIFY: 'spotify',
   VIMEO: 'vimeo',
   RUMBLE: 'rumble',
   BITCHUTE: 'bitchute',

@@ -1,8 +1,4 @@
 // Non-YouTube metadata extractor using file data and time-based information
-import { detectPlatform } from './platformUtils';
-
-const SPOTIFY_TRACK_UNSUPPORTED_MESSAGE = 'Spotify track downloads are not supported because Spotify tracks are DRM-protected.';
-const isSpotifyTrackUrl = (url) => /open\.spotify\.com\/track\/|spotify\.com\/track\//i.test(url || '');
 
 class NonYouTubeMetadataExtractor {
   constructor() {
@@ -84,14 +80,6 @@ class NonYouTubeMetadataExtractor {
           /soundcloud\.com\/[^\/]+\/([^\/?#]+)/
         ],
         metadataExtractor: this.extractSoundCloudMetadata.bind(this)
-      },
-      spotify: {
-        name: 'Spotify',
-        patterns: [
-          /open\.spotify\.com\/(?:track|episode|show|playlist|album)\/([^\/?#]+)/,
-          /spotify\.link\/([^\/?#]+)/
-        ],
-        metadataExtractor: this.extractSpotifyMetadata.bind(this)
       },
       bilibili: {
         name: 'Bilibili',
@@ -624,48 +612,6 @@ class NonYouTubeMetadataExtractor {
     };
   }
 
-  async extractSpotifyMetadata(url) {
-    try {
-      const info = await window.api?.fetchVideoInfo(url);
-      if (info) {
-        return {
-          videoUrl: url,
-          title: this.sanitizeTitle(info.title) || 'Spotify Audio',
-          thumbnail: info.thumbnail || this.generatePlaceholderThumbnail('spotify'),
-          duration: this.formatDuration(info.duration) || 'PT0S',
-          platform: 'Spotify',
-          resourceId: this.extractResourceId(url)?.id || null,
-          unsupportedDownload: Boolean(info.unsupportedDownload),
-          unsupportedReason: info.unsupportedReason || (isSpotifyTrackUrl(url) ? SPOTIFY_TRACK_UNSUPPORTED_MESSAGE : null),
-          metadata: {
-            uploader: info.uploader || info.artist || 'Unknown Artist',
-            description: info.description || '',
-            uploadDate: info.upload_date || null
-          }
-        };
-      }
-    } catch (error) {
-      console.warn('yt-dlp extraction failed for Spotify:', error);
-    }
-
-    const resourceId = this.extractResourceId(url)?.id || 'unknown';
-
-    return {
-      videoUrl: url,
-      title: `Spotify Audio - ${resourceId.substring(0, 8)}`,
-      thumbnail: this.generatePlaceholderThumbnail('spotify'),
-      duration: 'PT0S',
-      platform: 'Spotify',
-      resourceId,
-      unsupportedDownload: isSpotifyTrackUrl(url),
-      unsupportedReason: isSpotifyTrackUrl(url) ? SPOTIFY_TRACK_UNSUPPORTED_MESSAGE : null,
-      metadata: {
-        resourceId,
-        extractedAt: new Date().toISOString()
-      }
-    };
-  }
-
   generateGenericMetadata(url, platform = 'Unknown') {
     const urlObj = new URL(url);
     const domain = urlObj.hostname.replace('www.', '');
@@ -694,7 +640,6 @@ class NonYouTubeMetadataExtractor {
       tiktok: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="tt" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#000000"/><stop offset="50%" style="stop-color:#FF0050"/><stop offset="100%" style="stop-color:#00F2EA"/></linearGradient></defs><rect width="120" height="70" fill="url(#tt)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">TikTok</text></svg>`,
       vimeo: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="vm" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00ADFF"/><stop offset="100%" style="stop-color:#0066CC"/></linearGradient></defs><rect width="120" height="70" fill="url(#vm)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Vimeo</text></svg>`,
       dailymotion: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="dm" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00A3E0"/><stop offset="100%" style="stop-color:#006699"/></linearGradient></defs><rect width="120" height="70" fill="url(#dm)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Dailymotion</text></svg>`,
-      spotify: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="sp" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#1DB954"/><stop offset="100%" style="stop-color:#0B7D38"/></linearGradient></defs><rect width="120" height="70" fill="url(#sp)"/><text x="60" y="40" text-anchor="middle" fill="white" font-family="Arial" font-size="10" font-weight="bold">Spotify</text></svg>`,
       generic: `<svg width="120" height="70" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gen" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#667eea"/><stop offset="100%" style="stop-color:#764ba2"/></linearGradient></defs><rect width="120" height="70" fill="url(#gen)"/><text x="60" y="35" text-anchor="middle" fill="white" font-family="Arial" font-size="8" font-weight="bold">Video</text><text x="60" y="45" text-anchor="middle" fill="white" font-family="Arial" font-size="6">Loading...</text></svg>`
     };
 
