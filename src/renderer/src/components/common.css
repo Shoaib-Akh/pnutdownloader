@@ -87,7 +87,7 @@ h1 {
   position: absolute;
   bottom: 10% !important;
   right: 50px;
-  background: linear-gradient(135deg, #BB4F28 0%, #dc2626 100%);
+  background: var(--pnut-button-bg);
   color: white;
   padding: 12px 31px;
   border: none;
@@ -98,7 +98,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(187, 79, 40, 0.3);
+  box-shadow: var(--pnut-shadow-sm);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -229,7 +229,7 @@ h1 {
 .progress-bar-container {
   width: 100%;
   height: 4px;
-  background: #E2E8F0;
+  background: var(--theme-progress-bg);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 10px;
@@ -237,12 +237,12 @@ h1 {
 
 .progress-bar {
   height: 10px;
-  background: #BB4F28;
+  background: var(--theme-progress-fill);
   transition: width 0.5s ease-in-out;
 }
 
 .progress-bar .progress-bar {
-  background-color: #BB4F28 !important;
+  background-color: var(--theme-progress-fill) !important;
 }
 
 .progress-info {
@@ -426,7 +426,7 @@ h1 {
 }
 
 .three-dots-btn {
-  background: linear-gradient(135deg, #BB4F28 0%, #d9775c 100%);
+  background: var(--pnut-button-bg);
   border: none;
   color: #ffffff;
   cursor: pointer;
@@ -436,7 +436,7 @@ h1 {
   justify-content: center;
   border-radius: 50%;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(187, 79, 40, 0.25);
+  box-shadow: var(--pnut-shadow-sm);
   width: 36px;
   height: 36px;
 }
@@ -444,7 +444,7 @@ h1 {
 
 .three-dots-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(187, 79, 40, 0.4);
+  box-shadow: var(--pnut-shadow-md);
 }
 
 /* .dropdown {
@@ -729,7 +729,7 @@ h1 {
 
 /* LoginModal.css */
 .custom-login-modal {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-body);
 }
 
 .custom-login-modal .modal-content {
@@ -916,7 +916,7 @@ h1 {
   border: 1px solid var(--pnut-border);
   border-radius: var(--pnut-radius-lg);
   background:
-    linear-gradient(135deg, rgba(187, 79, 40, 0.08), transparent 42%),
+    linear-gradient(135deg, var(--pnut-brand-soft), transparent 42%),
     var(--pnut-surface);
   box-shadow: var(--pnut-shadow-sm);
 }
@@ -926,7 +926,7 @@ h1 {
   color: var(--pnut-text);
   font-size: 28px;
   line-height: 1.14;
-  font-weight: 780;
+  font-weight: 700;
   text-align: left;
 }
 
@@ -940,7 +940,7 @@ h1 {
 
 .download-hub__hint {
   flex: 0 0 auto;
-  border: 1px solid rgba(187, 79, 40, 0.22);
+  border: 1px solid var(--pnut-brand-border);
   border-radius: var(--pnut-radius);
   background: var(--pnut-brand-soft);
   color: var(--pnut-brand);
@@ -966,17 +966,20 @@ h1 {
   border: 1px solid var(--pnut-border);
   border-radius: var(--pnut-radius-lg);
   background:
-    linear-gradient(135deg, color-mix(in srgb, var(--platform-bg) 68%, transparent), transparent 68%),
+    linear-gradient(135deg, var(--pnut-brand-soft) 0%, transparent 62%),
     var(--pnut-surface);
   color: var(--pnut-text);
   cursor: pointer;
-  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  transition: background 0.16s ease, transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
   box-shadow: var(--pnut-shadow-sm);
 }
 
 .platform-card:hover,
 .platform-card:focus-visible {
-  border-color: color-mix(in srgb, var(--platform-color) 45%, var(--pnut-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pnut-brand-soft) 78%, var(--pnut-brand) 22%) 0%, transparent 66%),
+    var(--pnut-surface);
+  border-color: var(--pnut-brand-border-strong);
   box-shadow: var(--pnut-shadow-md);
   transform: translateY(-2px);
   outline: none;
@@ -989,9 +992,10 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--pnut-surface);
+  background: var(--pnut-brand-soft);
   color: var(--platform-color);
-  box-shadow: var(--pnut-shadow-sm);
+  border: 1px solid var(--pnut-brand-border);
+  box-shadow: none;
 }
 
 .platform-card__icon svg {
@@ -1004,7 +1008,7 @@ h1 {
   color: var(--pnut-text);
   font-size: 15px;
   line-height: 1.2;
-  font-weight: 760;
+  font-weight: 700;
 }
 
 .platform-card__text p {
@@ -1023,12 +1027,12 @@ h1 {
   box-shadow: var(--pnut-shadow-sm) !important;
   padding: 9px 12px !important;
   font-size: 13px !important;
-  font-weight: 750 !important;
+  font-weight: 700 !important;
 }
 
 .close-webview-btn:hover {
   background: var(--pnut-brand-soft) !important;
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
   color: var(--pnut-brand) !important;
   transform: translateY(-1px) !important;
   box-shadow: var(--pnut-shadow-md) !important;
@@ -1089,7 +1093,7 @@ h1 {
   min-width: 44px !important;
   color: var(--pnut-muted) !important;
   font-size: 12px !important;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .url-bar {
@@ -1130,14 +1134,15 @@ h1 {
   bottom: 28px !important;
   padding: 12px 16px !important;
   border-radius: var(--pnut-radius) !important;
-  background: var(--pnut-brand) !important;
-  box-shadow: 0 12px 24px rgba(187, 79, 40, 0.28) !important;
+  background: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
+  box-shadow: var(--pnut-shadow-sm) !important;
   font-size: 14px !important;
   font-weight: 800 !important;
 }
 
 .download-btn:hover {
-  background: var(--pnut-brand-hover) !important;
+  background: var(--pnut-button-hover) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -1167,7 +1172,7 @@ h1 {
 .custom-modal-title {
   color: var(--pnut-text) !important;
   font-size: 20px !important;
-  font-weight: 780 !important;
+  font-weight: 700 !important;
 }
 
 .custom-modal-body,
@@ -1185,17 +1190,17 @@ h1 {
 }
 
 .custom-login-button {
-  background: var(--pnut-brand) !important;
-  border: 1px solid var(--pnut-brand) !important;
-  color: #ffffff !important;
+  background: var(--pnut-button-bg) !important;
+  border: 1px solid var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
   border-radius: var(--pnut-radius) !important;
   box-shadow: none !important;
 }
 
 .custom-login-button:hover {
-  background: var(--pnut-brand-hover) !important;
-  border-color: var(--pnut-brand-hover) !important;
-  box-shadow: 0 8px 18px rgba(187, 79, 40, 0.22) !important;
+  background: var(--pnut-button-hover) !important;
+  border-color: var(--pnut-button-hover) !important;
+  box-shadow: var(--pnut-shadow-sm) !important;
 }
 
 .custom-cancel-button {
@@ -1208,7 +1213,7 @@ h1 {
 .custom-cancel-button:hover {
   color: var(--pnut-text) !important;
   background: var(--pnut-brand-soft) !important;
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
 }
 
 @media (max-width: 1180px) {
@@ -1252,7 +1257,7 @@ h1 {
   color: var(--pnut-text) !important;
   font-size: 26px !important;
   line-height: 1.15 !important;
-  font-weight: 780 !important;
+  font-weight: 700 !important;
   letter-spacing: 0 !important;
 }
 
@@ -1299,7 +1304,7 @@ h1 {
 .download-library__count {
   color: var(--pnut-muted) !important;
   font-size: 13px !important;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .download-library__actions .pnut-button {
@@ -1316,7 +1321,7 @@ h1 {
 .download-library__actions .pnut-button:hover {
   background: var(--pnut-brand-soft) !important;
   color: var(--pnut-brand) !important;
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
 }
 
 .download-library__actions .pnut-button--danger {
@@ -1351,12 +1356,12 @@ h1 {
 }
 
 .download-row--active {
-  border-color: rgba(14, 165, 233, 0.42) !important;
+  border-color: var(--pnut-brand-border-strong) !important;
   background: linear-gradient(135deg, var(--pnut-info-soft), var(--pnut-surface) 62%) !important;
 }
 
 .download-row--selected {
-  border-color: rgba(187, 79, 40, 0.42) !important;
+  border-color: var(--pnut-brand-border-strong) !important;
   background: linear-gradient(135deg, var(--pnut-brand-soft), var(--pnut-surface) 70%) !important;
 }
 
@@ -1369,7 +1374,7 @@ h1 {
   color: var(--pnut-text) !important;
   font-size: 14px !important;
   line-height: 1.35 !important;
-  font-weight: 720 !important;
+  font-weight: 700 !important;
 }
 
 .download-row__content {
@@ -1417,7 +1422,7 @@ h1 {
 .download-row__menu-button:hover {
   color: var(--pnut-brand) !important;
   background: var(--pnut-brand-soft) !important;
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
 }
 
 .download-library__list > div[style*="text-align: center"] {
@@ -1426,7 +1431,7 @@ h1 {
   background: var(--pnut-surface);
   color: var(--pnut-muted) !important;
   font-size: 15px !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
 }
 
 @media (max-width: 760px) {
@@ -1471,7 +1476,7 @@ h1 {
 
 .about-us-section h1 {
   font-size: 26px !important;
-  font-weight: 780 !important;
+  font-weight: 700 !important;
 }
 
 .about-us-section h4,
@@ -1510,18 +1515,18 @@ h1 {
   color: var(--pnut-text) !important;
   box-shadow: none !important;
   font-size: 13px !important;
-  font-weight: 750 !important;
+  font-weight: 700 !important;
 }
 
 .about-us-section .btn:hover {
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
   background: var(--pnut-brand-soft) !important;
   color: var(--pnut-brand) !important;
   transform: translateY(-1px) !important;
 }
 
 .about-us-section .btn:first-of-type {
-  background: var(--pnut-brand) !important;
-  border-color: var(--pnut-brand) !important;
-  color: #ffffff !important;
+  background: var(--pnut-button-bg) !important;
+  border-color: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
 }

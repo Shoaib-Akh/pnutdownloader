@@ -638,10 +638,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                   className="pnut-button pnut-button--danger"
                   style={{
                     padding: '6px 12px',
-                    border: '1px solid #dc3545',
+                    border: '1px solid var(--pnut-danger)',
                     borderRadius: '5px',
-                    background: '#dc3545',
-                    color: 'white',
+                    background: 'var(--pnut-danger)',
+                    color: '#ffffff',
                     fontSize: '13px',
                     cursor: 'pointer',
                     display: 'flex',
@@ -659,10 +659,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             className="pnut-button"
             style={{
               padding: '6px 12px',
-              border: isSelectMode ? '1px solid #0ea5e9' : '1px solid #ddd',
+              border: isSelectMode ? '1px solid var(--pnut-button-bg)' : '1px solid var(--pnut-border)',
               borderRadius: '5px',
-              background: isSelectMode ? '#0ea5e9' : 'white',
-              color: isSelectMode ? 'white' : '#333',
+              background: isSelectMode ? 'var(--pnut-button-bg)' : 'var(--pnut-surface)',
+              color: isSelectMode ? 'var(--pnut-button-text)' : 'var(--pnut-text)',
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -707,22 +707,24 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                   alignItems: 'center',
                   gap: '18px',
                   padding: '20px',
-                  background: activeDownloads?.has(item.id) ? 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)' : selectedItems.has(item.id) ? '#e3f2fd' : 'white',
+                  background: activeDownloads?.has(item.id)
+                    ? 'linear-gradient(135deg, var(--pnut-info-soft) 0%, var(--pnut-surface) 100%)'
+                    : selectedItems.has(item.id)
+                      ? 'linear-gradient(135deg, var(--pnut-brand-soft) 0%, var(--pnut-surface) 100%)'
+                      : 'var(--pnut-surface)',
                   borderRadius: '10px',
-                  border: activeDownloads?.has(item.id) ? '2px solid #0ea5e9' : selectedItems.has(item.id) ? '2px solid #2196f3' : '1px solid #e0e0e0',
+                  border: activeDownloads?.has(item.id) || selectedItems.has(item.id)
+                    ? '2px solid var(--pnut-brand-border-strong)'
+                    : '1px solid var(--pnut-border)',
                   transition: 'all 0.3s ease',
-                  boxShadow: activeDownloads?.has(item.id) ? '0 4px 12px rgba(14, 165, 233, 0.15)' : selectedItems.has(item.id) ? '0 4px 12px rgba(33, 150, 243, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  boxShadow: activeDownloads?.has(item.id) || selectedItems.has(item.id) ? 'var(--pnut-shadow-sm)' : 'none',
                   position: 'relative'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id)
-                    ? '0 6px 16px rgba(14, 165, 233, 0.25)'
-                    : '0 2px 8px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.boxShadow = 'var(--pnut-shadow-md)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id)
-                    ? '0 4px 12px rgba(14, 165, 233, 0.15)'
-                    : '0 1px 3px rgba(0,0,0,0.05)';
+                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) || selectedItems.has(item.id) ? 'var(--pnut-shadow-sm)' : 'none';
                 }}
               >
                 {/* Active Download Indicator */}
@@ -731,8 +733,8 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     position: 'absolute',
                     top: '8px',
                     right: '8px',
-                    background: '#0ea5e9',
-                    color: 'white',
+                    background: 'var(--pnut-brand-fill)',
+                    color: '#1A0E00',
                     padding: '2px 8px',
                     borderRadius: '12px',
                     fontSize: '10px',
@@ -745,7 +747,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     <div style={{
                       width: '6px',
                       height: '6px',
-                      background: 'white',
+                      background: '#1A0E00',
                       borderRadius: '50%',
                       animation: 'blink 1.5s infinite'
                     }}></div>
@@ -766,7 +768,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     }}
                   >
                     {selectedItems.has(item.id) ? (
-                      <FaCheckSquare style={{ fontSize: '20px', color: '#2196f3' }} />
+                      <FaCheckSquare style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
                     ) : (
                       <FaSquare style={{ fontSize: '20px', color: '#999' }} />
                     )}

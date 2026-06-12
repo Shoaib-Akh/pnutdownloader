@@ -57,8 +57,8 @@
 /* Active download card glow effect */
 .active-download-glow {
   box-shadow: 
-    0 4px 12px rgba(14, 165, 233, 0.15),
-    0 0 0 1px rgba(14, 165, 233, 0.1),
+    var(--pnut-shadow-sm),
+    0 0 0 1px var(--pnut-brand-border),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -69,17 +69,17 @@
 }
 
 .progress-enhanced::-webkit-progress-bar {
-  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 100%);
+  background: linear-gradient(90deg, var(--theme-progress-bg) 0%, var(--pnut-surface-raised) 100%);
 }
 
 .progress-enhanced::-webkit-progress-value {
-  background: linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%);
+  background: linear-gradient(90deg, var(--theme-progress-fill) 0%, var(--pnut-brand) 100%);
   transition: width 0.3s ease;
 }
 
 /* Thumbnail loading state */
 .thumbnail-loading {
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--pnut-surface-raised) 0%, var(--theme-progress-bg) 100%);
   position: relative;
   overflow: hidden;
 }

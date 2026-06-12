@@ -40,7 +40,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
             role="progressbar" 
             style={{ 
               width: `${displayProgress}%`,
-              backgroundColor: '#BB4F28'
+              backgroundColor: 'var(--theme-progress-fill)'
             }}
           ></div>
         </div>
@@ -54,7 +54,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
         }
         .spinner-border {
           animation: spin 1s linear infinite;
-          border: 0.25em solid #BB4F28;
+          border: 0.25em solid var(--theme-progress-fill);
           border-right-color: transparent;
         }
         @keyframes spin {
@@ -78,7 +78,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
   return (
     <div 
       className="modal fade show" 
-      style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
+      style={{ display: 'block', backgroundColor: 'var(--theme-overlay)' }}
       data-bs-backdrop="static" 
       data-bs-keyboard="false"
     >
@@ -99,18 +99,18 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
 
             {isDownloaded ? (
               <>
-                <p className="lead mb-3 text-dark fw-semibold">Update downloaded</p>
-                <p className="text-muted mb-0">
+                <p className="lead mb-3 fw-semibold" style={{ color: 'var(--pnut-text)' }}>Update downloaded</p>
+                <p className="mb-0" style={{ color: 'var(--pnut-muted)' }}>
                   Restart the app to install the new version.
                 </p>
               </>
             ) : (
               <>
-                <p className="lead mb-3 text-dark fw-semibold">New version available</p>
+                <p className="lead mb-3 fw-semibold" style={{ color: 'var(--pnut-text)' }}>New version available</p>
                 {isDownloading ? (
                   <DownloadLoader />
                 ) : (
-                  <p className="text-muted mb-4">
+                  <p className="mb-4" style={{ color: 'var(--pnut-muted)' }}>
                     A new version is ready to download.
                   </p>
                 )}
@@ -123,7 +123,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
               !isDownloading && (
                 <button 
                   className="btn btn-primary btn-lg px-5 rounded-pill fw-medium"
-                  style={{backgroundColor:"#BB4F28"}}
+                  style={{ backgroundColor: 'var(--pnut-button-bg)', borderColor: 'var(--pnut-button-bg)', color: 'var(--pnut-button-text)' }}
                   onClick={handleDownload}
                 >
                   Download update
@@ -134,7 +134,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
               <button 
                 className="btn btn-success btn-lg px-5 rounded-pill fw-medium"
                 onClick={onInstall}
-                style={{backgroundColor:"green"}}
+                style={{ backgroundColor: 'var(--pnut-success)', borderColor: 'var(--pnut-success)', color: '#ffffff' }}
               >
                 Install and restart
               </button>

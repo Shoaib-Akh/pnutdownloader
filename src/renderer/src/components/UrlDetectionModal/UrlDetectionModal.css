@@ -13,7 +13,7 @@
 }
 
 .url-detection-modal-header {
-  background: linear-gradient(135deg, #BB4F28 0%, #d66b4a 100%);
+  background: var(--pnut-button-bg);
   border-bottom: none;
   padding: 24px 32px;
   position: relative;
@@ -26,7 +26,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #BB4F28, #d66b4a, #BB4F28);
+  background: linear-gradient(90deg, var(--pnut-brand), var(--pnut-brand-fill), var(--pnut-brand));
   animation: shimmer 3s ease-in-out infinite;
 }
 
@@ -113,7 +113,7 @@
 .url-display label {
   display: block;
   font-weight: 600;
-  color: #BB4F28;
+  color: var(--pnut-brand);
   margin-bottom: 8px;
   font-size: 0.9rem;
   text-transform: uppercase;
@@ -125,7 +125,7 @@
   border: 1px solid #ddd;
   border-radius: 8px;
   padding: 12px 16px;
-  font-family: 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   color: #333;
   word-break: break-all;
@@ -172,7 +172,7 @@
 }
 
 .url-detection-download-button {
-  background: linear-gradient(135deg, #BB4F28 0%, #d66b4a 100%);
+  background: var(--pnut-button-bg);
   border: none;
   border-radius: 8px;
   padding: 12px 24px;
@@ -187,9 +187,9 @@
 }
 
 .url-detection-download-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #a03d1f 0%, #BB4F28 100%);
+  background: var(--pnut-button-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(187, 79, 40, 0.4);
+  box-shadow: var(--pnut-shadow-sm);
 }
 
 .url-detection-download-button:disabled {
@@ -282,7 +282,7 @@
 .url-detection-modal-title {
   color: var(--pnut-text) !important;
   font-size: 20px !important;
-  font-weight: 780 !important;
+  font-weight: 700 !important;
 }
 
 .modal-icon {
@@ -317,7 +317,7 @@
 .url-detection-message h4 {
   color: var(--pnut-text) !important;
   font-size: 18px !important;
-  font-weight: 760 !important;
+  font-weight: 700 !important;
 }
 
 .url-detection-message p,
@@ -368,13 +368,13 @@
 }
 
 .url-detection-download-button {
-  border: 1px solid var(--pnut-brand) !important;
-  background: var(--pnut-brand) !important;
-  color: #ffffff !important;
+  border: 1px solid var(--pnut-button-bg) !important;
+  background: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
 }
 
 .url-detection-download-button:hover:not(:disabled) {
-  background: var(--pnut-brand-hover) !important;
+  background: var(--pnut-button-hover) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -398,6 +398,6 @@
 .url-detection-close-button:focus,
 .url-detection-cancel-button:focus,
 .url-detection-download-button:focus {
-  outline: 2px solid #BB4F28;
+  outline: 2px solid var(--pnut-brand);
   outline-offset: 2px;
 }

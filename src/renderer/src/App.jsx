@@ -48,15 +48,18 @@ function App() {
           justifyContent: 'center',
           alignItems: 'center',
           height: '100vh',
-          backgroundColor: '#f0f0f0',
+          backgroundColor: 'var(--theme-bg-primary)',
           flexDirection: 'column',
+          fontFamily: 'var(--font-body)',
         }}
       >
         <div
           style={{
             fontSize: '24px',
             marginBottom: '20px',
-            color: '#333',
+            color: 'var(--theme-text-primary)',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
           }}
         >
           Initializing Dependencies...
@@ -65,8 +68,8 @@ function App() {
           style={{
             width: '50px',
             height: '50px',
-            border: '5px solid #ccc',
-            borderTop: '5px solid #BB4F28',
+            border: '5px solid var(--theme-border)',
+            borderTop: '5px solid var(--theme-progress-fill)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }}
@@ -76,7 +79,7 @@ function App() {
             style={{
               marginTop: '16px',
               fontSize: '14px',
-              color: '#555',
+              color: 'var(--theme-text-secondary)',
               textAlign: 'center',
               maxWidth: '80%',
             }}

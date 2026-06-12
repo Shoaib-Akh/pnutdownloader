@@ -65,18 +65,18 @@ class ErrorBoundary extends Component {
             justifyContent: 'center',
             minHeight: '200px',
             padding: '20px',
-            backgroundColor: '#fff5f5',
-            border: '1px solid #fc8181',
+            backgroundColor: 'var(--pnut-danger-soft)',
+            border: '1px solid var(--pnut-danger)',
             borderRadius: '8px',
             margin: '10px',
-            fontFamily: 'system-ui, -apple-system, sans-serif'
+            fontFamily: 'var(--font-body)'
           }}
         >
           <div
             style={{
               fontSize: '24px',
               marginBottom: '10px',
-              color: '#c53030'
+              color: 'var(--pnut-danger)'
             }}
           >
             ⚠️
@@ -84,7 +84,7 @@ class ErrorBoundary extends Component {
           <h3
             style={{
               fontSize: '18px',
-              color: '#2d3748',
+              color: 'var(--pnut-text)',
               marginBottom: '8px'
             }}
           >
@@ -93,7 +93,7 @@ class ErrorBoundary extends Component {
           <p
             style={{
               fontSize: '14px',
-              color: '#718096',
+              color: 'var(--pnut-muted)',
               marginBottom: '16px',
               textAlign: 'center'
             }}
@@ -109,11 +109,11 @@ class ErrorBoundary extends Component {
                 maxWidth: '400px',
                 marginBottom: '16px',
                 padding: '10px',
-                backgroundColor: '#fff',
-                border: '1px solid #e2e8f0',
+                backgroundColor: 'var(--pnut-surface)',
+                border: '1px solid var(--pnut-border)',
                 borderRadius: '4px',
                 fontSize: '12px',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 overflow: 'auto'
               }}
             >
@@ -135,7 +135,7 @@ class ErrorBoundary extends Component {
                     marginTop: '10px',
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
-                    color: '#805ad5'
+                    color: 'var(--pnut-brand)'
                   }}
                 >
                   {this.state.errorInfo.componentStack}
@@ -149,8 +149,8 @@ class ErrorBoundary extends Component {
               onClick={this.handleGoHome}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#4299e1',
-                color: 'white',
+                backgroundColor: 'var(--pnut-button-bg)',
+                color: 'var(--pnut-button-text)',
                 border: 'none',
                 borderRadius: '4px',
                 cursor: 'pointer',
@@ -163,7 +163,7 @@ class ErrorBoundary extends Component {
               onClick={this.handleReload}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#48bb78',
+                backgroundColor: 'var(--pnut-success)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',

@@ -14,13 +14,14 @@
 }
 
 .feedback-modal-content {
-  background: white;
+  background: var(--pnut-surface);
   padding: 30px;
-  border-radius: 15px;
+  border: 1px solid var(--pnut-border);
+  border-radius: var(--pnut-radius-lg);
   width: 90%;
   max-width: 500px;
   position: relative;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: var(--pnut-shadow-md);
   animation: slideIn 0.3s ease-out;
 }
 
@@ -43,32 +44,32 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: #64748b;
+  color: var(--pnut-muted);
   transition: color 0.2s;
 }
 
 .feedback-modal-close:hover {
-  color: #ef4444;
+  color: var(--pnut-danger);
 }
 
 .feedback-modal-title {
   margin-top: 0;
   margin-bottom: 10px;
-  color: #1e293b;
+  color: var(--pnut-text);
   text-align: center;
   font-size: 24px;
 }
 
 .feedback-modal-subtitle {
   text-align: center;
-  color: #64748b;
+  color: var(--pnut-muted);
   margin-bottom: 20px;
 }
 
 .feedback-name-input {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pnut-border);
   border-radius: 8px;
   margin-bottom: 20px;
   font-family: inherit;
@@ -79,7 +80,7 @@
 
 .feedback-name-input:focus {
   outline: none;
-  border-color: #BB4F28;
+  border-color: var(--pnut-brand);
 }
 
 .feedback-rating-container {
@@ -97,7 +98,7 @@
 .feedback-textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--pnut-border);
   border-radius: 8px;
   resize: vertical;
   margin-bottom: 20px;
@@ -108,14 +109,14 @@
 
 .feedback-textarea:focus {
   outline: none;
-  border-color: #BB4F28;
+  border-color: var(--pnut-brand);
 }
 
 .feedback-submit-btn {
   width: 100%;
   padding: 12px;
-  background-color: #BB4F28;
-  color: white;
+  background-color: var(--pnut-button-bg);
+  color: var(--pnut-button-text);
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -125,11 +126,11 @@
 }
 
 .feedback-submit-btn:hover {
-  background-color: #9a4120;
+  background-color: var(--pnut-button-hover);
 }
 
 .feedback-submit-btn:disabled {
-  background-color: #cbd5e1;
+  background-color: var(--pnut-border-strong);
   cursor: not-allowed;
 }
 
@@ -140,9 +141,9 @@
 }
 
 .feedback-message.success {
-  color: #10b981;
+  color: var(--pnut-success);
 }
 
 .feedback-message.error {
-  color: #ef4444;
+  color: var(--pnut-danger);
 }

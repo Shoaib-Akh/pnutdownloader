@@ -9,7 +9,7 @@
   --navbar-bg: var(--theme-navbar-bg);
   --navbar-border: var(--theme-navbar-border);
   --navbar-shadow: var(--theme-card-shadow);
-  --navbar-shadow-hover: rgba(187, 79, 40, 0.25);
+  --navbar-shadow-hover: var(--pnut-shadow-sm);
   --navbar-text-primary: var(--theme-navbar-text);
   --navbar-text-secondary: var(--theme-navbar-text-secondary);
   --navbar-input-bg: var(--theme-navbar-input-bg);
@@ -79,7 +79,7 @@
 }
 
 .navbar-input-group:focus-within {
-  box-shadow: 0 4px 16px var(--navbar-shadow-hover), 0 0 0 3px rgba(187, 79, 40, 0.1);
+  box-shadow: 0 4px 16px var(--navbar-shadow-hover), var(--pnut-ring);
   border-color: var(--navbar-input-focus);
   transform: translateY(-1px);
 }
@@ -112,7 +112,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(187, 79, 40, 0.1), transparent);
+  background: linear-gradient(90deg, transparent, var(--pnut-brand-soft), transparent);
   transition: left 0.5s ease;
 }
 
@@ -183,7 +183,7 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 8px rgba(187, 79, 40, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), var(--pnut-shadow-sm);
 }
 
 .navbar-download-btn::before {
@@ -209,7 +209,7 @@
 
 .navbar-download-btn:active {
   transform: translateY(0);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(187, 79, 40, 0.3);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2), var(--pnut-shadow-sm);
 }
 
 .navbar-download-btn svg {
@@ -249,7 +249,7 @@
 .navbar-controls .dropdown-toggle:hover,
 .navbar-controls .dropdown-toggle.show {
   background: linear-gradient(135deg, rgba(248, 249, 250, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), 0 0 0 2px rgba(187, 79, 40, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12), var(--pnut-ring);
   transform: translateY(-1px);
   border-color: var(--theme-primary);
 }
@@ -308,13 +308,13 @@
 }
 
 .navbar-controls .dropdown-item:hover {
-  background: linear-gradient(135deg, rgba(187, 79, 40, 0.08) 0%, rgba(187, 79, 40, 0.12) 100%);
+  background: var(--pnut-brand-soft);
   color: var(--theme-primary-dark);
   transform: translateX(2px);
 }
 
 .navbar-controls .dropdown-item.active {
-  background: linear-gradient(135deg, rgba(187, 79, 40, 0.15) 0%, rgba(187, 79, 40, 0.2) 100%);
+  background: var(--pnut-brand-soft);
   color: var(--theme-primary-dark);
   font-weight: 600;
 }
@@ -332,7 +332,7 @@
   padding: 3px 8px;
   border-radius: 10px;
   font-weight: 600;
-  box-shadow: 0 2px 4px rgba(187, 79, 40, 0.3);
+  box-shadow: var(--pnut-shadow-sm);
   margin-left: 8px;
   display: inline-flex;
   align-items: center;
@@ -594,14 +594,14 @@
   min-height: 86px;
   padding: 14px 24px !important;
   gap: 14px !important;
-  background: rgba(255, 255, 255, 0.82) !important;
+  background: color-mix(in srgb, var(--pnut-surface-raised) 92%, transparent) !important;
   border-bottom: 1px solid var(--pnut-border) !important;
   box-shadow: var(--pnut-shadow-sm) !important;
   backdrop-filter: blur(18px);
 }
 
 .dark-theme .navbar-modern {
-  background: rgba(24, 27, 32, 0.84) !important;
+  background: color-mix(in srgb, var(--pnut-surface) 90%, transparent) !important;
 }
 
 .navbar-modern::before {
@@ -635,7 +635,7 @@
   border-right: 1px solid var(--pnut-border) !important;
   padding: 0 16px !important;
   font-size: 13px !important;
-  font-weight: 750 !important;
+  font-weight: 700 !important;
 }
 
 .navbar-paste-btn:hover {
@@ -668,18 +668,18 @@
 }
 
 .navbar-download-btn {
-  background: var(--pnut-brand) !important;
-  color: #ffffff !important;
-  border-left: 1px solid var(--pnut-brand) !important;
+  background: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
+  border-left: 1px solid var(--pnut-button-bg) !important;
   padding: 0 22px !important;
   font-size: 14px !important;
   font-weight: 800 !important;
-  box-shadow: 0 8px 18px rgba(187, 79, 40, 0.22) !important;
+  box-shadow: var(--pnut-shadow-sm) !important;
 }
 
 .navbar-download-btn:hover {
-  background: var(--pnut-brand-hover) !important;
-  box-shadow: 0 10px 20px rgba(187, 79, 40, 0.28) !important;
+  background: var(--pnut-button-hover) !important;
+  box-shadow: var(--pnut-shadow-md) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -708,7 +708,7 @@
 .navbar-controls .dropdown-toggle:hover,
 .navbar-controls .dropdown-toggle.show {
   background: var(--pnut-brand-soft) !important;
-  border-color: rgba(187, 79, 40, 0.28) !important;
+  border-color: var(--pnut-brand-border) !important;
   transform: none !important;
   color: var(--pnut-text) !important;
 }
@@ -726,7 +726,7 @@
 .navbar-controls .dropdown-toggle span:last-child {
   color: var(--pnut-text) !important;
   font-size: 13px !important;
-  font-weight: 750 !important;
+  font-weight: 700 !important;
   padding-left: 0 !important;
 }
 
@@ -745,7 +745,7 @@
   color: var(--pnut-text-soft) !important;
   border-radius: var(--pnut-radius) !important;
   font-size: 13px !important;
-  font-weight: 650 !important;
+  font-weight: 600 !important;
 }
 
 .pnut-dropdown__item:hover,

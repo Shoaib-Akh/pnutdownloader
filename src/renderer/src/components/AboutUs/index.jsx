@@ -89,7 +89,7 @@ function AboutUs() {
         <div className="mb-3 mt-2 pt-1">
           <img src={Logo} alt="PNUT Downloader Logo" style={{ height: '50px', marginBottom: '10px' }} />
         </div>
-        <h1 className="display-4 fw-bold text-dark mb-2" style={{ fontSize: 22, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+        <h1 className="display-4 fw-bold text-dark mb-2" style={{ fontSize: 22, color: 'var(--pnut-text)' }}>
           About PNUT
         </h1>
         <h4 className="lead text-muted col-md-10 mx-auto" style={{ fontSize: 15, lineHeight: 1.4 }}>
@@ -99,16 +99,16 @@ function AboutUs() {
 
       <div className="row g-4 mb-5">
         <div className="col-md-12">
-          <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'linear-gradient(135deg, #fff 0%, #f8f9fa 100%)' }}>
+          <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'var(--pnut-surface)' }}>
             <div className="card-body p-3 d-flex justify-content-around align-items-center">
               <div className="text-center">
                 <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Total Downloads</h3>
-                <div className="h2 fw-bold" style={{ color: '#BB4F28' }}>{userStats.totalDownloads}</div>
+                <div className="h2 fw-bold" style={{ color: 'var(--pnut-brand)' }}>{userStats.totalDownloads}</div>
               </div>
-              <div style={{ width: '1px', height: '40px', backgroundColor: '#e2e8f0' }}></div>
+              <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--pnut-border)' }}></div>
               <div className="text-center">
                 <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Download Errors</h3>
-                <div className="h2 fw-bold" style={{ color: '#dc3545' }}>{userStats.errorCount}</div>
+                <div className="h2 fw-bold" style={{ color: 'var(--pnut-danger)' }}>{userStats.errorCount}</div>
               </div>
             </div>
           </div>
@@ -120,7 +120,7 @@ function AboutUs() {
           <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', }}>
             <div className="card-body p-3">
               <div className="mb-2">
-                <FaRocket style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
+                <FaRocket style={{ fontSize: '1.5rem', color: 'var(--pnut-brand)' }} />
               </div>
               <h2 className="h5 fw-semibold text-dark mb-2">Mission</h2>
               <p className="text-muted small" style={{ lineHeight: 1.6 }}>
@@ -131,10 +131,10 @@ function AboutUs() {
         </div>
 
         <div className="col-md-6 mt-2">
-          <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
+          <div className="card h-100 border-0 shadow-sm" style={{ borderRadius: '15px', transition: 'transform 0.3s ease', background: 'var(--pnut-surface-raised)' }}>
             <div className="card-body p-3">
               <div className="mb-2">
-                <FaUsers style={{ fontSize: '1.5rem', color: '#BB4F28' }} />
+                <FaUsers style={{ fontSize: '1.5rem', color: 'var(--pnut-brand)' }} />
               </div>
               <h2 className="h5 fw-semibold text-dark mb-2">Built for</h2>
               <p className="text-muted small" style={{ lineHeight: 1.6 }}>
@@ -147,25 +147,25 @@ function AboutUs() {
 
       <div className="mt-3 row align-items-start">
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center">
-          <h2 className="h5 fw-semibold text-dark mt-2" style={{ fontSize: 18, background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+          <h2 className="h5 fw-semibold text-dark mt-2" style={{ fontSize: 18, color: 'var(--pnut-text)' }}>
             Community
           </h2>
           <p className="text-muted mb-2 small">Join the community and stay updated.</p>
-          <h3 className="mb-2" style={{ fontSize: 14, color: '#BB4F28' }}>
+          <h3 className="mb-2" style={{ fontSize: 14, color: 'var(--pnut-brand)' }}>
             Current Version: <b>{appVersion}</b>
           </h3>
 
           <div className="d-flex flex-column gap-2 mb-3 align-items-center">
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: 'var(--pnut-button-bg)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: 'var(--pnut-shadow-sm)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-button-text)' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(187, 79, 40, 0.35)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-md)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(187, 79, 40, 0.25)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
               }}
               onClick={() => window.api && window.api.checkForUpdates()}
             >
@@ -227,7 +227,7 @@ function AboutUs() {
         </div>
 
         <div className="col-md-6 d-flex flex-column justify-content-center align-items-center" style={{ cursor: 'default' }}>
-          <h3 className="mb-2" style={{ fontSize: 16, fontWeight: '600', background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Quick Links</h3>
+          <h3 className="mb-2" style={{ fontSize: 16, fontWeight: '600', color: 'var(--pnut-text)' }}>Quick Links</h3>
           <div className="d-flex flex-column gap-2">
             <button
               onClick={() => {
@@ -239,14 +239,14 @@ function AboutUs() {
                 }
               }}
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #BB4F28 0%, #d9775c 100%)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: '0 4px 12px rgba(187, 79, 40, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
+              style={{ background: 'var(--pnut-button-bg)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: 'var(--pnut-shadow-sm)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-button-text)' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(187, 79, 40, 0.35)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-md)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(187, 79, 40, 0.25)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
               }}
             >
               <FaEnvelope className="me-2" />
@@ -254,14 +254,14 @@ function AboutUs() {
             </button>
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
+              style={{ background: 'var(--pnut-surface)', border: '1px solid var(--pnut-border)', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-text)', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.35)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.25)';
+                e.target.style.boxShadow = 'none';
               }}
               onClick={() => {
                 if (window.api) {
@@ -276,14 +276,14 @@ function AboutUs() {
             </button>
             <button
               className="btn px-3"
-              style={{ background: 'linear-gradient(135deg, #6c757d 0%, #868e96 100%)', border: 'none', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: '0 4px 12px rgba(108, 117, 125, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white', whiteSpace: 'nowrap' }}
+              style={{ background: 'var(--pnut-surface)', border: '1px solid var(--pnut-border)', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-text)', whiteSpace: 'nowrap' }}
               onMouseEnter={(e) => {
                 e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(108, 117, 125, 0.35)';
+                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
               }}
               onMouseLeave={(e) => {
                 e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(108, 117, 125, 0.25)';
+                e.target.style.boxShadow = 'none';
               }}
               onClick={() => {
                 if (window.api) {
@@ -303,11 +303,11 @@ function AboutUs() {
       {/* Copyright notice pushed to the bottom */}
       <div className="text-center mt-3 mb-2">
         <div className="mb-1">
-          <p className="mb-1" style={{ fontSize: 12, color: '#6c757d' }}>
-            Made with <FaHeart style={{ color: '#e74c3c' }} /> by the PNUT Team
+          <p className="mb-1" style={{ fontSize: 12, color: 'var(--pnut-muted)' }}>
+            Made with <FaHeart style={{ color: 'var(--pnut-danger)' }} /> by the PNUT Team
           </p>
         </div>
-        <p style={{ fontSize: 11, color: '#6c757d', margin: 0 }}>
+        <p style={{ fontSize: 11, color: 'var(--pnut-muted)', margin: 0 }}>
           Copyright 2025 PNUT Downloader. All Rights Reserved.
         </p>
       </div>

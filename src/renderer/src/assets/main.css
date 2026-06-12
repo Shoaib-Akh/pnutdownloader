@@ -1,7 +1,7 @@
 body {
     background-color: var(--theme-bg-primary) !important;
     margin: 0 !important;;
-    font-family: Arial, sans-serif !important;;
+    font-family: var(--font-body) !important;
     overflow: hidden;
     color: var(--theme-text-primary);
   }
