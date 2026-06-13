@@ -950,9 +950,9 @@ function createWindow() {
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
     width: 1200,
-    height: 800,
+    height: 850,
     minWidth: 1150,
-    minHeight: 750,
+    minHeight: 850,
     icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {

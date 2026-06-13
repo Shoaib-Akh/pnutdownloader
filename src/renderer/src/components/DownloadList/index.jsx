@@ -25,6 +25,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     downloadListData,
   } = useDownloadListVM()
 
+  const asText = (value, fallback = '') => {
+    if (value === null || value === undefined) return fallback
+    if (typeof value === 'string') return value
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    return fallback
+  }
+
   const handleSearchChange = (event) => {
     setSearchQuery(event.target.value)
   }
@@ -85,7 +92,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   const handleSelectAll = () => {
     const currentList = searchQuery
       ? filteredList.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+        asText(item.title || item.filename).toLowerCase().includes(searchQuery.toLowerCase())
       )
       : filteredList
 
@@ -406,12 +413,14 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   // re-read list when lastUpdated changes to reflect background updates
   const filteredList = (downloadListData)
     .filter((item) => {
+      const itemUrl = asText(item.url)
+      const itemFormat = asText(item.format).toLowerCase()
       const isPlaylist =
-        item.url.includes('playlist') || item.url.includes('&list=') || item.url.includes('?list=');
+        itemUrl.includes('playlist') || itemUrl.includes('&list=') || itemUrl.includes('?list=');
       if (selectedItem === 'All Files' || selectedItem === 'All File') return true;
       if (selectedItem === 'Playlist') return isPlaylist;
-      if (selectedItem === 'Video') return item.format === 'mp4' && !isPlaylist;
-      if (selectedItem === 'Audio') return ['mp3', 'flac', 'wav', 'aac'].includes(item.format);
+      if (selectedItem === 'Video') return itemFormat === 'mp4' && !isPlaylist;
+      if (selectedItem === 'Audio') return ['mp3', 'flac', 'wav', 'aac'].includes(itemFormat);
       return false;
     })
     .sort((a, b) => {
@@ -424,7 +433,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         const audioFormats = ['mp3', 'flac', 'wav', 'aac']; // Define order of formats
         return audioFormats.indexOf(a.format) - audioFormats.indexOf(b.format);
       }
-      if (selectedItem === 'Playlist') return a.url.localeCompare(b.url);
+      if (selectedItem === 'Playlist') return asText(a.url).localeCompare(asText(b.url));
       if (selectedItem === 'Video') {
         // Sort videos by download date (newest first)
         return new Date(b.downloadDate || 0) - new Date(a.downloadDate || 0);
@@ -436,7 +445,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   // Apply search filter
   const searchFilteredList = searchQuery
     ? filteredList.filter(item =>
-      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+      asText(item.title || item.filename).toLowerCase().includes(searchQuery.toLowerCase())
     )
     : filteredList
 
@@ -452,10 +461,11 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
 
   // Function to clean title by removing unwanted suffixes
   const cleanTitle = (title) => {
-    if (!title) return title
+    const titleText = asText(title)
+    if (!titleText) return titleText
     
     // Normalize Unicode for better international character handling
-    return title
+    return titleText
       .normalize('NFD') // Decompose characters for better Unicode handling
       // Remove common quality and format suffixes (case-insensitive)
       .replace(/[_\-\s]+\d+[pP](\.[a-zA-Z0-9]+)?$/g, '') // Remove _720p.f140, _1080p.f137, etc.
@@ -618,7 +628,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 {(() => {
                   const currentList = searchQuery
                     ? filteredList.filter(item =>
-                      item.title.toLowerCase().includes(searchQuery.toLowerCase())
+                      asText(item.title || item.filename).toLowerCase().includes(searchQuery.toLowerCase())
                     )
                     : filteredList
                   return selectedItems.size === currentList.length && currentList.length > 0 ? (

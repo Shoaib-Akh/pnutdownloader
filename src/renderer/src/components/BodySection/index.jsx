@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FaDownload,
   FaTimes,
@@ -46,12 +46,12 @@ function BodySection({
   setAboutUs,
   updateInfo
 }) {
-  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false)
   const [showDonationModal, setShowDonationModal] = useState(false)
-  const [isWebViewReady, setIsWebViewReady] = useState(false);
+  const [isWebViewReady, setIsWebViewReady] = useState(false)
 
-  const [canGoBack, setCanGoBack] = useState(false);
-  const [canGoForward, setCanGoForward] = useState(false);
+  const [canGoBack, setCanGoBack] = useState(false)
+  const [canGoForward, setCanGoForward] = useState(false)
   const [url, setUrl] = useState('')
   const [lastUrl, setLastUrl] = useState('')
   const [isDownloadable, setIsDownloadable] = useState(false)
@@ -62,6 +62,7 @@ function BodySection({
   const [playlistModalLoading, setPlaylistModalLoading] = useState(false)
   const [playlistData, setPlaylistData] = useState(null)
   const webviewRef = useRef(null)
+  const hasBrowserUrl = Boolean(url)
 
   const {
     enqueueDownload,
@@ -69,7 +70,7 @@ function BodySection({
     retryDownload,
     progressMap: downloadProgressMap,
     activeDownloads,
-    normalizeYouTubeUrlForSingleVideo: normalizeYouTubeSingle,
+    normalizeYouTubeUrlForSingleVideo: normalizeYouTubeSingle
   } = useDownloadManager({
     downloadType,
     format,
@@ -77,7 +78,7 @@ function BodySection({
     saveTo,
     bitrate,
     onDonationPrompt: () => setShowDonationModal(true),
-    onLoginRequired: () => setShowLoginPopup(true),
+    onLoginRequired: () => setShowLoginPopup(true)
   })
 
   const handleCopyUrl = () => {
@@ -89,9 +90,27 @@ function BodySection({
       })
   }
 
+  const getNavigableUrl = (value) => {
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return ''
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmedValue)) return trimmedValue
+    if (/^[\w.-]+\.[a-z]{2,}(\/.*)?$/i.test(trimmedValue)) {
+      return `https://${trimmedValue}`
+    }
+    return `https://www.google.com/search?q=${encodeURIComponent(trimmedValue)}`
+  }
+
   const handleGo = () => {
-    if (currentWebViewUrl && webviewRef.current) {
-      webviewRef.current.src = currentWebViewUrl
+    const nextUrl = getNavigableUrl(currentWebViewUrl)
+    if (!nextUrl) return
+
+    setUrl(nextUrl)
+    setCurrentWebViewUrl(nextUrl)
+    setIsDownloadable(false)
+    setIsWebViewReady(false)
+
+    if (webviewRef.current) {
+      webviewRef.current.src = nextUrl
     }
   }
   useEffect(() => {
@@ -108,17 +127,17 @@ function BodySection({
     if (pastLinkUrl) {
       const fetchAndDownload = async () => {
         try {
-          console.log('[DEBUG] Processing URL:', pastLinkUrl);
-          const result = await enqueueDownload(pastLinkUrl);
-          console.log('[DEBUG] Enqueue result:', result);
-          
+          console.log('[DEBUG] Processing URL:', pastLinkUrl)
+          const result = await enqueueDownload(pastLinkUrl)
+          console.log('[DEBUG] Enqueue result:', result)
+
           if (result?.duplicate) {
             if (window.api?.showMessageBox) {
               window.api.showMessageBox({
                 type: 'warning',
                 title: 'Duplicate Download',
                 message:
-                  'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+                  'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
               })
             } else {
               alert(
@@ -133,7 +152,7 @@ function BodySection({
               window.api.showMessageBox({
                 type: 'warning',
                 title: 'Download Not Supported',
-                message: result.message || 'This URL is not supported for download.',
+                message: result.message || 'This URL is not supported for download.'
               })
             } else {
               alert(result.message || 'This URL is not supported for download.')
@@ -147,7 +166,7 @@ function BodySection({
             setPlaylistModalLoading(false)
           }
           if (result?.id) {
-            console.log('[DEBUG] Download added with ID:', result.id);
+            console.log('[DEBUG] Download added with ID:', result.id)
             setDownloadListOpen(true)
             setShowWebView(false)
             setIsSidebarOpen(true)
@@ -155,8 +174,8 @@ function BodySection({
             setDownload(true)
           }
         } catch (error) {
-          console.error('[DEBUG] Error adding download:', error);
-          alert('Failed to add download: ' + error.message);
+          console.error('[DEBUG] Error adding download:', error)
+          alert('Failed to add download: ' + error.message)
         } finally {
           setPastLinkUrl('')
         }
@@ -165,102 +184,110 @@ function BodySection({
     }
   }, [pastLinkUrl])
 
-
   useEffect(() => {
     if (webviewRef.current && showWebView) {
-      const webview = webviewRef.current;
+      const webview = webviewRef.current
 
       const onDomReady = () => {
-        setIsWebViewReady(true);
-        setCanGoBack(webview.canGoBack());
-        setCanGoForward(webview.canGoForward());
-      };
-      webview.addEventListener('dom-ready', onDomReady);
+        setIsWebViewReady(true)
+        setCanGoBack(webview.canGoBack())
+        setCanGoForward(webview.canGoForward())
+      }
+      webview.addEventListener('dom-ready', onDomReady)
       const handleNavigation = (event) => {
-        setCurrentWebViewUrl(event.url);
-        checkIfDownloadable(event.url);
-        setCanGoBack(webview.canGoBack());
-        setCanGoForward(webview.canGoForward());
-      };
+        setCurrentWebViewUrl(event.url)
+        checkIfDownloadable(event.url)
+        setCanGoBack(webview.canGoBack())
+        setCanGoForward(webview.canGoForward())
+      }
 
-      webview.addEventListener('did-navigate', handleNavigation);
-      webview.addEventListener('did-navigate-in-page', handleNavigation);
+      webview.addEventListener('did-navigate', handleNavigation)
+      webview.addEventListener('did-navigate-in-page', handleNavigation)
 
       return () => {
-        webview.removeEventListener('dom-ready', onDomReady);
-        webview.removeEventListener('did-navigate', handleNavigation);
-        webview.removeEventListener('did-navigate-in-page', handleNavigation);
-      };
+        webview.removeEventListener('dom-ready', onDomReady)
+        webview.removeEventListener('did-navigate', handleNavigation)
+        webview.removeEventListener('did-navigate-in-page', handleNavigation)
+      }
     }
-    setIsWebViewReady(true);
-
-  }, [showWebView, isWebViewReady]);
+    setIsWebViewReady(true)
+  }, [showWebView, isWebViewReady])
 
   useEffect(() => {
-    if (currentWebViewUrl) window.api.getYoutubeCookies()
-    setLastUrl(currentWebViewUrl)
+    if (currentWebViewUrl && hasBrowserUrl) {
+      window.api.getYoutubeCookies()
+      setLastUrl(currentWebViewUrl)
+    }
     setDownload(false)
-  }, [currentWebViewUrl])
+  }, [currentWebViewUrl, hasBrowserUrl])
 
-  // Set YouTube as default URL when Browser is clicked
   useEffect(() => {
-    if (showWebView && !url && !currentWebViewUrl) {
-      setUrl('https://www.youtube.com');
-      setCurrentWebViewUrl('https://www.youtube.com');
+    if (showWebView && selectedItem === 'Browser') {
+      setUrl('')
+      setCurrentWebViewUrl('')
+      setIsDownloadable(false)
+      setCanGoBack(false)
+      setCanGoForward(false)
+      setIsWebViewReady(true)
     }
-  }, [showWebView, url, currentWebViewUrl])
+  }, [showWebView, selectedItem])
 
   const DONATION_URL = "https://ko-fi.com/pnutdownloader'"
 
   const handlePlatformClick = (platformUrl) => {
     window.api.trackEvent('platformUrl', { platformUrl })
     setUrl(platformUrl)
+    setCurrentWebViewUrl(platformUrl)
     setShowWebView(true)
     setIsDownloadable(false)
     setIsSidebarOpen(false)
-    setIsWebViewReady(false);
+    setIsWebViewReady(false)
   }
 
   const handleCloseWebView = () => {
-    setLastUrl(currentWebViewUrl || url)
+    if (url) {
+      setLastUrl(currentWebViewUrl || url)
+    }
     setUrl('')
+    setCurrentWebViewUrl('')
     setShowWebView(false)
     setIsDownloadable(false)
     setIsSidebarOpen(true)
-    setIsWebViewReady(false);
+    setIsWebViewReady(false)
   }
 
   const handleResumeBrowser = () => {
     if (lastUrl) {
       setUrl(lastUrl)
+      setCurrentWebViewUrl(lastUrl)
       setShowWebView(true)
       setIsSidebarOpen(false)
       setSelectedItem('')
+      setIsWebViewReady(false)
     }
   }
 
   const checkIfDownloadable = (currentUrl) => {
     if (!currentUrl) {
-      setIsDownloadable(false);
-      return;
+      setIsDownloadable(false)
+      return
     }
 
     // Check against all video patterns from all.json
     const isDownloadable = alljson?.videoPatterns?.some((pattern) => {
       try {
-        const regex = new RegExp(pattern);
-        return regex.test(currentUrl);
+        const regex = new RegExp(pattern)
+        return regex.test(currentUrl)
       } catch (error) {
-        console.warn(`Invalid regex pattern: ${pattern}`, error);
-        return false;
+        console.warn(`Invalid regex pattern: ${pattern}`, error)
+        return false
       }
-    });
+    })
 
-    setIsDownloadable(isDownloadable || false);
+    setIsDownloadable(isDownloadable || false)
   }
 
   const handleDownloadClick = async () => {
-
     if (window.api) {
       try {
         window.api.trackEvent('download_button_clicked', {
@@ -278,10 +305,10 @@ function BodySection({
     } else {
       console.error('window.api is not defined')
     }
-    setAboutUs(false);
-    const rawUrlToDownload = pastLinkUrl || currentWebViewUrl;
-    const urlToDownload = normalizeYouTubeSingle(rawUrlToDownload);
-    if (!urlToDownload) return;
+    setAboutUs(false)
+    const rawUrlToDownload = pastLinkUrl || currentWebViewUrl
+    const urlToDownload = normalizeYouTubeSingle(rawUrlToDownload)
+    if (!urlToDownload) return
 
     const result = await enqueueDownload(urlToDownload)
 
@@ -291,7 +318,7 @@ function BodySection({
           type: 'warning',
           title: 'Duplicate Download',
           message:
-            'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.',
+            'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
         })
       } else {
         alert(
@@ -309,14 +336,14 @@ function BodySection({
       return
     }
 
-    setUrl(urlToDownload);
-    setDownloadListOpen(true);
-    setShowWebView(false);
-    setIsSidebarOpen(true);
-    setSelectedItem('All Files');
-    setDownload(true);
+    setUrl(urlToDownload)
+    setDownloadListOpen(true)
+    setShowWebView(false)
+    setIsSidebarOpen(true)
+    setSelectedItem('All Files')
+    setDownload(true)
     // enqueueDownload already queued when result.id present
-  };
+  }
 
   const handleDonate = () => {
     if (DONATION_URL && window.api) {
@@ -329,22 +356,25 @@ function BodySection({
     window.api.trackEvent('youtube-login')
     // Navigate to YouTube - when user signs in here, cookies will be saved
     // Use youtube.com home page which will redirect to login if needed
-    const youtubeUrl = 'https://www.youtube.com';
-    setCurrentWebViewUrl(youtubeUrl);
-    setUrl(youtubeUrl);
-    setLastUrl(youtubeUrl);
-    setShowWebView(true);
-    setIsSidebarOpen(false);
-    setShowLoginPopup(false);
-    setIsWebViewReady(true);
-  };
+    const youtubeUrl = 'https://www.youtube.com'
+    setCurrentWebViewUrl(youtubeUrl)
+    setUrl(youtubeUrl)
+    setLastUrl(youtubeUrl)
+    setShowWebView(true)
+    setIsSidebarOpen(false)
+    setSelectedItem('')
+    setShowLoginPopup(false)
+    setIsWebViewReady(true)
+  }
 
   const handleRetry = (id) => {
     window.api.trackEvent('handleRetry')
     retryDownload(id)
-  };
+  }
   return (
-    <div className={`app-content ${showWebView ? 'app-content--browser' : 'app-content--standard'}`}>
+    <div
+      className={`app-content ${showWebView ? 'app-content--browser' : 'app-content--standard'}`}
+    >
       {aboutUs ? (
         <div className="about-page-wrap">
           <AboutUs updateInfo={updateInfo} />
@@ -418,19 +448,21 @@ function BodySection({
               <button
                 className="nav-btn"
                 onClick={() => webviewRef.current?.goBack()}
-                disabled={!isWebViewReady || !canGoBack}
+                disabled={!hasBrowserUrl || !isWebViewReady || !canGoBack}
               >
                 <FaArrowLeft size={16} />
               </button>
               <button
                 className="nav-btn"
                 onClick={() => webviewRef.current?.goForward()}
-                disabled={!isWebViewReady || !canGoForward}
+                disabled={!hasBrowserUrl || !isWebViewReady || !canGoForward}
               >
                 <FaArrowRight size={16} />
               </button>
-              <button className="nav-btn" onClick={() => webviewRef.current?.reload()}
-                disabled={!isWebViewReady}
+              <button
+                className="nav-btn"
+                onClick={() => webviewRef.current?.reload()}
+                disabled={!hasBrowserUrl || !isWebViewReady}
               >
                 <FaSync size={16} />
               </button>
@@ -468,14 +500,12 @@ function BodySection({
                 type="text"
                 value={currentWebViewUrl}
                 onChange={(e) => setCurrentWebViewUrl(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === 'Enter' && (webviewRef.current.src = currentWebViewUrl)
-                }
-                placeholder="Enter URL or search..."
+                onKeyDown={(e) => e.key === 'Enter' && handleGo()}
+                placeholder="Enter a URL or search..."
               />
               <OverlayTrigger
                 placement="top"
-              overlay={<Tooltip id="copy-tooltip">Copy URL</Tooltip>}
+                overlay={<Tooltip id="copy-tooltip">Copy URL</Tooltip>}
               >
                 <button className="url-btn" onClick={handleCopyUrl}>
                   <FaCopy size={16} />
@@ -501,7 +531,7 @@ function BodySection({
             </OverlayTrigger>
           </div>
           <div className="webview-height">
-            {showWebView &&
+            {showWebView && hasBrowserUrl ? (
               <webview
                 ref={webviewRef}
                 src={url}
@@ -509,7 +539,11 @@ function BodySection({
                 allowpopups="true"
                 partition="persist:main"
               />
-            }
+            ) : (
+              <div className="explore-start-page">
+                <PlatformIcons handlePlatformClick={handlePlatformClick} variant="explore" />
+              </div>
+            )}
           </div>
           {isDownloadable && (
             <button className="download-btn" onClick={handleDownloadClick}>
@@ -556,7 +590,6 @@ function BodySection({
           isLoading={playlistModalLoading}
         />
       )}
-
     </div>
   )
 }
