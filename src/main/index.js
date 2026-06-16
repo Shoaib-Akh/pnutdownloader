@@ -1,6 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, session, dialog, globalShortcut, Notification, clipboard } from 'electron'
 import { join } from 'path'
-const tar = require('tar'); // You'll need to install this: npm install tar
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
@@ -32,6 +31,44 @@ const https = require('https');
 
 const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
+
+let dependencyStatus = {
+  status: 'idle',
+  tool: 'dependencies',
+  action: 'idle',
+  message: 'Waiting to check dependencies...',
+  isBusy: false,
+  ready: false,
+  percent: null,
+  downloadedBytes: null,
+  totalBytes: null,
+  speedBps: null,
+  timestamp: Date.now()
+};
+
+const emitDependencyStatus = (update = {}) => {
+  dependencyStatus = {
+    ...dependencyStatus,
+    ...update,
+    timestamp: Date.now()
+  };
+
+  if (typeof dependencyStatus.percent === 'number') {
+    dependencyStatus.percent = Math.max(0, Math.min(100, dependencyStatus.percent));
+  }
+
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_EVENTS.DEPENDENCY_PROGRESS, dependencyStatus);
+    }
+  } catch (err) {
+    console.warn('Failed to send dependency status:', err.message);
+  }
+
+  return dependencyStatus;
+};
+
+const getDependencyStatusSnapshot = () => ({ ...dependencyStatus });
 
 const getLogSafeYtdlpArgs = (args) => {
   const redactValueAfter = new Set(['--cookies']);
@@ -295,8 +332,14 @@ if (!gotTheLock) {
   })
 }
 
-function downloadFile(url, destPath) {
+function downloadFile(url, destPath, options = {}) {
   return new Promise(async (resolve, reject) => {
+    const {
+      tool = 'dependencies',
+      action = 'download',
+      displayName = tool === 'yt-dlp' ? 'yt-dlp' : tool === 'ffmpeg' ? 'FFmpeg' : 'Dependency',
+      message = `Downloading ${displayName}...`
+    } = options;
     const dir = dirname(destPath);
     if (!existsSync(dir)) {
       console.log(`Creating directory: ${dir}`);
@@ -316,15 +359,37 @@ function downloadFile(url, destPath) {
 
     const file = createWriteStream(destPath, { flags: 'w' });
     console.log(`Starting download of ${url} to ${destPath}`);
+    emitDependencyStatus({
+      status: 'downloading',
+      tool,
+      action,
+      message,
+      isBusy: true,
+      ready: false,
+      percent: 0,
+      downloadedBytes: 0,
+      totalBytes: null,
+      speedBps: null,
+      error: null
+    });
 
     const request = https.get(url, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
         file.close();
-        return downloadFile(response.headers.location, destPath).then(resolve).catch(reject);
+        return downloadFile(response.headers.location, destPath, options).then(resolve).catch(reject);
       }
       if (response.statusCode !== 200) {
         file.close();
         fs.unlink(destPath).catch(() => {});
+        emitDependencyStatus({
+          status: 'failed',
+          tool,
+          action,
+          message: `${displayName} download failed with HTTP ${response.statusCode}.`,
+          isBusy: false,
+          ready: false,
+          error: `HTTP ${response.statusCode}`
+        });
         reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
         return;
       }
@@ -363,21 +428,24 @@ function downloadFile(url, destPath) {
         const speedStr = `${formatBytes(speedBps)}/s`;
 
         const progressPayload = {
+          status: 'downloading',
+          tool,
+          action,
           destPath,
           url,
           downloadedBytes,
           totalBytes: totalBytes && Number.isFinite(totalBytes) ? totalBytes : null,
           speedBps: Number.isFinite(speedBps) ? speedBps : null,
+          percent: totalBytes && Number.isFinite(totalBytes) && totalBytes > 0
+            ? Math.min((downloadedBytes / totalBytes) * 100, 100)
+            : null,
+          message,
+          isBusy: true,
+          ready: false,
           timestamp: now
         };
 
-        try {
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send(IPC_EVENTS.DOWNLOAD_PROGRESS, progressPayload);
-          }
-        } catch (err) {
-          // Ignore progress IPC errors
-        }
+        emitDependencyStatus(progressPayload);
 
         if (totalBytes && Number.isFinite(totalBytes) && totalBytes > 0) {
           const pct = Math.min((downloadedBytes / totalBytes) * 100, 100);
@@ -410,6 +478,18 @@ function downloadFile(url, destPath) {
       file.on('finish', async () => {
         file.close();
         console.log(`Download completed, file size: ${downloadedBytes} bytes`);
+        emitDependencyStatus({
+          status: 'downloaded',
+          tool,
+          action,
+          message: `${displayName} download finished. Preparing it now...`,
+          isBusy: true,
+          ready: false,
+          percent: 100,
+          downloadedBytes,
+          totalBytes: totalBytes && Number.isFinite(totalBytes) ? totalBytes : downloadedBytes,
+          speedBps: null
+        });
         
         // Set executable permissions for binary files on Unix-like systems
         if (process.platform !== 'win32' && (
@@ -432,12 +512,30 @@ function downloadFile(url, destPath) {
     request.on('error', (err) => {
       file.close();
       fs.unlink(destPath).catch(() => {});
+      emitDependencyStatus({
+        status: 'failed',
+        tool,
+        action,
+        message: `${displayName} download failed: ${err.message}`,
+        isBusy: false,
+        ready: false,
+        error: err.message
+      });
       reject(new Error(`Download failed: ${err.message}`));
     });
 
     file.on('error', (err) => {
       file.close();
       fs.unlink(destPath).catch(() => {});
+      emitDependencyStatus({
+        status: 'failed',
+        tool,
+        action,
+        message: `Could not save ${displayName}: ${err.message}`,
+        isBusy: false,
+        ready: false,
+        error: err.message
+      });
       reject(new Error(`File write failed: ${err.message}`));
     });
 
@@ -659,43 +757,96 @@ async function updateYtdlp(forceUpdate = false) {
   const bundledPath = app.isPackaged
     ? join(process.resourcesPath, getYtdlpExecutableName())
     : join(__dirname, '../../public', getYtdlpExecutableName());
-  
-  try {
-    // Get latest nightly build URL
-    const nightlyInfo = await getNightlyDownloadUrl();
-    ytdlpUrl = nightlyInfo.url;
-    releaseTag = nightlyInfo.tag;
-    console.log(`Downloading yt-dlp nightly build: ${releaseTag}`);
-  } catch (error) {
-    console.warn(`Failed to get nightly build URL, falling back to stable: ${error.message}`);
-    // Fallback to stable releases if nightly fails
-    if (process.platform === 'win32') {
-      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
-    } else if (process.platform === 'darwin') {
-      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
-    } else {
-      ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
-    }
-  }
-  
+
   // Always use bundled/downloaded version
   if (!ytdlpPath || ytdlpPath === bundledPath || !existsSync(ytdlpPath)) {
     ytdlpPath = bundledPath;
   }
   
   try {
+    emitDependencyStatus({
+      status: 'checking',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message: forceUpdate ? 'Preparing a fresh yt-dlp download...' : 'Checking yt-dlp for updates...',
+      isBusy: true,
+      ready: false,
+      percent: null,
+      downloadedBytes: null,
+      totalBytes: null,
+      speedBps: null,
+      error: null
+    });
+
     // Check if update is needed (unless forced)
     if (!forceUpdate) {
       const updateCheck = await checkYtdlpUpdate();
       if (!updateCheck.needsUpdate && updateCheck.reason === 'up_to_date') {
         console.log('yt-dlp is already up to date');
+        emitDependencyStatus({
+          status: 'ready',
+          tool: 'yt-dlp',
+          action: 'update',
+          message: `yt-dlp is already up to date${updateCheck.currentVersion ? ` (${updateCheck.currentVersion})` : ''}.`,
+          isBusy: false,
+          ready: true,
+          percent: 100,
+          currentVersion: updateCheck.currentVersion || null,
+          latestVersion: updateCheck.currentVersion || null,
+          error: null
+        });
         return { success: true, message: 'Already up to date', version: updateCheck.currentVersion };
       }
+    }
+
+    try {
+      // Get latest nightly build URL
+      const nightlyInfo = await getNightlyDownloadUrl();
+      ytdlpUrl = nightlyInfo.url;
+      releaseTag = nightlyInfo.tag;
+      console.log(`Downloading yt-dlp nightly build: ${releaseTag}`);
+      emitDependencyStatus({
+        status: 'updating',
+        tool: 'yt-dlp',
+        action: forceUpdate ? 'manual-update' : 'update',
+        message: `Downloading yt-dlp ${releaseTag}...`,
+        isBusy: true,
+        ready: false,
+        percent: 0,
+        latestVersion: releaseTag
+      });
+    } catch (error) {
+      console.warn(`Failed to get nightly build URL, falling back to stable: ${error.message}`);
+      // Fallback to stable releases if nightly fails
+      if (process.platform === 'win32') {
+        ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+      } else if (process.platform === 'darwin') {
+        ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
+      } else {
+        ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+      }
+      emitDependencyStatus({
+        status: 'updating',
+        tool: 'yt-dlp',
+        action: forceUpdate ? 'manual-update' : 'update',
+        message: 'Downloading the latest stable yt-dlp build...',
+        isBusy: true,
+        ready: false,
+        percent: 0
+      });
     }
 
     // Remove old binary if it exists (in case it's corrupted)
     if (existsSync(ytdlpPath)) {
       try {
+        emitDependencyStatus({
+          status: 'updating',
+          tool: 'yt-dlp',
+          action: forceUpdate ? 'manual-update' : 'update',
+          message: 'Replacing the old yt-dlp binary...',
+          isBusy: true,
+          ready: false
+        });
         await fs.unlink(ytdlpPath);
         console.log(`Removed old yt-dlp binary: ${ytdlpPath}`);
         // Wait a bit to ensure file system has released the file
@@ -706,10 +857,24 @@ async function updateYtdlp(forceUpdate = false) {
     }
     
     console.log(`Downloading yt-dlp from: ${ytdlpUrl}`);
-    await downloadFile(ytdlpUrl, ytdlpPath);
+    await downloadFile(ytdlpUrl, ytdlpPath, {
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      displayName: 'yt-dlp',
+      message: releaseTag ? `Downloading yt-dlp ${releaseTag}...` : 'Downloading yt-dlp...'
+    });
     console.log('yt-dlp downloaded successfully');
     const stats = await fs.stat(ytdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
+    emitDependencyStatus({
+      status: 'verifying',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message: 'Verifying yt-dlp and setting permissions...',
+      isBusy: true,
+      ready: false,
+      percent: 100
+    });
     
     // Set executable permissions on Unix-like systems with retry logic
     if (process.platform !== 'win32') {
@@ -764,14 +929,99 @@ async function updateYtdlp(forceUpdate = false) {
       }
     }
     
+    emitDependencyStatus({
+      status: 'ready',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message: releaseTag ? `yt-dlp updated to ${releaseTag}.` : 'yt-dlp updated successfully.',
+      isBusy: false,
+      ready: true,
+      percent: 100,
+      version: releaseTag,
+      latestVersion: releaseTag,
+      error: null
+    });
+
     return { success: true, message: 'yt-dlp updated successfully', version: releaseTag };
   } catch (error) {
     console.error(`Failed to update yt-dlp: ${error.message}`);
+    emitDependencyStatus({
+      status: 'failed',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message: `yt-dlp update failed: ${error.message}`,
+      isBusy: false,
+      ready: false,
+      error: error.message
+    });
     throw error;
   }
 }
 
-async function downloadAndExtractFFmpeg() {
+async function runYtdlpAutoUpdateCheck(source = 'automatic') {
+  try {
+    emitDependencyStatus({
+      status: 'checking',
+      tool: 'yt-dlp',
+      action: 'auto-update',
+      message: 'Checking yt-dlp updates...',
+      isBusy: true,
+      ready: false,
+      percent: null,
+      downloadedBytes: null,
+      totalBytes: null,
+      speedBps: null,
+      error: null
+    });
+
+    console.log(`${source} yt-dlp update check...`);
+    const updateCheck = await checkYtdlpUpdate();
+    if (updateCheck.needsUpdate) {
+      console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
+      console.log('Updating yt-dlp automatically...');
+      const updateResult = await updateYtdlp();
+      if (updateResult.success) {
+        console.log(`yt-dlp updated successfully to ${updateResult.version}`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(IPC_EVENTS.YTDLP_UPDATED, {
+            version: updateResult.version,
+            message: 'yt-dlp has been updated to the latest nightly build'
+          });
+        }
+      }
+    } else {
+      console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
+      emitDependencyStatus({
+        status: 'ready',
+        tool: 'yt-dlp',
+        action: 'auto-update',
+        message: updateCheck.currentVersion
+          ? `yt-dlp is up to date (${updateCheck.currentVersion}).`
+          : 'yt-dlp is up to date.',
+        isBusy: false,
+        ready: true,
+        percent: 100,
+        currentVersion: updateCheck.currentVersion || null,
+        latestVersion: updateCheck.latestVersion || updateCheck.currentVersion || null,
+        error: null
+      });
+    }
+  } catch (error) {
+    console.error(`Error during ${source} yt-dlp update check:`, error.message);
+    emitDependencyStatus({
+      status: 'failed',
+      tool: 'yt-dlp',
+      action: 'auto-update',
+      message: `Could not update yt-dlp: ${error.message}`,
+      isBusy: false,
+      ready: false,
+      error: error.message
+    });
+  }
+}
+
+async function downloadAndExtractFFmpeg(options = {}) {
+  const { forceUpdate = false } = options;
   let ffmpegUrl;
   let tempTarPath;
   let ffmpegFileName;
@@ -803,11 +1053,35 @@ async function downloadAndExtractFFmpeg() {
   const extractPath = dirname(ffmpegPath);
 
   try {
-    if (existsSync(ffmpegPath)) {
+    emitDependencyStatus({
+      status: 'checking',
+      tool: 'ffmpeg',
+      action: forceUpdate ? 'manual-update' : 'install',
+      message: forceUpdate ? 'Preparing a fresh FFmpeg download...' : 'Checking FFmpeg...',
+      isBusy: true,
+      ready: false,
+      percent: null,
+      downloadedBytes: null,
+      totalBytes: null,
+      speedBps: null,
+      error: null
+    });
+
+    if (!forceUpdate && existsSync(ffmpegPath)) {
       const stats = await fs.stat(ffmpegPath);
       if (stats.size > 0) {
         console.log('FFmpeg already exists, skipping download');
-        return;
+        emitDependencyStatus({
+          status: 'ready',
+          tool: 'ffmpeg',
+          action: 'install',
+          message: 'FFmpeg is already installed.',
+          isBusy: false,
+          ready: true,
+          percent: 100,
+          error: null
+        });
+        return { success: true, message: 'FFmpeg already installed', skipped: true };
       }
     }
 
@@ -819,8 +1093,22 @@ async function downloadAndExtractFFmpeg() {
     
     if (process.platform === 'win32') {
       console.log('Downloading FFmpeg for Windows...');
-      await downloadFile(ffmpegUrl, tempTarPath);
+      await downloadFile(ffmpegUrl, tempTarPath, {
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        displayName: 'FFmpeg',
+        message: 'Downloading FFmpeg for Windows...'
+      });
       console.log('Extracting FFmpeg...');
+      emitDependencyStatus({
+        status: 'extracting',
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        message: 'Extracting FFmpeg...',
+        isBusy: true,
+        ready: false,
+        percent: 100
+      });
       
       // Extract ZIP file for Windows using PowerShell
       const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
@@ -866,9 +1154,23 @@ async function downloadAndExtractFFmpeg() {
     } else if (process.platform === 'darwin') {
       // macOS: Always download bundled version (don't use system FFmpeg)
       console.log('Downloading FFmpeg for macOS...');
-      await downloadFile(ffmpegUrl, tempTarPath);
+      await downloadFile(ffmpegUrl, tempTarPath, {
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        displayName: 'FFmpeg',
+        message: 'Downloading FFmpeg for macOS...'
+      });
       
       // Extract ZIP file
+      emitDependencyStatus({
+        status: 'extracting',
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        message: 'Extracting FFmpeg...',
+        isBusy: true,
+        ready: false,
+        percent: 100
+      });
       const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
       mkdirSync(extractDir, { recursive: true });
       execSync(`unzip -q -o "${tempTarPath}" -d "${extractDir}"`);
@@ -899,7 +1201,21 @@ async function downloadAndExtractFFmpeg() {
     } else {
       // Linux - download and extract tar.xz
       console.log('Downloading FFmpeg for Linux...');
-      await downloadFile(ffmpegUrl, tempTarPath);
+      await downloadFile(ffmpegUrl, tempTarPath, {
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        displayName: 'FFmpeg',
+        message: 'Downloading FFmpeg for Linux...'
+      });
+      emitDependencyStatus({
+        status: 'extracting',
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        message: 'Extracting FFmpeg...',
+        isBusy: true,
+        ready: false,
+        percent: 100
+      });
       execSync(`tar -xf "${tempTarPath}" -C "${extractPath}" --strip-components=1 --wildcards "*/ffmpeg"`);
       // Find and move ffmpeg to the correct location
       const extractedFiles = await fs.readdir(extractPath);
@@ -920,12 +1236,33 @@ async function downloadAndExtractFFmpeg() {
 
     const stats = await fs.stat(ffmpegPath);
     console.log(`FFmpeg downloaded and extracted successfully. Size: ${stats.size} bytes`);
+    emitDependencyStatus({
+      status: 'verifying',
+      tool: 'ffmpeg',
+      action: forceUpdate ? 'manual-update' : 'install',
+      message: 'Verifying FFmpeg...',
+      isBusy: true,
+      ready: false,
+      percent: 100
+    });
     
     // Verify the downloaded FFmpeg works
     try {
       const { execSync } = require('child_process');
       const version = execSync(`"${ffmpegPath}" -version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 });
       console.log(`FFmpeg verification successful. Version: ${version.split('\n')[0]}`);
+      emitDependencyStatus({
+        status: 'ready',
+        tool: 'ffmpeg',
+        action: forceUpdate ? 'manual-update' : 'install',
+        message: 'FFmpeg is ready.',
+        isBusy: false,
+        ready: true,
+        percent: 100,
+        version: version.split('\n')[0],
+        error: null
+      });
+      return { success: true, message: 'FFmpeg updated successfully', version: version.split('\n')[0] };
     } catch (verifyErr) {
       console.error(`FFmpeg verification failed: ${verifyErr.message}`);
       throw new Error(`Downloaded FFmpeg binary is not working: ${verifyErr.message}`);
@@ -933,6 +1270,15 @@ async function downloadAndExtractFFmpeg() {
   } catch (error) {
     console.error(`Failed to download/extract FFmpeg: ${error.message}`);
     console.error(`Platform: ${process.platform}, FFmpeg path: ${ffmpegPath}`);
+    emitDependencyStatus({
+      status: 'failed',
+      tool: 'ffmpeg',
+      action: forceUpdate ? 'manual-update' : 'install',
+      message: `FFmpeg update failed: ${error.message}`,
+      isBusy: false,
+      ready: false,
+      error: error.message
+    });
     throw error;
   }
 }
@@ -974,17 +1320,20 @@ function createWindow() {
     event.preventDefault(); // Prevent immediate close
     console.log('Main window close requested, showing confirmation dialog...');
     try {
+      const dependencyBusy = Boolean(dependencyStatus?.isBusy);
       const result = await dialog.showMessageBox(mainWindow, {
         type: 'warning',
         title: 'Confirm Exit',
-        message: 'Are you sure you want to exit PNUT Downloader?',
-        buttons: ['Yes', 'No'],
-        defaultId: 1, // Default to "No"
-        cancelId: 1,  // Cancel on "No"
+        message: dependencyBusy
+          ? 'FFmpeg or yt-dlp is still downloading/updating. Closing now can leave the dependency incomplete. Keep PNUT Downloader open until it finishes?'
+          : 'Are you sure you want to exit PNUT Downloader?',
+        buttons: dependencyBusy ? ['Keep Waiting', 'Close Anyway'] : ['Yes', 'No'],
+        defaultId: dependencyBusy ? 0 : 1, // Default to safest option
+        cancelId: dependencyBusy ? 0 : 1,
         noLink: true,
       });
 
-      if (result.response === 0) { // User clicked "Yes"
+      if (!dependencyBusy && result.response === 0) { // User clicked "Yes"
         console.log('User confirmed exit, closing main window...');
         isAppClosing = true;
         try {
@@ -993,6 +1342,15 @@ function createWindow() {
           // ignore
         }
         mainWindow.destroy(); // Destroy window to trigger 'closed' event
+      } else if (dependencyBusy && result.response === 1) {
+        console.log('User chose to close while dependency operation is active.');
+        isAppClosing = true;
+        try {
+          await cancelActiveDownloads({ reason: 'app_close_dependency_active' });
+        } catch (e) {
+          // ignore
+        }
+        mainWindow.destroy();
       } else {
         console.log('User canceled exit, keeping window open.');
         // Window remains open
@@ -1242,6 +1600,20 @@ app.whenReady().then(async () => {
 
   // Start initialization in the background
   const initDependencies = async () => {
+    emitDependencyStatus({
+      status: 'checking',
+      tool: 'dependencies',
+      action: 'startup',
+      message: 'Checking FFmpeg and yt-dlp...',
+      isBusy: true,
+      ready: false,
+      percent: null,
+      downloadedBytes: null,
+      totalBytes: null,
+      speedBps: null,
+      error: null
+    });
+
     // Initialize yt-dlp path - always use bundled/downloaded version
     const initializeYtdlp = async () => {
       // Check if bundled version exists
@@ -1253,6 +1625,15 @@ app.whenReady().then(async () => {
         ytdlpPath = bundledPath;
         // Verify it works
         try {
+          emitDependencyStatus({
+            status: 'verifying',
+            tool: 'yt-dlp',
+            action: 'startup',
+            message: 'Verifying yt-dlp...',
+            isBusy: true,
+            ready: false,
+            percent: null
+          });
           await checkYtdlpVersion();
           console.log('Using bundled yt-dlp at:', bundledPath);
           return true;
@@ -1288,6 +1669,15 @@ app.whenReady().then(async () => {
       console.log('yt-dlp path after update:', ytdlpPath);
     } else {
       // Verify the version
+      emitDependencyStatus({
+        status: 'verifying',
+        tool: 'yt-dlp',
+        action: 'startup',
+        message: 'Confirming yt-dlp version...',
+        isBusy: true,
+        ready: false,
+        percent: null
+      });
       checkYtdlpVersion().then(version => {
         console.log('yt-dlp version:', version);
       }).catch(err => {
@@ -1295,65 +1685,17 @@ app.whenReady().then(async () => {
       });
       
       // Auto-update check: Run after 30 seconds to not block startup
-      setTimeout(async () => {
-        try {
-          console.log('Checking for yt-dlp updates...');
-          const updateCheck = await checkYtdlpUpdate();
-          if (updateCheck.needsUpdate) {
-            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-            console.log('Updating yt-dlp automatically...');
-            try {
-              const updateResult = await updateYtdlp();
-              if (updateResult.success) {
-                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-                // Notify renderer if window is available
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send(IPC_EVENTS.YTDLP_UPDATED, {
-                    version: updateResult.version,
-                    message: 'yt-dlp has been updated to the latest nightly build'
-                  });
-                }
-              }
-            } catch (updateErr) {
-              console.error('Auto-update failed:', updateErr.message);
-            }
-          } else {
-            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
-          }
-        } catch (error) {
-          console.error('Error during auto-update check:', error.message);
-        }
+      setTimeout(() => {
+        runYtdlpAutoUpdateCheck('Automatic').catch((error) => {
+          console.error('Auto-update failed:', error.message);
+        });
       }, 30000); // Wait 30 seconds after app start
       
       // Set up periodic auto-update check (every 24 hours)
-      setInterval(async () => {
-        try {
-          console.log('Periodic yt-dlp update check...');
-          const updateCheck = await checkYtdlpUpdate();
-          if (updateCheck.needsUpdate) {
-            console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
-            console.log('Updating yt-dlp automatically...');
-            try {
-              const updateResult = await updateYtdlp();
-              if (updateResult.success) {
-                console.log(`yt-dlp updated successfully to ${updateResult.version}`);
-                // Notify renderer if window is available
-                if (mainWindow && !mainWindow.isDestroyed()) {
-                  mainWindow.webContents.send(IPC_EVENTS.YTDLP_UPDATED, {
-                    version: updateResult.version,
-                    message: 'yt-dlp has been updated to the latest nightly build'
-                  });
-                }
-              }
-            } catch (updateErr) {
-              console.error('Auto-update failed:', updateErr.message);
-            }
-          } else {
-            console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
-          }
-        } catch (error) {
-          console.error('Error during periodic auto-update check:', error.message);
-        }
+      setInterval(() => {
+        runYtdlpAutoUpdateCheck('Periodic').catch((error) => {
+          console.error('Periodic yt-dlp update failed:', error.message);
+        });
       }, 24 * 60 * 60 * 1000); // Check every 24 hours
     }
 
@@ -1361,8 +1703,35 @@ app.whenReady().then(async () => {
     isInitialized = deps.ready;
     if (isInitialized) {
       console.log('All dependencies initialized successfully');
+      emitDependencyStatus({
+        status: 'ready',
+        tool: 'dependencies',
+        action: 'startup',
+        message: 'All download dependencies are ready.',
+        isBusy: false,
+        ready: true,
+        percent: 100,
+        dependencies: {
+          ffmpeg: deps.ffmpeg,
+          ytdlp: deps.ytdlp
+        },
+        error: null
+      });
     } else {
       console.error('Failed to initialize all dependencies');
+      emitDependencyStatus({
+        status: 'failed',
+        tool: 'dependencies',
+        action: 'startup',
+        message: deps.error || 'Could not prepare all download dependencies.',
+        isBusy: false,
+        ready: false,
+        dependencies: {
+          ffmpeg: deps.ffmpeg,
+          ytdlp: deps.ytdlp
+        },
+        error: deps.error || 'Dependencies are missing or incomplete'
+      });
     }
   };
 
@@ -1408,8 +1777,6 @@ app.whenReady().then(async () => {
       mainWindow.webContents.send(IPC_EVENTS.WEBVIEW_URL_UPDATE, url);
     }
   });
-
-  createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -2933,6 +3300,10 @@ ipcMain.handle(IPC_CHANNELS.CHECK_YTDLP_UPDATE, async () => {
   }
 });
 
+ipcMain.handle(IPC_CHANNELS.GET_DEPENDENCY_STATUS, async () => {
+  return getDependencyStatusSnapshot();
+});
+
 // IPC handler to manually update yt-dlp
 ipcMain.handle(IPC_CHANNELS.UPDATE_YTDLP, async () => {
   try {
@@ -2945,6 +3316,24 @@ ipcMain.handle(IPC_CHANNELS.UPDATE_YTDLP, async () => {
     };
   } catch (error) {
     console.error('Error updating yt-dlp:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+});
+
+ipcMain.handle(IPC_CHANNELS.UPDATE_FFMPEG, async () => {
+  try {
+    console.log('Manual FFmpeg update requested');
+    const updateResult = await downloadAndExtractFFmpeg({ forceUpdate: true });
+    return {
+      success: updateResult?.success !== false,
+      message: updateResult?.message || 'FFmpeg updated successfully',
+      version: updateResult?.version || null
+    };
+  } catch (error) {
+    console.error('Error updating FFmpeg:', error);
     return {
       success: false,
       error: error.message
@@ -2989,22 +3378,38 @@ async function checkDependencies() {
       console.log('yt-dlp size:', ytdlpStats.size);
       
       const ready = ffmpegStats.size > 1000000 && ytdlpStats.size > 1000000; // Minimum 1MB each
-      console.log('Dependencies ready:', ready);
+      const operationBusy = Boolean(dependencyStatus?.isBusy);
+      console.log('Dependencies ready:', ready && !operationBusy);
       
       return {
-        ready: ready,
+        ready: ready && !operationBusy,
         ffmpeg: ffmpegStats.size > 1000000,
         ytdlp: ytdlpStats.size > 1000000,
         ffmpegSize: ffmpegStats.size,
-        ytdlpSize: ytdlpStats.size
+        ytdlpSize: ytdlpStats.size,
+        isBusy: operationBusy,
+        dependencyStatus: getDependencyStatusSnapshot()
       };
     }
     
     console.log('Dependencies not ready - missing files');
-    return { ready: false, ffmpeg: false, ytdlp: false };
+    return {
+      ready: false,
+      ffmpeg: ffmpegExists,
+      ytdlp: ytdlpExists,
+      isBusy: Boolean(dependencyStatus?.isBusy),
+      dependencyStatus: getDependencyStatusSnapshot()
+    };
   } catch (error) {
     console.error('Error checking dependencies:', error);
-    return { ready: false, ffmpeg: false, ytdlp: false, error: error.message };
+    return {
+      ready: false,
+      ffmpeg: false,
+      ytdlp: false,
+      isBusy: Boolean(dependencyStatus?.isBusy),
+      dependencyStatus: getDependencyStatusSnapshot(),
+      error: error.message
+    };
   }
 }
 

@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import Navbar from './components/Navbar'
 import BodySection from './components/BodySection'
 import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
 import ErrorBoundary from './components/ErrorBoundary'
+import DependencyLoader from './components/DependencyLoader'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
 import './assets/theme.css'
@@ -24,7 +25,7 @@ function App() {
   const [downloadListOpen, setDownloadListOpen] = useState(false)
   const [pastLinkUrl, setPastLinkUrl] = useState('')
   const [aboutUs, setAboutUs] = useState(false)
-  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+  const [, setFeedbackModalOpen] = useState(false)
   const {
     updateAvailable,
     updateInfo,
@@ -33,6 +34,10 @@ function App() {
     handleInstallUpdate,
     isLoading,
     dependencyProgressText,
+    dependencyStatus,
+    handleManualYtdlpUpdate,
+    handleManualFfmpegUpdate,
+    handleDependencyRetry,
     urlDetectionModalOpen,
     detectedUrl,
     isUrlDownloading,
@@ -42,58 +47,13 @@ function App() {
 
   if (isLoading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          backgroundColor: 'var(--theme-bg-primary)',
-          flexDirection: 'column',
-          fontFamily: 'var(--font-body)',
-        }}
-      >
-        <div
-          style={{
-            fontSize: '24px',
-            marginBottom: '20px',
-            color: 'var(--theme-text-primary)',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-          }}
-        >
-          Initializing Dependencies...
-        </div>
-        <div
-          style={{
-            width: '50px',
-            height: '50px',
-            border: '5px solid var(--theme-border)',
-            borderTop: '5px solid var(--theme-progress-fill)',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-          }}
-        ></div>
-        {dependencyProgressText ? (
-          <div
-            style={{
-              marginTop: '16px',
-              fontSize: '14px',
-              color: 'var(--theme-text-secondary)',
-              textAlign: 'center',
-              maxWidth: '80%',
-            }}
-          >
-            {dependencyProgressText}
-          </div>
-        ) : null}
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
+      <DependencyLoader
+        dependencyStatus={dependencyStatus}
+        progressText={dependencyProgressText}
+        onUpdateYtdlp={handleManualYtdlpUpdate}
+        onUpdateFfmpeg={handleManualFfmpegUpdate}
+        onRetry={handleDependencyRetry}
+      />
     )
   }
 

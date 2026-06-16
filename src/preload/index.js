@@ -75,6 +75,15 @@ openPath: (path) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, path),
   downloadUpdate: () => ipcRenderer.send(IPC_CHANNELS.DOWNLOAD_UPDATE),
   installUpdate: () => ipcRenderer.send(IPC_CHANNELS.INSTALL_UPDATE),
   checkDependencies: () => ipcRenderer.invoke(IPC_CHANNELS.CHECK_DEPENDENCIES),
+  getDependencyStatus: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DEPENDENCY_STATUS),
+  checkYtdlpUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.CHECK_YTDLP_UPDATE),
+  updateYtdlp: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_YTDLP),
+  updateFfmpeg: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_FFMPEG),
+  onDependencyProgress: (callback) => {
+    const listener = (_event, status) => callback(status)
+    ipcRenderer.on(IPC_EVENTS.DEPENDENCY_PROGRESS, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.DEPENDENCY_PROGRESS, listener)
+  },
   selectFolder: () => ipcRenderer.invoke(IPC_CHANNELS.SELECT_FOLDER),
 
   // Image proxy for external CDN images

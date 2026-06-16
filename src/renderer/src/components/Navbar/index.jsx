@@ -15,7 +15,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
   };
 
   const bitrateOptions = ['320K', '256K', '192K', '128K', '96K', '64K'];
-  const saveToOptions = ['Downloads', 'Desktop', 'Custom'];
+  const saveToOptions = ['Downloads', 'Desktop'];
 
   const qualityOptions = [
     { value: '2160p', label: '2160p', badge: '4K' },

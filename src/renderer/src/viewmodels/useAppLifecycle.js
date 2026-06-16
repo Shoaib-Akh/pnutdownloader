@@ -1,5 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+const BUSY_DEPENDENCY_STATUSES = new Set([
+  'checking',
+  'downloading',
+  'downloaded',
+  'extracting',
+  'verifying',
+  'updating'
+])
+
+const buildDependencyStatusFromCheck = (status) => {
+  const dependencyStatus = status?.dependencyStatus || {}
+
+  return {
+    ...dependencyStatus,
+    ready: Boolean(status?.ready),
+    isBusy: Boolean(status?.isBusy || dependencyStatus?.isBusy),
+    dependencies: {
+      ffmpeg: Boolean(status?.ffmpeg),
+      ytdlp: Boolean(status?.ytdlp),
+      ...(dependencyStatus.dependencies || {})
+    },
+    ffmpegSize: status?.ffmpegSize,
+    ytdlpSize: status?.ytdlpSize,
+    error: status?.error || dependencyStatus.error || null,
+    message:
+      dependencyStatus.message ||
+      (status?.ready
+        ? 'All download dependencies are ready.'
+        : status?.error || 'Preparing necessary tools for downloads...')
+  }
+}
+
 const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [updateInfo, setUpdateInfo] = useState(null)
@@ -7,10 +39,115 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [dependencyProgressText, setDependencyProgressText] = useState('')
-  const dependencyLastProgressAtRef = useRef(0)
+  const [dependencyStatus, setDependencyStatus] = useState({
+    status: 'checking',
+    tool: 'dependencies',
+    action: 'startup',
+    message: 'Preparing necessary tools for downloads...',
+    isBusy: true,
+    ready: false
+  })
+  const hideDependencyLoaderTimeoutRef = useRef(null)
   const [urlDetectionModalOpen, setUrlDetectionModalOpen] = useState(false)
   const [detectedUrl, setDetectedUrl] = useState('')
   const [isUrlDownloading, setIsUrlDownloading] = useState(false)
+
+  const clearHideDependencyLoaderTimeout = useCallback(() => {
+    if (hideDependencyLoaderTimeoutRef.current) {
+      clearTimeout(hideDependencyLoaderTimeoutRef.current)
+      hideDependencyLoaderTimeoutRef.current = null
+    }
+  }, [])
+
+  const applyDependencyStatus = useCallback(
+    (nextStatus = {}) => {
+      const normalizedStatus = {
+        ...nextStatus,
+        isBusy: Boolean(nextStatus.isBusy || BUSY_DEPENDENCY_STATUSES.has(nextStatus.status))
+      }
+
+      setDependencyStatus((previousStatus) => ({
+        ...previousStatus,
+        ...normalizedStatus,
+        dependencies: {
+          ...(previousStatus.dependencies || {}),
+          ...(normalizedStatus.dependencies || {})
+        }
+      }))
+
+      if (normalizedStatus.message) {
+        setDependencyProgressText(normalizedStatus.message)
+      }
+
+      if (normalizedStatus.isBusy) {
+        clearHideDependencyLoaderTimeout()
+        setIsLoading(true)
+        return
+      }
+
+      if (normalizedStatus.status === 'failed' || normalizedStatus.error) {
+        clearHideDependencyLoaderTimeout()
+        setIsLoading(true)
+        return
+      }
+
+      if (normalizedStatus.ready || normalizedStatus.status === 'ready') {
+        clearHideDependencyLoaderTimeout()
+        hideDependencyLoaderTimeoutRef.current = setTimeout(() => {
+          setIsLoading(false)
+        }, 700)
+      }
+    },
+    [clearHideDependencyLoaderTimeout]
+  )
+
+  const refreshDependencyCheck = useCallback(async () => {
+    if (!window.api?.checkDependencies) return null
+
+    const status = await window.api.checkDependencies()
+    const normalizedStatus = buildDependencyStatusFromCheck(status)
+    applyDependencyStatus(normalizedStatus)
+    return status
+  }, [applyDependencyStatus])
+
+  const runManualDependencyUpdate = useCallback(
+    async (tool) => {
+      if (!window.api) return
+
+      const updater = tool === 'ffmpeg' ? window.api.updateFfmpeg : window.api.updateYtdlp
+      if (typeof updater !== 'function') return
+
+      applyDependencyStatus({
+        status: 'checking',
+        tool,
+        action: 'manual-update',
+        message: 'Preparing tool update...',
+        isBusy: true,
+        ready: false,
+        error: null
+      })
+
+      try {
+        const result = await updater()
+        if (!result?.success) {
+          throw new Error(result?.error || result?.message || 'Tool update failed')
+        }
+
+        await refreshDependencyCheck()
+      } catch (error) {
+        applyDependencyStatus({
+          status: 'failed',
+          tool,
+          action: 'manual-update',
+          message: `Tool update failed: ${error.message}`,
+          isBusy: false,
+          ready: false,
+          error: error.message
+        })
+      }
+    },
+    [applyDependencyStatus, refreshDependencyCheck]
+  )
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -27,43 +164,22 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
           return
         }
 
-        if (window.api.onDownloadProgress) {
+        if (window.api.getDependencyStatus) {
           try {
-            window.api.onDownloadProgress((progressData) => {
-              try {
-                dependencyLastProgressAtRef.current = Date.now()
-                const downloadedBytes = Number(progressData?.downloadedBytes || 0)
-                const totalBytes = progressData?.totalBytes ? Number(progressData.totalBytes) : null
-                const speedBps = progressData?.speedBps ? Number(progressData.speedBps) : null
+            const currentDependencyStatus = await window.api.getDependencyStatus()
+            if (currentDependencyStatus) {
+              applyDependencyStatus(currentDependencyStatus)
+            }
+          } catch {
+            // ignore
+          }
+        }
 
-                const formatBytes = (bytes) => {
-                  if (!Number.isFinite(bytes)) return '0 B'
-                  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-                  let v = bytes
-                  let i = 0
-                  while (v >= 1024 && i < units.length - 1) {
-                    v /= 1024
-                    i++
-                  }
-                  return `${v.toFixed(i === 0 ? 0 : 2)} ${units[i]}`
-                }
-
-                const speedStr = speedBps && Number.isFinite(speedBps) ? `${formatBytes(speedBps)}/s` : ''
-                if (totalBytes && Number.isFinite(totalBytes) && totalBytes > 0) {
-                  const pct = Math.min((downloadedBytes / totalBytes) * 100, 100)
-                  setDependencyProgressText(
-                    `Downloading dependencies: ${formatBytes(downloadedBytes)} / ${formatBytes(totalBytes)} (${pct.toFixed(
-                      1
-                    )}%)${speedStr ? ` @ ${speedStr}` : ''}`
-                  )
-                } else {
-                  setDependencyProgressText(
-                    `Downloading dependencies: ${formatBytes(downloadedBytes)}${speedStr ? ` @ ${speedStr}` : ''}`
-                  )
-                }
-              } catch (err) {
-                setDependencyProgressText('Downloading dependencies...')
-              }
+        let removeDependencyProgressListener = null
+        if (window.api.onDependencyProgress) {
+          try {
+            removeDependencyProgressListener = window.api.onDependencyProgress((status) => {
+              applyDependencyStatus(status)
             })
           } catch {
             // ignore
@@ -72,16 +188,11 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
 
         const checkDependencies = async () => {
           try {
-            const status = await window.api.checkDependencies()
+            const status = await refreshDependencyCheck()
+            if (!status) return
             if (status.ready) {
-              const now = Date.now()
-              const lastProgressAt = dependencyLastProgressAtRef.current
-              const hasRecentProgress = lastProgressAt && now - lastProgressAt < 3000
-
-              if (hasRecentProgress) {
+              if (status.isBusy) {
                 setTimeout(checkDependencies, 2000)
-              } else {
-                setIsLoading(false)
               }
             } else {
               setTimeout(checkDependencies, 20000)
@@ -129,7 +240,15 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
             setUrlDetectionModalOpen(true)
           })
         } else {
-          console.warn('onVideoUrlDetected is not available. Please restart the app for URL detection to work.')
+          console.warn(
+            'onVideoUrlDetected is not available. Please restart the app for URL detection to work.'
+          )
+        }
+
+        return () => {
+          if (typeof removeDependencyProgressListener === 'function') {
+            removeDependencyProgressListener()
+          }
         }
       } catch (error) {
         console.error('App initialization error:', error)
@@ -137,14 +256,20 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
       }
     }
 
-    initializeApp()
+    const cleanupPromise = initializeApp()
 
     return () => {
+      clearHideDependencyLoaderTimeout()
+      Promise.resolve(cleanupPromise).then((cleanup) => {
+        if (typeof cleanup === 'function') {
+          cleanup()
+        }
+      })
       if (window.api && typeof window.api.removeVideoUrlDetectedListener === 'function') {
         window.api.removeVideoUrlDetectedListener()
       }
     }
-  }, [])
+  }, [applyDependencyStatus, clearHideDependencyLoaderTimeout, refreshDependencyCheck])
 
   const handleInstallUpdate = useCallback(() => {
     if (!window.api) return
@@ -188,13 +313,17 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
     handleInstallUpdate,
     isLoading,
     dependencyProgressText,
+    dependencyStatus,
+    handleManualYtdlpUpdate: () => runManualDependencyUpdate('yt-dlp'),
+    handleManualFfmpegUpdate: () => runManualDependencyUpdate('ffmpeg'),
+    handleDependencyRetry: refreshDependencyCheck,
     urlDetectionModalOpen,
     detectedUrl,
     isUrlDownloading,
     handleUrlDetectionClose,
     handleUrlDetectionDownload,
     setUrlDetectionModalOpen,
-    setDetectedUrl,
+    setDetectedUrl
   }
 }
 

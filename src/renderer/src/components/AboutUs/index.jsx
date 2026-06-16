@@ -1,9 +1,59 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Logo from '../../assets/Images/logoB.png'
 import UpdateNotification from '../UpdateNotification' // adjust path if needed
 import '../common.css'
-import { FaRocket, FaUsers, FaHeart, FaEnvelope, FaShieldAlt, FaFileContract, FaReddit, FaFacebook, FaTrash } from 'react-icons/fa'
-import { clearLegacyDownloads, getUserStats } from '../../utils/firestoreService'
+import {
+  FaCheckCircle,
+  FaDownload,
+  FaEnvelope,
+  FaExclamationTriangle,
+  FaFacebook,
+  FaFileContract,
+  FaHeart,
+  FaReddit,
+  FaRocket,
+  FaShieldAlt,
+  FaSyncAlt,
+  FaUsers,
+} from 'react-icons/fa'
+import { getUserStats } from '../../utils/firestoreService'
+
+const BUSY_DEPENDENCY_STATUSES = new Set(['checking', 'downloading', 'downloaded', 'extracting', 'verifying', 'updating'])
+const DEFAULT_DEPENDENCY_MESSAGE = 'Run repair if downloads fail, audio is missing, or video processing stops.'
+const READY_DEPENDENCY_MESSAGE = 'Download repair is ready.'
+
+const sanitizeDependencyMessage = (message = '') =>
+  String(message)
+    .replace(/yt-dlp/gi, 'download engine')
+    .replace(/ffmpeg/gi, 'media processor')
+
+const getFriendlyDependencyName = (tool) => {
+  if (tool === 'ffmpeg') return 'media processor'
+  if (tool === 'yt-dlp') return 'download engine'
+  return 'repair tools'
+}
+
+const getFriendlyStatusLabel = (status, isBusy, hasError) => {
+  if (hasError) return 'Needs attention'
+  if (isBusy) return 'Repairing'
+  if (status === 'ready') return 'Ready'
+  return 'Ready'
+}
+
+const formatBytes = (bytes) => {
+  const value = Number(bytes)
+  if (!Number.isFinite(value) || value <= 0) return '0 B'
+
+  const units = ['B', 'KB', 'MB', 'GB']
+  let size = value
+  let index = 0
+  while (size >= 1024 && index < units.length - 1) {
+    size /= 1024
+    index += 1
+  }
+
+  return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`
+}
 
 function AboutUs() {
   const [appVersion, setAppVersion] = useState('')
@@ -12,8 +62,29 @@ function AboutUs() {
   const [updateDownloaded, setUpdateDownloaded] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState(0)
   const [userStats, setUserStats] = useState({ totalDownloads: 0, errorCount: 0 })
+  const [dependencyStatus, setDependencyStatus] = useState({
+    message: DEFAULT_DEPENDENCY_MESSAGE,
+    isBusy: false,
+    ready: false,
+  })
+
+  const applyDependencyStatus = (status = {}) => {
+    setDependencyStatus((previousStatus) => ({
+      ...previousStatus,
+      ...status,
+      isBusy: Boolean(status.isBusy || BUSY_DEPENDENCY_STATUSES.has(status.status)),
+      error: status.error ? sanitizeDependencyMessage(status.error) : status.error,
+      dependencies: {
+        ...(previousStatus.dependencies || {}),
+        ...(status.dependencies || {}),
+      },
+      message: sanitizeDependencyMessage(status.message || (status.ready ? READY_DEPENDENCY_MESSAGE : DEFAULT_DEPENDENCY_MESSAGE)),
+    }))
+  }
 
   useEffect(() => {
+    let removeDependencyProgressListener = null
+
     if (window.api) {
       window.api.getAppVersion().then((version) => {
         setAppVersion(version)
@@ -44,6 +115,26 @@ function AboutUs() {
           })
         }
       })
+
+      if (window.api.getDependencyStatus) {
+        window.api.getDependencyStatus().then((status) => {
+          if (status) {
+            applyDependencyStatus(status)
+          }
+        }).catch(() => {})
+      }
+
+      if (window.api.onDependencyProgress) {
+        removeDependencyProgressListener = window.api.onDependencyProgress((status) => {
+          applyDependencyStatus(status)
+        })
+      }
+    }
+
+    return () => {
+      if (typeof removeDependencyProgressListener === 'function') {
+        removeDependencyProgressListener()
+      }
     }
   }, [])
 
@@ -56,12 +147,111 @@ function AboutUs() {
     }
   }
 
-  const handleCleanupLegacyData = async () => {
-    if (confirm('Are you sure you want to clear ALL legacy download data from Firestore? This cannot be undone.')) {
-      await clearLegacyDownloads()
-      alert('Legacy data cleanup triggered. Check console for results.')
+  const refreshDependencyStatus = async () => {
+    if (!window.api?.checkDependencies) return
+
+    const status = await window.api.checkDependencies()
+    applyDependencyStatus({
+      ...(status?.dependencyStatus || {}),
+      ready: Boolean(status?.ready),
+      isBusy: Boolean(status?.isBusy || status?.dependencyStatus?.isBusy),
+      dependencies: {
+        ffmpeg: Boolean(status?.ffmpeg),
+        ytdlp: Boolean(status?.ytdlp),
+        ...(status?.dependencyStatus?.dependencies || {}),
+      },
+      error: status?.error || status?.dependencyStatus?.error || null,
+      message:
+        status?.dependencyStatus?.message ||
+        (status?.ready ? READY_DEPENDENCY_MESSAGE : status?.error || 'Dependency check finished.'),
+    })
+  }
+
+  const runDependencyRepairStep = async (tool) => {
+    if (!window.api) return
+
+    const updater = tool === 'ffmpeg' ? window.api.updateFfmpeg : window.api.updateYtdlp
+    if (typeof updater !== 'function') return
+
+    const toolName = getFriendlyDependencyName(tool)
+    applyDependencyStatus({
+      status: 'checking',
+      tool,
+      action: 'manual-update',
+      message: `Updating the ${toolName}. Keep PNUT Downloader open.`,
+      isBusy: true,
+      ready: false,
+      error: null,
+    })
+
+    try {
+      const result = await updater()
+      if (!result?.success) {
+        throw new Error(result?.error || result?.message || `${toolName} update failed`)
+      }
+      await refreshDependencyStatus()
+    } catch (error) {
+      applyDependencyStatus({
+        status: 'failed',
+        tool,
+        action: 'manual-update',
+        message: `The ${toolName} update failed. Check your internet connection, then try again.`,
+        isBusy: false,
+        ready: false,
+        error: sanitizeDependencyMessage(error.message),
+      })
+      throw error
     }
   }
+
+  const handleRepairDownloads = async () => {
+    if (!window.api) return
+
+    applyDependencyStatus({
+      status: 'checking',
+      tool: 'dependencies',
+      action: 'repair',
+      message: 'Repairing download support. Keep PNUT Downloader open.',
+      isBusy: true,
+      ready: false,
+      error: null,
+      percent: null,
+    })
+
+    try {
+      await runDependencyRepairStep('yt-dlp')
+      await runDependencyRepairStep('ffmpeg')
+      await refreshDependencyStatus()
+      applyDependencyStatus({
+        status: 'ready',
+        tool: 'dependencies',
+        action: 'repair',
+        message: 'Repair completed. Try your download again.',
+        isBusy: false,
+        ready: true,
+        error: null,
+        percent: 100,
+      })
+    } catch (error) {
+      applyDependencyStatus({
+        status: 'failed',
+        tool: 'dependencies',
+        action: 'repair',
+        message: 'Repair did not finish. Check your internet connection, then try again.',
+        isBusy: false,
+        ready: false,
+        error: sanitizeDependencyMessage(error.message),
+      })
+    }
+  }
+
+  const dependencyPercent = Number(dependencyStatus.percent)
+  const hasDependencyPercent = Number.isFinite(dependencyPercent)
+  const hasDependencyError = Boolean(dependencyStatus.error || dependencyStatus.status === 'failed')
+  const dependencyBusy = Boolean(dependencyStatus.isBusy)
+  const dependencyStatusLabel = getFriendlyStatusLabel(dependencyStatus.status, dependencyBusy, hasDependencyError)
+  const showDependencyBytes =
+    Number.isFinite(Number(dependencyStatus.downloadedBytes)) && Number.isFinite(Number(dependencyStatus.totalBytes)) && Number(dependencyStatus.totalBytes) > 0
 
   return (
     <section
@@ -140,6 +330,79 @@ function AboutUs() {
               <p className="text-muted small" style={{ lineHeight: 1.6 }}>
                 Creators, students, and everyday users who need a reliable desktop downloader.
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="row g-4 mb-3">
+        <div className="col-md-12">
+          <div
+            className="card border-0 shadow-sm"
+            style={{
+              borderRadius: '8px',
+              background: 'var(--pnut-surface)',
+              border: '1px solid var(--pnut-border)',
+              overflow: 'hidden',
+            }}
+          >
+            <div className="card-body p-3" style={{ background: 'linear-gradient(135deg, rgba(var(--theme-primary-rgb), 0.08), transparent 58%)' }}>
+              <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                <div style={{ minWidth: 240, flex: 1 }}>
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    {hasDependencyError ? (
+                      <FaExclamationTriangle style={{ color: 'var(--pnut-danger)' }} />
+                    ) : dependencyBusy ? (
+                      <FaSyncAlt style={{ color: 'var(--pnut-brand)' }} />
+                    ) : (
+                      <FaCheckCircle style={{ color: 'var(--pnut-success)' }} />
+                    )}
+                    <h2 className="h5 fw-semibold text-dark mb-0">Repair Downloads</h2>
+                  </div>
+                  <p className="text-muted small mb-2" style={{ lineHeight: 1.5, maxWidth: 560 }}>
+                    Run this once if downloads fail, audio is missing, or video processing stops.
+                  </p>
+                  <p
+                    className="small mb-0"
+                    style={{
+                      color: hasDependencyError ? 'var(--pnut-danger)' : 'var(--pnut-muted)',
+                      lineHeight: 1.5,
+                      fontWeight: hasDependencyError ? 700 : 500,
+                    }}
+                  >
+                    {dependencyStatus.message}
+                    {hasDependencyError && dependencyStatus.error ? ` Error: ${dependencyStatus.error}` : ''}
+                  </p>
+                </div>
+
+                <div className="d-flex flex-column align-items-stretch gap-2" style={{ minWidth: 210 }}>
+                  <button
+                    className="btn px-3"
+                    type="button"
+                    disabled={dependencyBusy}
+                    onClick={handleRepairDownloads}
+                    style={{
+                      minHeight: 42,
+                      background: 'var(--pnut-button-bg)',
+                      border: 'none',
+                      fontSize: 13,
+                      fontWeight: 800,
+                      borderRadius: '8px',
+                      color: 'var(--pnut-button-text)',
+                      boxShadow: 'var(--pnut-shadow-sm)',
+                      opacity: dependencyBusy ? 0.65 : 1,
+                    }}
+                  >
+                    {dependencyBusy ? <FaSyncAlt className="me-2" /> : <FaDownload className="me-2" />}
+                    {dependencyBusy ? 'Repairing...' : 'Repair Downloads'}
+                  </button>
+                  <span className="small text-center" style={{ color: 'var(--pnut-muted)', fontSize: 11 }}>
+                    Keep the app open until repair finishes.
+                  </span>
+                </div>
+              </div>
+
+             
             </div>
           </div>
         </div>

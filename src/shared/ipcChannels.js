@@ -1,6 +1,7 @@
 export const IPC_CHANNELS = {
   ACCESS_FILE: 'accessFile',
   CHECK_DEPENDENCIES: 'check-dependencies',
+  GET_DEPENDENCY_STATUS: 'get-dependency-status',
   CHECK_FILE_EXISTS: 'checkFileExists',
   CHECK_YTDLP_UPDATE: 'check-ytdlp-update',
   CREATE_DIRECTORY: 'create-directory',
@@ -34,11 +35,13 @@ export const IPC_CHANNELS = {
   SHOW_CONFIRM_DIALOG: 'show-confirm-dialog',
   SHOW_MESSAGE_BOX: 'show-message-box',
   SHOW_VIDEO_URL_NOTIFICATION: 'show-video-url-notification',
+  UPDATE_FFMPEG: 'update-ffmpeg',
   UPDATE_YTDLP: 'update-ytdlp'
 }
 
 export const IPC_EVENTS = {
   CHECK_FOR_UPDATES: 'check-for-updates',
+  DEPENDENCY_PROGRESS: 'dependency-progress',
   DOWNLOAD_PROGRESS: 'download-progress',
   FILE_DELETED: 'file-deleted',
   FILE_DELETED_SUCCESS: 'file-deleted-successfully',
