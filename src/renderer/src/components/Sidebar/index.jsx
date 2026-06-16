@@ -6,6 +6,7 @@ import squirrel from '../../assets/Images/squirrel.png';
 import './Sidebar.css';
 import Logo from '../../assets/Images/logo.png';
 import LogoDark from '../../assets/Images/logoDark.png';
+import { trackDonationButton } from '../../utils/donationService';
 
 function Sidebar({
   isOpen,
@@ -60,8 +61,14 @@ function Sidebar({
 
 
   const handleClick = () => {
+    const donationUrl = 'https://ko-fi.com/pnutdownloader';
     window.api.trackEvent('Support us')
-    window.api.openExternal('https://ko-fi.com/pnutdownloader');
+    trackDonationButton({
+      button: 'support',
+      label: 'Support PNUT',
+      targetUrl: donationUrl,
+    });
+    window.api.openExternal(donationUrl);
   };
 
   return (
@@ -136,9 +143,8 @@ function Sidebar({
                 setDownloadListOpen(false);
                 if (item.label === 'Feedback') {
                   setAboutUs(false);
-                  window.api.trackEvent('Feedback Clicked');
+                  window.api?.trackEvent?.('Feedback Clicked');
                   setFeedbackModalOpen(true);
-                  window.api.openExternal('https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true');
                 } else if (item.label === 'About us') {
                   setAboutUs(true);
                 } else {

@@ -55,7 +55,7 @@ const formatBytes = (bytes) => {
   return `${size.toFixed(index === 0 ? 0 : 1)} ${units[index]}`
 }
 
-function AboutUs() {
+function AboutUs({ onOpenFeedback }) {
   const [appVersion, setAppVersion] = useState('')
   const [updateAvailable, setUpdateAvailable] = useState(false)
   const [updateInfo, setUpdateInfo] = useState(null)
@@ -494,12 +494,8 @@ function AboutUs() {
           <div className="d-flex flex-column gap-2">
             <button
               onClick={() => {
-                if (window.api) {
-                  window.api.trackEvent('feedback_button_clicked')
-                  window.api.openExternal(
-                    'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true'
-                  )
-                }
+                window.api?.trackEvent?.('feedback_button_clicked')
+                onOpenFeedback?.()
               }}
               className="btn px-3"
               style={{ background: 'var(--pnut-button-bg)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: 'var(--pnut-shadow-sm)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-button-text)' }}

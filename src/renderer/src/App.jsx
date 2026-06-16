@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Navbar from './components/Navbar'
 import BodySection from './components/BodySection'
 import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
+import FeedbackModal from './components/FeedbackModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import DependencyLoader from './components/DependencyLoader'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
+import { flushQueuedDonationClicks } from './utils/donationService'
 import './assets/theme.css'
 import './assets/redesign.css'
 
@@ -25,7 +27,12 @@ function App() {
   const [downloadListOpen, setDownloadListOpen] = useState(false)
   const [pastLinkUrl, setPastLinkUrl] = useState('')
   const [aboutUs, setAboutUs] = useState(false)
-  const [, setFeedbackModalOpen] = useState(false)
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false)
+
+  useEffect(() => {
+    flushQueuedDonationClicks().catch(console.error)
+  }, [])
+
   const {
     updateAvailable,
     updateInfo,
@@ -75,6 +82,11 @@ function App() {
           onDownload={handleUrlDetectionDownload}
           url={detectedUrl}
           isLoading={isUrlDownloading}
+        />
+
+        <FeedbackModal
+          isOpen={feedbackModalOpen}
+          onClose={() => setFeedbackModalOpen(false)}
         />
 
         <div className={`app-shell ${showWebView ? 'app-shell--browser' : ''}`}>
@@ -134,6 +146,7 @@ function App() {
               aboutUs={aboutUs}
               updateInfo={updateInfo}
               setAboutUs={setAboutUs}
+              onOpenFeedback={() => setFeedbackModalOpen(true)}
             />
           </main>
         </div>

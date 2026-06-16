@@ -6,7 +6,10 @@ out
 *.log*
  cookies
 .env
+.env.local
+.env.*.local
 cookies.txt
 ffmpeg.exe
+public/ffmpeg
 yt-dlp.exe
 yt-dlp_macos

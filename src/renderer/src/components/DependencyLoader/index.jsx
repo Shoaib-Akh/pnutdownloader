@@ -112,7 +112,7 @@ const DependencyLoader = ({
           )}
         </div>
 
-        <div className="dependency-loader__grid">
+        {/* <div className="dependency-loader__grid">
           {dependencyItems.map((item) => {
             const itemState = getDependencyState(status, item.key)
             return (
@@ -142,9 +142,9 @@ const DependencyLoader = ({
               </div>
             )
           })}
-        </div>
+        </div> */}
 
-        <div className="dependency-loader__actions">
+        {/* <div className="dependency-loader__actions">
           <button
             type="button"
             onClick={onUpdateYtdlp}
@@ -172,7 +172,7 @@ const DependencyLoader = ({
             <FaSyncAlt aria-hidden="true" />
             Check Again
           </button>
-        </div>
+        </div> */}
       </div>
     </div>
   )

@@ -1,6 +1,8 @@
+/* eslint-disable react/prop-types */
 import { useMemo } from 'react'
 import { Modal, Button } from 'react-bootstrap'
 import { FaCommentDots, FaHeart, FaMagic, FaQuoteLeft } from 'react-icons/fa'
+import { trackDonationButton } from '../../utils/donationService'
 import '../common.css'
 
 const QUOTES = [
@@ -28,10 +30,26 @@ const IMPACT_POINTS = ['Faster fixes', 'New platforms', 'Cleaner downloads']
 const FEEDBACK_URL =
   'https://docs.google.com/forms/d/1cvpfj-usDCY49YtLWxYZJTMz-sOPDHUdYRwfDJco2UY/viewform?edit_requested=true'
 
-function DonationModal({ isOpen, onClose, onDonate }) {
-  const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], [isOpen])
+function DonationModal({ isOpen, onClose, onDonate, donationUrl }) {
+  const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], [])
+  const donationTargetUrl = donationUrl || 'https://ko-fi.com/pnutdownloader'
+
+  const handleMaybeLater = () => {
+    trackDonationButton({
+      button: 'maybe_later',
+      label: 'Maybe later',
+      targetUrl: null
+    })
+    onClose()
+  }
 
   const handleFeedback = () => {
+    trackDonationButton({
+      button: 'feedback',
+      label: 'Feedback',
+      targetUrl: FEEDBACK_URL
+    })
+
     if (window.api) {
       window.api.trackEvent('donation_modal_feedback_clicked')
       window.api.openExternal(FEEDBACK_URL)
@@ -39,6 +57,15 @@ function DonationModal({ isOpen, onClose, onDonate }) {
     }
 
     window.open(FEEDBACK_URL, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleSupport = () => {
+    trackDonationButton({
+      button: 'support',
+      label: 'Support',
+      targetUrl: donationTargetUrl
+    })
+    onDonate?.()
   }
 
   return (
@@ -61,12 +88,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
           </span>
           Support PNUT
         </Modal.Title>
-        <button
-          type="button"
-          className="custom-close-button"
-          onClick={onClose}
-          aria-label="Close"
-        >
+        <button type="button" className="custom-close-button" onClick={onClose} aria-label="Close">
           ×
         </button>
       </Modal.Header>
@@ -90,7 +112,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer donation-modal__footer">
         <Button
-          onClick={onClose}
+          onClick={handleMaybeLater}
           className="custom-cancel-button donation-later-button"
           aria-label="Maybe later, I still appreciate PNUT"
           variant="secondary"
@@ -111,7 +133,7 @@ function DonationModal({ isOpen, onClose, onDonate }) {
           Feedback
         </Button>
         <Button
-          onClick={onDonate}
+          onClick={handleSupport}
           className="custom-login-button donation-support-button"
           aria-label="Donate"
           variant="primary"

@@ -44,7 +44,8 @@ function BodySection({
 
   aboutUs,
   setAboutUs,
-  updateInfo
+  updateInfo,
+  onOpenFeedback
 }) {
   const [showLoginPopup, setShowLoginPopup] = useState(false)
   const [showDonationModal, setShowDonationModal] = useState(false)
@@ -232,7 +233,7 @@ function BodySection({
     }
   }, [showWebView, selectedItem])
 
-  const DONATION_URL = "https://ko-fi.com/pnutdownloader'"
+  const DONATION_URL = 'https://ko-fi.com/pnutdownloader'
 
   const handlePlatformClick = (platformUrl) => {
     window.api.trackEvent('platformUrl', { platformUrl })
@@ -377,7 +378,7 @@ function BodySection({
     >
       {aboutUs ? (
         <div className="about-page-wrap">
-          <AboutUs updateInfo={updateInfo} />
+          <AboutUs updateInfo={updateInfo} onOpenFeedback={onOpenFeedback} />
         </div>
       ) : !showWebView ? (
         <>
@@ -570,6 +571,7 @@ function BodySection({
           isOpen={showDonationModal}
           onClose={() => setShowDonationModal(false)}
           onDonate={handleDonate}
+          donationUrl={DONATION_URL}
         />
       )}
 
