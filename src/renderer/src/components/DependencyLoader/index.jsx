@@ -42,8 +42,9 @@ const DependencyLoader = ({
   const status = dependencyStatus || {}
   const percent = Number(status.percent)
   const hasPercent = Number.isFinite(percent)
-  const isBusy = status.isBusy !== false && status.status !== 'failed'
-  const isFailed = status.status === 'failed'
+  // treat as busy only when explicitly marked busy (and not failed)
+  const isBusy = status.isBusy === true && status.status !== 'failed'
+  const isFailed = status.status  === 'failed'
   const message = progressText || status.message || 'Preparing download dependencies...'
   const totalBytes = Number(status.totalBytes)
   const downloadedBytes = Number(status.downloadedBytes)

@@ -12,23 +12,27 @@ const BUSY_DEPENDENCY_STATUSES = new Set([
 const buildDependencyStatusFromCheck = (status) => {
   const dependencyStatus = status?.dependencyStatus || {}
 
+  const deps = {
+    ffmpeg: Boolean(status?.ffmpeg),
+    ytdlp: Boolean(status?.ytdlp),
+    ...(dependencyStatus.dependencies || {})
+  }
+
+  const ready =
+    Boolean(status?.ready) || Boolean(dependencyStatus?.ready) || (deps.ffmpeg && deps.ytdlp)
+
   return {
     ...dependencyStatus,
-    ready: Boolean(status?.ready),
-    isBusy: Boolean(status?.isBusy || dependencyStatus?.isBusy),
-    dependencies: {
-      ffmpeg: Boolean(status?.ffmpeg),
-      ytdlp: Boolean(status?.ytdlp),
-      ...(dependencyStatus.dependencies || {})
-    },
+    ready,
+    // if ready, not busy
+    isBusy: Boolean(status?.isBusy || dependencyStatus?.isBusy) && !ready,
+    dependencies: deps,
     ffmpegSize: status?.ffmpegSize,
     ytdlpSize: status?.ytdlpSize,
     error: status?.error || dependencyStatus.error || null,
     message:
       dependencyStatus.message ||
-      (status?.ready
-        ? 'All download dependencies are ready.'
-        : status?.error || 'Preparing necessary tools for downloads...')
+      (ready ? 'All download dependencies are ready.' : status?.error || 'Preparing necessary tools for downloads...')
   }
 }
 
@@ -63,7 +67,14 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
     (nextStatus = {}) => {
       const normalizedStatus = {
         ...nextStatus,
+        // initial busy calculation based on status or explicit flag
         isBusy: Boolean(nextStatus.isBusy || BUSY_DEPENDENCY_STATUSES.has(nextStatus.status))
+      }
+
+      // If dependencies indicate both tools are present, consider ready
+      if (normalizedStatus.dependencies && normalizedStatus.dependencies.ffmpeg && normalizedStatus.dependencies.ytdlp) {
+        normalizedStatus.ready = true
+        normalizedStatus.isBusy = false
       }
 
       setDependencyStatus((previousStatus) => ({
@@ -79,7 +90,7 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
         setDependencyProgressText(normalizedStatus.message)
       }
 
-      if (normalizedStatus.isBusy) {
+      if (normalizedStatus.isBusy && normalizedStatus.status !== 'ready') {
         clearHideDependencyLoaderTimeout()
         setIsLoading(true)
         return

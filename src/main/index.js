@@ -1678,11 +1678,12 @@ app.whenReady().then(async () => {
         ready: false,
         percent: null
       });
-      checkYtdlpVersion().then(version => {
+      try {
+        const version = await checkYtdlpVersion();
         console.log('yt-dlp version:', version);
-      }).catch(err => {
+      } catch (err) {
         console.error('Failed to check yt-dlp version:', err);
-      });
+      }
       
       // Auto-update check: Run after 30 seconds to not block startup
       setTimeout(() => {
@@ -3378,16 +3379,15 @@ async function checkDependencies() {
       console.log('yt-dlp size:', ytdlpStats.size);
       
       const ready = ffmpegStats.size > 1000000 && ytdlpStats.size > 1000000; // Minimum 1MB each
-      const operationBusy = Boolean(dependencyStatus?.isBusy);
-      console.log('Dependencies ready:', ready && !operationBusy);
-      
+      console.log('Dependencies ready:', ready);
+
       return {
-        ready: ready && !operationBusy,
+        ready: ready,
         ffmpeg: ffmpegStats.size > 1000000,
         ytdlp: ytdlpStats.size > 1000000,
         ffmpegSize: ffmpegStats.size,
         ytdlpSize: ytdlpStats.size,
-        isBusy: operationBusy,
+        isBusy: Boolean(dependencyStatus?.isBusy),
         dependencyStatus: getDependencyStatusSnapshot()
       };
     }
