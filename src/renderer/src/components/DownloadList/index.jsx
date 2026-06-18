@@ -700,7 +700,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         {searchFilteredList?.length > 0 ? (
           [...new Set(searchFilteredList.map((item) => item.id))].map((uniqueId, index) => {
             const item = searchFilteredList.find((i) => i.id === uniqueId);
-
+console.log(`Rendering item:${new Date().toISOString()}`, item.status);
             const progress = progressMap.get(item.id)?.progress || 0;
             const speed = progressMap.get(item.id)?.speed || 'Unknown';
             const fileSize = progressMap.get(item.id)?.fileSize || 'Unknown';

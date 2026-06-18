@@ -31,6 +31,8 @@ const https = require('https');
 
 const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
+const YTDLP_AUTO_UPDATE_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
+const YTDLP_AUTO_UPDATE_POLL_MS = 24 * 60 * 60 * 1000;
 
 let dependencyStatus = {
   status: 'idle',
@@ -138,7 +140,7 @@ const getYtdlpExecutableName = () => {
   if (process.platform === 'win32') {
     return 'yt-dlp.exe';
   } else if (process.platform === 'darwin') {
-    return 'yt-dlp_macos';
+    return 'yt-dlp';
   }
   return 'yt-dlp';
 };
@@ -167,10 +169,17 @@ const getYtdlpPath = () => {
   return join(__dirname, '../../public', getYtdlpExecutableName());
 };
 
+const getYtdlpVersionFilePath = () => {
+  return app.isPackaged
+    ? join(process.resourcesPath, 'ytdlp_version.txt')
+    : join(__dirname, '../../public/ytdlp_version.txt');
+};
+
 // Initialize with default path, will be updated in app.whenReady()
 let ytdlpPath = app.isPackaged
   ? join(process.resourcesPath, getYtdlpExecutableName())
   : join(__dirname, '../../public', getYtdlpExecutableName());
+let downloadToolsUpdateInProgress = false;
 // Set icon path based on OS
 let iconPath = ''
 switch (process.platform) {
@@ -661,14 +670,7 @@ async function getNightlyDownloadUrl() {
     console.log(`Latest nightly release: ${release.tag}`);
     
     // Determine which asset to download based on platform
-    let assetName;
-    if (process.platform === 'win32') {
-      assetName = 'yt-dlp.exe';
-    } else if (process.platform === 'darwin') {
-      assetName = 'yt-dlp_macos';
-    } else {
-      assetName = 'yt-dlp';
-    }
+    const assetName = getYtdlpExecutableName();
 
     // Find the matching asset
     const asset = release.assets.find(a => a.name === assetName);
@@ -687,70 +689,117 @@ async function getNightlyDownloadUrl() {
   }
 }
 
+async function readYtdlpVersionMetadata() {
+  const versionFile = getYtdlpVersionFilePath();
+
+  try {
+    const versionData = await fs.readFile(versionFile, 'utf8');
+    const lines = versionData.trim().split('\n');
+    const lastKnownVersion = lines[0] || null;
+    const parsedTimestamp = lines[1] ? Number.parseInt(lines[1], 10) : null;
+    const lastCheckTime = Number.isFinite(parsedTimestamp) ? parsedTimestamp : null;
+
+    console.log(`Last known yt-dlp version: ${lastKnownVersion || 'Unknown'}`);
+    console.log(`Last yt-dlp update check: ${lastCheckTime ? new Date(lastCheckTime).toISOString() : 'Unknown'}`);
+
+    return { versionFile, lastKnownVersion, lastCheckTime };
+  } catch (err) {
+    console.log('No previous yt-dlp version metadata found');
+    return { versionFile, lastKnownVersion: null, lastCheckTime: null };
+  }
+}
+
+async function saveYtdlpVersionMetadata(version, timestamp = Date.now()) {
+  if (!version) return;
+
+  const versionFile = getYtdlpVersionFilePath();
+
+  try {
+    const versionData = `${version}\n${timestamp}`;
+    await fs.writeFile(versionFile, versionData, 'utf8');
+    console.log(`Saved yt-dlp metadata: ${version} checked at ${new Date(timestamp).toISOString()}`);
+  } catch (err) {
+    console.warn(`Failed to save yt-dlp metadata: ${err.message}`);
+  }
+}
+
 // Function to check if update is needed
 async function checkYtdlpUpdate() {
   try {
-    const versionFile = app.isPackaged
-      ? join(process.resourcesPath, 'ytdlp_version.txt')
-      : join(__dirname, '../../public/ytdlp_version.txt');
-
-    let lastKnownVersion = null;
-    let lastUpdateTime = null;
-    
-    try {
-      const versionData = await fs.readFile(versionFile, 'utf8');
-      const lines = versionData.trim().split('\n');
-      lastKnownVersion = lines[0];
-      lastUpdateTime = lines[1] ? parseInt(lines[1]) : null;
-      console.log(`Last known version: ${lastKnownVersion}`);
-      console.log(`Last update time: ${lastUpdateTime ? new Date(lastUpdateTime).toISOString() : 'Unknown'}`);
-    } catch (err) {
-      console.log('No previous version file found');
-    }
-
-    // Check if 3 days (259200000 ms) have passed since last update
+    const { lastKnownVersion, lastCheckTime } = await readYtdlpVersionMetadata();
     const now = Date.now();
-    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000;
-    const shouldUpdateTimeBased = lastUpdateTime && (now - lastUpdateTime > threeDaysInMs);
-    
-    if (shouldUpdateTimeBased) {
-      console.log('3 days passed since last update, checking for new version');
+
+    try {
+      const stats = await fs.stat(ytdlpPath);
+      if (stats.size === 0) {
+        return { needsUpdate: true, reason: 'empty_binary', currentVersion: lastKnownVersion };
+      }
+    } catch (err) {
+      console.log('yt-dlp binary is missing, will download:', err.message);
+      return { needsUpdate: true, reason: 'missing_binary', currentVersion: lastKnownVersion };
     }
 
-    // Get current version
-    let currentVersion;
-    try {
-      currentVersion = await checkYtdlpVersion();
-      console.log(`Current yt-dlp version: ${currentVersion}`);
-    } catch (err) {
-      console.log('Could not get current version, will update:', err.message);
-      return { needsUpdate: true, reason: 'version_check_failed' };
+    if (lastCheckTime && now - lastCheckTime < YTDLP_AUTO_UPDATE_INTERVAL_MS) {
+      const nextCheckAt = lastCheckTime + YTDLP_AUTO_UPDATE_INTERVAL_MS;
+      console.log(`Skipping yt-dlp update check; last check was less than 2 days ago. Next check after ${new Date(nextCheckAt).toISOString()}`);
+      return {
+        needsUpdate: false,
+        reason: 'recently_checked',
+        currentVersion: lastKnownVersion,
+        lastCheckedAt: lastCheckTime,
+        nextCheckAt
+      };
+    }
+
+    if (lastCheckTime) {
+      console.log('At least 2 days passed since the last yt-dlp update check; checking now.');
+    }
+
+    let currentVersion = lastKnownVersion;
+    if (!currentVersion) {
+      try {
+        currentVersion = await checkYtdlpVersion();
+        console.log(`Current yt-dlp version: ${currentVersion}`);
+      } catch (err) {
+        console.log('Could not get current yt-dlp version, will update:', err.message);
+        return { needsUpdate: true, reason: 'version_check_failed' };
+      }
     }
 
     // Get latest nightly release
     const release = await getLatestNightlyRelease();
     console.log(`Latest nightly release tag: ${release.tag}`);
 
-    // Update if: 1) new version available, 2) 3 days passed, or 3) no previous version
-    if (!lastKnownVersion || lastKnownVersion !== release.tag || shouldUpdateTimeBased) {
+    // Update only when a new release is available, not just because time passed.
+    if (!lastKnownVersion || lastKnownVersion !== release.tag) {
       return { 
         needsUpdate: true, 
         reason: !lastKnownVersion ? 'first_time' : 
-                lastKnownVersion !== release.tag ? 'new_version_available' : 
-                'time_based_update',
+                'new_version_available',
         currentVersion: lastKnownVersion || currentVersion,
         latestVersion: release.tag
       };
     }
 
-    return { needsUpdate: false, reason: 'up_to_date', currentVersion: release.tag };
+    await saveYtdlpVersionMetadata(release.tag, now);
+
+    return {
+      needsUpdate: false,
+      reason: 'up_to_date',
+      currentVersion: release.tag,
+      latestVersion: release.tag,
+      lastCheckedAt: now,
+      nextCheckAt: now + YTDLP_AUTO_UPDATE_INTERVAL_MS
+    };
   } catch (error) {
     console.error(`Error checking for yt-dlp update: ${error.message}`);
     return { needsUpdate: false, reason: 'check_failed', error: error.message };
   }
 }
 
-async function updateYtdlp(forceUpdate = false) {
+async function updateYtdlp(forceUpdate = false, options = {}) {
+  const { skipUpdateCheck = false } = options;
+  let markedYtdlpUpdateInProgress = false;
   // Determine download URL and target path
   let ytdlpUrl;
   let releaseTag = null;
@@ -764,6 +813,15 @@ async function updateYtdlp(forceUpdate = false) {
   }
   
   try {
+    if (hasActiveDownloads()) {
+      const message = 'Skipped yt-dlp update because a download is active.';
+      console.log(message);
+      if (forceUpdate) {
+        throw new Error('A download is in progress. Try Repair Downloads again after it finishes.');
+      }
+      return { success: true, message, skipped: true, reason: 'download_active' };
+    }
+
     emitDependencyStatus({
       status: 'checking',
       tool: 'yt-dlp',
@@ -779,25 +837,49 @@ async function updateYtdlp(forceUpdate = false) {
     });
 
     // Check if update is needed (unless forced)
-    if (!forceUpdate) {
+    if (!forceUpdate && !skipUpdateCheck) {
       const updateCheck = await checkYtdlpUpdate();
-      if (!updateCheck.needsUpdate && updateCheck.reason === 'up_to_date') {
-        console.log('yt-dlp is already up to date');
+      if (!updateCheck.needsUpdate) {
+        const wasRecentlyChecked = updateCheck.reason === 'recently_checked';
+        const message = wasRecentlyChecked
+          ? 'yt-dlp update check skipped; it was checked less than 2 days ago.'
+          : `yt-dlp is already up to date${updateCheck.currentVersion ? ` (${updateCheck.currentVersion})` : ''}.`;
+        console.log(message);
         emitDependencyStatus({
           status: 'ready',
           tool: 'yt-dlp',
           action: 'update',
-          message: `yt-dlp is already up to date${updateCheck.currentVersion ? ` (${updateCheck.currentVersion})` : ''}.`,
+          message,
           isBusy: false,
           ready: true,
           percent: 100,
           currentVersion: updateCheck.currentVersion || null,
-          latestVersion: updateCheck.currentVersion || null,
+          latestVersion: updateCheck.latestVersion || updateCheck.currentVersion || null,
+          nextCheckAt: updateCheck.nextCheckAt || null,
           error: null
         });
-        return { success: true, message: 'Already up to date', version: updateCheck.currentVersion };
+        return {
+          success: true,
+          message: wasRecentlyChecked ? 'Recently checked' : 'Already up to date',
+          version: updateCheck.currentVersion,
+          skipped: true,
+          reason: updateCheck.reason,
+          nextCheckAt: updateCheck.nextCheckAt || null
+        };
       }
     }
+
+    if (hasActiveDownloads()) {
+      const message = 'Skipped yt-dlp update because a download started.';
+      console.log(message);
+      if (forceUpdate) {
+        throw new Error('A download is in progress. Try Repair Downloads again after it finishes.');
+      }
+      return { success: true, message, skipped: true, reason: 'download_active' };
+    }
+
+    downloadToolsUpdateInProgress = true;
+    markedYtdlpUpdateInProgress = true;
 
     try {
       // Get latest nightly build URL
@@ -820,8 +902,6 @@ async function updateYtdlp(forceUpdate = false) {
       // Fallback to stable releases if nightly fails
       if (process.platform === 'win32') {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
-      } else if (process.platform === 'darwin') {
-        ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
       } else {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
       }
@@ -834,6 +914,15 @@ async function updateYtdlp(forceUpdate = false) {
         ready: false,
         percent: 0
       });
+    }
+
+    if (hasActiveDownloads()) {
+      const message = 'Skipped yt-dlp replacement because a download started.';
+      console.log(message);
+      if (forceUpdate) {
+        throw new Error('A download is in progress. Try Repair Downloads again after it finishes.');
+      }
+      return { success: true, message, skipped: true, reason: 'download_active' };
     }
 
     // Remove old binary if it exists (in case it's corrupted)
@@ -896,20 +985,8 @@ async function updateYtdlp(forceUpdate = false) {
       }
     }
     
-    // Save version info with timestamp
-    if (releaseTag) {
-      const versionFile = app.isPackaged
-        ? join(process.resourcesPath, 'ytdlp_version.txt')
-        : join(__dirname, '../../public/ytdlp_version.txt');
-      try {
-        const timestamp = Date.now().toString();
-        const versionData = `${releaseTag}\n${timestamp}`;
-        await fs.writeFile(versionFile, versionData, 'utf8');
-        console.log(`Saved version info: ${releaseTag} at ${new Date(parseInt(timestamp)).toISOString()}`);
-      } catch (err) {
-        console.warn(`Failed to save version info: ${err.message}`);
-      }
-    }
+    // Save version info with the last successful update check timestamp.
+    await saveYtdlpVersionMetadata(releaseTag);
     
     // Verify the downloaded binary works (skip on Windows as it might show a console window)
     // Note: Verification is optional - if it fails, we still consider the download successful
@@ -955,31 +1032,26 @@ async function updateYtdlp(forceUpdate = false) {
       error: error.message
     });
     throw error;
+  } finally {
+    if (markedYtdlpUpdateInProgress) {
+      downloadToolsUpdateInProgress = false;
+    }
   }
 }
 
 async function runYtdlpAutoUpdateCheck(source = 'automatic') {
   try {
-    emitDependencyStatus({
-      status: 'checking',
-      tool: 'yt-dlp',
-      action: 'auto-update',
-      message: 'Checking yt-dlp updates...',
-      isBusy: true,
-      ready: false,
-      percent: null,
-      downloadedBytes: null,
-      totalBytes: null,
-      speedBps: null,
-      error: null
-    });
+    if (downloadProcess || (activeDownloads && Object.keys(activeDownloads).length > 0)) {
+      console.log(`${source} yt-dlp update check skipped because a download is active.`);
+      return;
+    }
 
     console.log(`${source} yt-dlp update check...`);
     const updateCheck = await checkYtdlpUpdate();
     if (updateCheck.needsUpdate) {
       console.log(`New yt-dlp version available: ${updateCheck.latestVersion}`);
       console.log('Updating yt-dlp automatically...');
-      const updateResult = await updateYtdlp();
+      const updateResult = await updateYtdlp(false, { skipUpdateCheck: true });
       if (updateResult.success) {
         console.log(`yt-dlp updated successfully to ${updateResult.version}`);
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -990,6 +1062,16 @@ async function runYtdlpAutoUpdateCheck(source = 'automatic') {
         }
       }
     } else {
+      if (updateCheck.reason === 'recently_checked') {
+        console.log(`yt-dlp update check skipped until ${updateCheck.nextCheckAt ? new Date(updateCheck.nextCheckAt).toISOString() : 'later'}.`);
+        return;
+      }
+
+      if (updateCheck.reason === 'check_failed') {
+        console.log(`yt-dlp update check failed and will not retry until the next startup: ${updateCheck.error || 'Unknown error'}`);
+        return;
+      }
+
       console.log(`yt-dlp is up to date. Reason: ${updateCheck.reason}`);
       emitDependencyStatus({
         status: 'ready',
@@ -1003,6 +1085,7 @@ async function runYtdlpAutoUpdateCheck(source = 'automatic') {
         percent: 100,
         currentVersion: updateCheck.currentVersion || null,
         latestVersion: updateCheck.latestVersion || updateCheck.currentVersion || null,
+        nextCheckAt: updateCheck.nextCheckAt || null,
         error: null
       });
     }
@@ -1022,6 +1105,7 @@ async function runYtdlpAutoUpdateCheck(source = 'automatic') {
 
 async function downloadAndExtractFFmpeg(options = {}) {
   const { forceUpdate = false } = options;
+  let markedDownloadToolsUpdateInProgress = false;
   let ffmpegUrl;
   let tempTarPath;
   let ffmpegFileName;
@@ -1084,6 +1168,18 @@ async function downloadAndExtractFFmpeg(options = {}) {
         return { success: true, message: 'FFmpeg already installed', skipped: true };
       }
     }
+
+    if (hasActiveDownloads()) {
+      const message = 'Skipped FFmpeg install/update because a download is active.';
+      console.log(message);
+      if (forceUpdate) {
+        throw new Error('A download is in progress. Try Repair Downloads again after it finishes.');
+      }
+      return { success: true, message, skipped: true, reason: 'download_active' };
+    }
+
+    downloadToolsUpdateInProgress = true;
+    markedDownloadToolsUpdateInProgress = true;
 
     if (!existsSync(extractPath)) {
       mkdirSync(extractPath, { recursive: true });
@@ -1280,6 +1376,10 @@ async function downloadAndExtractFFmpeg(options = {}) {
       error: error.message
     });
     throw error;
+  } finally {
+    if (markedDownloadToolsUpdateInProgress) {
+      downloadToolsUpdateInProgress = false;
+    }
   }
 }
 
@@ -1623,26 +1723,33 @@ app.whenReady().then(async () => {
       
       if (existsSync(bundledPath)) {
         ytdlpPath = bundledPath;
-        // Verify it works
         try {
+          const stats = await fs.stat(bundledPath);
+          const ready = stats.size > 1000000;
+          if (process.platform !== 'win32') {
+            await fs.chmod(bundledPath, 0o755).catch((err) => {
+              console.warn(`Could not set yt-dlp executable permission during startup: ${err.message}`);
+            });
+          }
+
           emitDependencyStatus({
-            status: 'verifying',
+            status: ready ? 'ready' : 'failed',
             tool: 'yt-dlp',
             action: 'startup',
-            message: 'Verifying yt-dlp...',
-            isBusy: true,
-            ready: false,
-            percent: null
+            message: ready ? 'yt-dlp is available.' : 'yt-dlp is missing or incomplete.',
+            isBusy: false,
+            ready,
+            percent: ready ? 100 : null
           });
-          await checkYtdlpVersion();
-          console.log('Using bundled yt-dlp at:', bundledPath);
-          return true;
-        } catch (err) {
-          console.warn('Bundled yt-dlp failed verification:', err.message);
-          // If it's a PyInstaller error or binary doesn't work, we'll download a new one
-          if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
-            console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
+
+          if (ready) {
+            console.log('Using existing yt-dlp at:', bundledPath);
+            return true;
           }
+
+          console.warn(`Existing yt-dlp is too small (${stats.size} bytes), will download a fresh copy.`);
+        } catch (err) {
+          console.warn('Could not inspect existing yt-dlp, will download a fresh copy:', err.message);
         }
       }
       
@@ -1663,41 +1770,23 @@ app.whenReady().then(async () => {
     
     if (!ytdlpInitialized) {
       console.log('yt-dlp not found or not working, downloading...');
-      await updateYtdlp().catch(downloadErr => {
+      await updateYtdlp(false, { skipUpdateCheck: true }).catch(downloadErr => {
         console.error('Failed to download yt-dlp:', downloadErr);
       });
       console.log('yt-dlp path after update:', ytdlpPath);
     } else {
-      // Verify the version
-      emitDependencyStatus({
-        status: 'verifying',
-        tool: 'yt-dlp',
-        action: 'startup',
-        message: 'Confirming yt-dlp version...',
-        isBusy: true,
-        ready: false,
-        percent: null
-      });
-      try {
-        const version = await checkYtdlpVersion();
-        console.log('yt-dlp version:', version);
-      } catch (err) {
-        console.error('Failed to check yt-dlp version:', err);
-      }
-      
-      // Auto-update check: Run after 30 seconds to not block startup
+      // Auto-update check: Run once after startup, and only if the 2-day throttle allows it.
       setTimeout(() => {
         runYtdlpAutoUpdateCheck('Automatic').catch((error) => {
           console.error('Auto-update failed:', error.message);
         });
       }, 30000); // Wait 30 seconds after app start
-      
-      // Set up periodic auto-update check (every 24 hours)
+
       setInterval(() => {
-        runYtdlpAutoUpdateCheck('Periodic').catch((error) => {
-          console.error('Periodic yt-dlp update failed:', error.message);
+        runYtdlpAutoUpdateCheck('Daily').catch((error) => {
+          console.error('Daily yt-dlp update check failed:', error.message);
         });
-      }, 24 * 60 * 60 * 1000); // Check every 24 hours
+      }, YTDLP_AUTO_UPDATE_POLL_MS);
     }
 
     const deps = await checkDependencies();
@@ -2242,6 +2331,10 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
 let downloadProcess = null;
 const activeDownloads = {};
 
+function hasActiveDownloads() {
+  return Boolean(downloadProcess) || Object.keys(activeDownloads || {}).length > 0;
+}
+
 const startDownload = async (event, options) => {
   return new Promise(async (resolve, reject) => {
     try {
@@ -2252,6 +2345,19 @@ const startDownload = async (event, options) => {
 
       const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
       const downloadLogId = downloadId || `download:${Date.now()}`;
+      const downloadStartedAt = Date.now();
+      console.log(`[${downloadLogId}] ⏱ Download request received at ${new Date().toISOString()}`);
+
+      if (downloadToolsUpdateInProgress) {
+        const message = 'Download tools are being updated. Try again when the repair/update finishes.';
+        event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+          downloadId,
+          error: message,
+          repairRecommended: true
+        });
+        return reject(new Error(message));
+      }
+
       console.log(`[${downloadLogId}] Download request:`, {
         url,
         isAudioOnly,
@@ -2272,13 +2378,10 @@ const startDownload = async (event, options) => {
         return reject(new Error('Download already in progress.'));
       }
 
-      // Update cookies before starting download (important for Dailymotion and other platforms)
-      try {
-        await updateCookiesFile();
-      } catch (cookieError) {
+      // Update cookies in background — do NOT await this, it must not block yt-dlp start
+      updateCookiesFile().catch((cookieError) => {
         console.warn('Failed to update cookies before download:', cookieError.message);
-        // Continue anyway - old cookies might still work
-      }
+      });
       
       let baseDir;
       if (saveTo === 'Desktop') {
@@ -2516,12 +2619,23 @@ const startDownload = async (event, options) => {
 
       const fetchAndSanitizeTitle = async () => {
         try {
+          // ── Fast path: renderer already sent the title ──────────────────────────
+          // titleFromOptions is populated by the renderer from its own video-info
+          // lookup. Use it directly and skip spawning an extra yt-dlp process.
+          if (titleFromOptions && titleFromOptions.trim() !== '') {
+            const sanitizedTitle = sanitize(titleFromOptions.trim());
+            if (sanitizedTitle && sanitizedTitle !== 'Unknown') {
+              console.log(`[${downloadId}] Using pre-fetched title from renderer: "${titleFromOptions}" -> "${sanitizedTitle}"`);
+              return sanitizedTitle;
+            }
+          }
+
           const platform = detectPlatform(url);
           const isYouTube = isYouTubePlatform(platform);
           
           console.log(`[${downloadId}] Platform detected: ${platform}, isYouTube: ${isYouTube}, isPlaylist: ${isPlaylist}`);
           
-          // For non-YouTube videos, ALWAYS try full yt-dlp info extraction first
+          // For non-YouTube videos, try full yt-dlp info extraction
           // This works for all platforms (Facebook, Instagram, Reddit, TikTok, etc.)
           if (!isYouTube && !isPlaylist) {
             try {
@@ -2529,7 +2643,6 @@ const startDownload = async (event, options) => {
               const videoInfo = await getVideoInfoFromYtDlp();
               
               console.log(`[${downloadId}] yt-dlp extraction completed. Title:`, videoInfo?.title || 'N/A');
-              console.log(`[${downloadId}] Full videoInfo keys:`, Object.keys(videoInfo || {}));
               
               // Try multiple possible title fields
               const rawTitle = videoInfo?.title || 
@@ -2582,25 +2695,20 @@ const startDownload = async (event, options) => {
                 }
               } else {
                 console.warn(`[${downloadId}] yt-dlp returned info but no valid title found.`);
-                console.warn(`[${downloadId}] Available fields:`, Object.keys(videoInfo || {}));
-                console.warn(`[${downloadId}] VideoInfo sample:`, JSON.stringify(videoInfo, null, 2).substring(0, 1000));
               }
             } catch (error) {
               console.error(`[${downloadId}] Error fetching video info from yt-dlp:`, error.message);
-              console.error(`[${downloadId}] Error stack:`, error.stack);
               
-              // Send error to renderer for debugging
               event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
                 downloadId,
                 message: `Failed to extract video info: ${error.message}`,
                 error: `yt-dlp info extraction failed: ${error.message}`
               });
-              
               // Continue to fallback
             }
           }
           
-          // For YouTube or if yt-dlp info extraction failed, use simple title extraction
+          // Last resort: spawn yt-dlp --get-title (slow, may timeout)
           console.log(`[${downloadId}] Using simple title extraction (YouTube or fallback)`);
           try {
             const rawTitle = await getTitle();
@@ -2613,7 +2721,6 @@ const startDownload = async (event, options) => {
           }
         } catch (error) {
           console.error(`[${downloadId}] Error in fetchAndSanitizeTitle:`, error.message);
-          console.error(`[${downloadId}] Error stack:`, error.stack);
           return 'Unknown';
         }
       };
@@ -2752,33 +2859,40 @@ const startDownload = async (event, options) => {
       };
 
       setupDownloadPath().then(async (downloadPath) => {
-        // Fetch thumbnail for non-YouTube content before starting download
-        const thumbnail = await fetchThumbnail(url);
-        
-        // Send thumbnail information to renderer
-        if (thumbnail) {
-          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-            downloadId,
-            thumbnail,
-            message: 'Thumbnail fetched for non-YouTube content'
-          });
-        }
+        // Fetch thumbnail in background — do NOT await before spawning yt-dlp
+        fetchThumbnail(url).then((thumbnail) => {
+          if (thumbnail) {
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+              downloadId,
+              thumbnail,
+              message: 'Thumbnail fetched for non-YouTube content'
+            });
+          }
+        }).catch(() => {});
+
+        console.log(`[${downloadId}] ⏱ Pre-download setup complete. Spawning yt-dlp now...`);
 
         // Detect if this is a Dailymotion URL
         const isDailymotion = url.includes('dailymotion.com') || url.includes('dai.ly');
-        
+        const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+
         const args = [
           '--continue',
-          '--ffmpeg-location', ffmpegPath,
+          '--ffmpeg-location', ffmpegPath, // Reverting back to binary path since ffprobe doesn't exist
           '-o', downloadPath,
-          '--cookies', cookiesPath,
-          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           '--newline',
           '--ignore-errors',
           '--progress',
-          '--extractor-retries', '3',
-          '--js-runtimes', 'node',
+          '--extractor-retries', '8',
+          '--concurrent-fragments', '4',
+          '--fixup', 'never', // Without ffprobe, fixing up M3U8 takes 80 seconds byte-by-byte. This skips it.
         ];
+
+        // Pass cookies for non-YouTube platforms (like Facebook/Instagram/Dailymotion)
+        // Passing cookies for public YouTube videos often triggers 80-second Bot/JS challenges.
+        if (!isYouTube) {
+          args.push('--cookies', cookiesPath);
+        }
 
         // Add Dailymotion-specific options for better compatibility
         if (isDailymotion) {
@@ -2804,6 +2918,7 @@ const startDownload = async (event, options) => {
 
         const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
         const startedAt = Date.now();
+        console.log(`[${downloadId}] ⏱ yt-dlp spawning after ${startedAt - downloadStartedAt}ms from button click`);
         downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
         activeDownloads[downloadId] = true;
 
@@ -3290,7 +3405,9 @@ ipcMain.handle(IPC_CHANNELS.CHECK_YTDLP_UPDATE, async () => {
       needsUpdate: updateCheck.needsUpdate,
       reason: updateCheck.reason,
       currentVersion: updateCheck.currentVersion || null,
-      latestVersion: updateCheck.latestVersion || null
+      latestVersion: updateCheck.latestVersion || null,
+      lastCheckedAt: updateCheck.lastCheckedAt || null,
+      nextCheckAt: updateCheck.nextCheckAt || null
     };
   } catch (error) {
     console.error('Error checking yt-dlp update:', error);
@@ -3350,6 +3467,17 @@ let isInitialized = false;
 
 async function checkDependencies() {
   try {
+    if (hasActiveDownloads()) {
+      console.log('Skipping dependency check because a download is active.');
+      return {
+        ready: true,
+        ffmpeg: true,
+        ytdlp: true,
+        isBusy: false,
+        dependencyStatus: getDependencyStatusSnapshot()
+      };
+    }
+
     console.log('Checking dependencies...');
     console.log('FFmpeg path:', ffmpegPath);
     console.log('yt-dlp path:', ytdlpPath);

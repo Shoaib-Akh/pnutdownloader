@@ -30,6 +30,9 @@ extraResources:
   
   - from: public/yt-dlp_macos
     to: yt-dlp_macos
+
+  - from: public/yt-dlp
+    to: yt-dlp
  
   - from: public/ffmpeg.exe
     to: ffmpeg.exe

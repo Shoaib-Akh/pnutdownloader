@@ -351,6 +351,23 @@ const useDownloadManager = ({
         return next
       })
     } catch (error) {
+      const errorMessage = error.message || error.toString()
+      const shouldSuggestRepair =
+        /yt-dlp|ffmpeg|download tools|media processor|PYI-|Failed to extract script from archive/i.test(
+          errorMessage
+        )
+
+      if (shouldSuggestRepair && window.api?.showMessageBox) {
+        window.api.showMessageBox({
+          type: 'warning',
+          title: 'Repair Downloads',
+          message: 'Download tools need attention.',
+          detail: 'Open About PNUT and click Repair Downloads. Try the download again after repair finishes.',
+          buttons: ['OK'],
+          defaultId: 0
+        }).catch(() => {})
+      }
+
       const storedDownloads = getStoredDownloads()
       const failedIndex = storedDownloads.findIndex((i) => i.id === currentId)
 
@@ -358,7 +375,7 @@ const useDownloadManager = ({
         storedDownloads[failedIndex].status = 'Failed'
         storedDownloads[failedIndex].isFailed = true
         setStoredDownloads(storedDownloads)
-        saveDownloadError(storedDownloads[failedIndex], error.message || error.toString())
+        saveDownloadError(storedDownloads[failedIndex], errorMessage)
       }
 
       setActiveDownloads((prev) => {
