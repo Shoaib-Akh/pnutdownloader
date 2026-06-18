@@ -201,11 +201,21 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
           try {
             const status = await refreshDependencyCheck()
             if (!status) return
-            if (status.ready) {
-              if (status.isBusy) {
-                setTimeout(checkDependencies, 2000)
-              }
+
+            // Use normalized flags: stop polling once fully ready and not busy
+            const isReady = Boolean(status.ready || (status.ffmpeg && status.ytdlp))
+            const isBusy = Boolean(status.isBusy) && !isReady
+
+            if (isReady && !isBusy) {
+              // Dependencies confirmed ready – stop polling
+              return
+            }
+
+            if (isBusy) {
+              // Actively working (downloading/verifying) – check again soon
+              setTimeout(checkDependencies, 2000)
             } else {
+              // Not ready yet, retry after a longer delay
               setTimeout(checkDependencies, 20000)
             }
           } catch (error) {
