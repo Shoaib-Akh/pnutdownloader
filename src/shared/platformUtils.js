@@ -27,6 +27,18 @@ export const PLATFORMS = {
   UNKNOWN: 'unknown'
 }
 
+export const SNAPCHAT_MEDIA_PATTERNS = [
+  /(?:^|\/\/)(?:www\.)?snapchat\.com\/spotlight\/[^/?#]+/i,
+  /(?:^|\/\/)(?:www\.)?snapchat\.com\/@[^/?#]+\/(?:spotlight|story|stories)\/[^/?#]+/i,
+  /(?:^|\/\/)(?:www\.)?snapchat\.com\/stories\/[^/?#]+\/[^/?#]+/i,
+  /(?:^|\/\/)story\.snapchat\.com\/(?:p|spotlight|story)\/[^/?#]+/i
+]
+
+export const isSnapchatMediaUrl = (url) => {
+  if (!url || typeof url !== 'string') return false
+  return SNAPCHAT_MEDIA_PATTERNS.some((pattern) => pattern.test(url))
+}
+
 /**
  * Detect platform from URL
  * @param {string} url - The URL to detect platform from
@@ -247,9 +259,7 @@ export const isDownloadableVideoUrl = (url) => {
   }
 
   // Snapchat public media patterns
-  if (urlLower.includes('snapchat.com/spotlight/') ||
-      urlLower.includes('snapchat.com/stories/') ||
-      urlLower.includes('story.snapchat.com/')) {
+  if (isSnapchatMediaUrl(url)) {
     return true
   }
   

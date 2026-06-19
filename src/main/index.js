@@ -2617,17 +2617,30 @@ const startDownload = async (event, options) => {
         });
       };
 
+      const isGeneratedMetadataTitle = (value) => {
+        if (!value || typeof value !== 'string') return true;
+        const normalized = value.trim().toLowerCase();
+
+        if (!normalized || normalized === 'unknown' || normalized === 'unknown video' || normalized === 'pending...') {
+          return true;
+        }
+
+        return /^(unknown video|unknown platform video|snapchat video|instagram (post|video)|facebook video|twitter (post|video)|tiktok video|vimeo video|dailymotion video|reddit (post|video)|twitch video|soundcloud track|bilibili video)(?:\s*(?:-|$|\().*)?$/i.test(normalized);
+      };
+
       const fetchAndSanitizeTitle = async () => {
         try {
           // ── Fast path: renderer already sent the title ──────────────────────────
           // titleFromOptions is populated by the renderer from its own video-info
           // lookup. Use it directly and skip spawning an extra yt-dlp process.
-          if (titleFromOptions && titleFromOptions.trim() !== '') {
+          if (titleFromOptions && titleFromOptions.trim() !== '' && !isGeneratedMetadataTitle(titleFromOptions)) {
             const sanitizedTitle = sanitize(titleFromOptions.trim());
-            if (sanitizedTitle && sanitizedTitle !== 'Unknown') {
+            if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !isGeneratedMetadataTitle(sanitizedTitle)) {
               console.log(`[${downloadId}] Using pre-fetched title from renderer: "${titleFromOptions}" -> "${sanitizedTitle}"`);
               return sanitizedTitle;
             }
+          } else if (titleFromOptions && isGeneratedMetadataTitle(titleFromOptions)) {
+            console.log(`[${downloadId}] Ignoring generated fallback title from renderer: "${titleFromOptions}"`);
           }
 
           const platform = detectPlatform(url);
@@ -2744,6 +2757,9 @@ const startDownload = async (event, options) => {
         if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
           return 'instagram'
         }
+        if (urlLower.includes('snapchat.com')) {
+          return 'snapchat'
+        }
         if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
           return 'tiktok'
         }
@@ -2804,7 +2820,7 @@ const startDownload = async (event, options) => {
         // Create title with quality for display and filenames
         // Use the extracted title if available, otherwise create fallback
         let titleWithQuality;
-        if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !sanitizedTitle.startsWith('Unknown Video')) {
+        if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !isGeneratedMetadataTitle(sanitizedTitle)) {
           titleWithQuality = isAudioOnly 
             ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
             : `${sanitizedTitle}_${sanitizedQuality}`;

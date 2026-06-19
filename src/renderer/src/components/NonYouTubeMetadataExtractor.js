@@ -14,9 +14,10 @@ class NonYouTubeMetadataExtractor {
       snapchat: {
         name: 'Snapchat',
         patterns: [
-          /snapchat\.com\/spotlight\/([^\/?#]+)/,
-          /snapchat\.com\/stories\/[^\/]+\/([^\/?#]+)/,
-          /story\.snapchat\.com\/(?:p|spotlight|story)\/([^\/?#]+)/
+          /snapchat\.com\/spotlight\/([^\/?#]+)/i,
+          /snapchat\.com\/@[^\/?#]+\/(?:spotlight|story|stories)\/([^\/?#]+)/i,
+          /snapchat\.com\/stories\/[^\/?#]+\/([^\/?#]+)/i,
+          /story\.snapchat\.com\/(?:p|spotlight|story)\/([^\/?#]+)/i
         ],
         metadataExtractor: this.extractSnapchatMetadata.bind(this)
       },

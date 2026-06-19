@@ -130,6 +130,16 @@ test('detect instagr.am short URLs', () => {
   expect(detectPlatform('https://instagr.am/p/abc123/')).toBe(PLATFORMS.INSTAGRAM)
 })
 
+// ==================== Snapchat Tests ====================
+console.log('\n--- Snapchat ---')
+
+test('detect Snapchat public media URLs', () => {
+  expect(detectPlatform('https://www.snapchat.com/spotlight/abc123xyz')).toBe(PLATFORMS.SNAPCHAT)
+  expect(detectPlatform('https://www.snapchat.com/@snapchat/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYenNyd3VhbWF2AZzn2zDlAZzn2zDQAAAAAQ')).toBe(PLATFORMS.SNAPCHAT)
+  expect(detectPlatform('https://www.snapchat.com/@publisher/story/abc123')).toBe(PLATFORMS.SNAPCHAT)
+  expect(detectPlatform('https://story.snapchat.com/p/abc123')).toBe(PLATFORMS.SNAPCHAT)
+})
+
 // ==================== TikTok Tests ====================
 console.log('\n--- TikTok ---')
 
@@ -385,6 +395,14 @@ test('return true for Instagram URLs', () => {
   expect(isDownloadableVideoUrl('https://www.instagram.com/reels/abc123')).toBeTrue()
   expect(isDownloadableVideoUrl('https://www.instagram.com/stories/user/123')).toBeTrue()
   expect(isDownloadableVideoUrl('https://instagr.am/p/abc123')).toBeTrue()
+})
+
+test('return true for Snapchat public media URLs', () => {
+  expect(isDownloadableVideoUrl('https://www.snapchat.com/spotlight/abc123xyz')).toBeTrue()
+  expect(isDownloadableVideoUrl('https://www.snapchat.com/@snapchat/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYenNyd3VhbWF2AZzn2zDlAZzn2zDQAAAAAQ')).toBeTrue()
+  expect(isDownloadableVideoUrl('https://www.snapchat.com/@publisher/story/abc123?share_id=123')).toBeTrue()
+  expect(isDownloadableVideoUrl('https://www.snapchat.com/stories/publisher/abc123')).toBeTrue()
+  expect(isDownloadableVideoUrl('https://story.snapchat.com/p/abc123')).toBeTrue()
 })
 
 test('return true for TikTok URLs', () => {

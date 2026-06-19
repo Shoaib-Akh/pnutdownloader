@@ -126,10 +126,12 @@ describe('PlatformService', () => {
     it('should detect Snapchat Spotlight URLs', () => {
       expect(detectPlatform('https://www.snapchat.com/spotlight/abc123xyz')).toBe(PLATFORMS.SNAPCHAT)
       expect(detectPlatform('https://snapchat.com/spotlight/Snap123')).toBe(PLATFORMS.SNAPCHAT)
+      expect(detectPlatform('https://www.snapchat.com/@snapchat/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYenNyd3VhbWF2AZzn2zDlAZzn2zDQAAAAAQ')).toBe(PLATFORMS.SNAPCHAT)
     })
 
     it('should detect Snapchat story URLs', () => {
       expect(detectPlatform('https://www.snapchat.com/stories/publisher/abc123')).toBe(PLATFORMS.SNAPCHAT)
+      expect(detectPlatform('https://www.snapchat.com/@publisher/story/abc123')).toBe(PLATFORMS.SNAPCHAT)
       expect(detectPlatform('https://story.snapchat.com/p/abc123')).toBe(PLATFORMS.SNAPCHAT)
     })
   })
@@ -453,6 +455,8 @@ describe('PlatformService', () => {
 
     it('should return true for Snapchat public media URLs', () => {
       expect(isDownloadableVideoUrl('https://www.snapchat.com/spotlight/abc123xyz')).toBe(true)
+      expect(isDownloadableVideoUrl('https://www.snapchat.com/@snapchat/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYenNyd3VhbWF2AZzn2zDlAZzn2zDQAAAAAQ')).toBe(true)
+      expect(isDownloadableVideoUrl('https://www.snapchat.com/@publisher/story/abc123?share_id=123')).toBe(true)
       expect(isDownloadableVideoUrl('https://www.snapchat.com/stories/publisher/abc123')).toBe(true)
       expect(isDownloadableVideoUrl('https://story.snapchat.com/p/abc123')).toBe(true)
     })

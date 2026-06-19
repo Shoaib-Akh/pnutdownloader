@@ -15,6 +15,7 @@
     "instagram\\.com\\/reels\\/[A-Za-z0-9_-]+",
     "instagram\\.com\\/stories\\/[^/]+\\/\\d+",
     "snapchat\\.com\\/spotlight\\/[A-Za-z0-9_-]+",
+    "snapchat\\.com\\/@[^/]+\\/(spotlight|story|stories)\\/[A-Za-z0-9_-]+",
     "snapchat\\.com\\/stories\\/[^/]+\\/[A-Za-z0-9_-]+",
     "story\\.snapchat\\.com\\/(p|spotlight|story)\\/[A-Za-z0-9_-]+",
     "dailymotion\\.com\\/video\\/[A-Za-z0-9]+",
