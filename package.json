@@ -63,31 +63,60 @@
   "build": {
     "appId": "com.shoaibakh.pnutdownloader",
     "win": {
-      "icon": "public/icon.ico"
+      "target": "nsis",
+      "icon": "public/icon.ico",
+      "extraResources": [
+        {
+          "from": "public/yt-dlp.exe",
+          "to": "yt-dlp.exe"
+        },
+        {
+          "from": "public/ffmpeg.exe",
+          "to": "ffmpeg.exe"
+        }
+      ]
     },
     "linux": {
-      "icon": "resources/icon.png"
+      "target": "AppImage",
+      "icon": "resources/icon.png",
+      "extraResources": [
+        {
+          "from": "public/yt-dlp",
+          "to": "yt-dlp"
+        },
+        {
+          "from": "public/ffmpeg",
+          "to": "ffmpeg"
+        }
+      ]
     },
     "mac": {
-      "icon": "resources/icon.icns"
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64",
+            "universal"
+          ]
+        }
+      ],
+      "icon": "resources/icon.icns",
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "extraResources": [
+        {
+          "from": "public/yt-dlp",
+          "to": "yt-dlp"
+        },
+        {
+          "from": "public/ffmpeg",
+          "to": "ffmpeg"
+        }
+      ]
     },
     "extraResources": [
-      {
-        "from": "public/yt-dlp.exe",
-        "to": "yt-dlp.exe"
-      },
-      {
-        "from": "public/yt-dlp_macos",
-        "to": "yt-dlp_macos"
-      },
-      {
-        "from": "public/yt-dlp",
-        "to": "yt-dlp"
-      },
-      {
-        "from": "public/ffmpeg.exe",
-        "to": "ffmpeg.exe"
-      },
       {
         "from": "public/cookies.txt",
         "to": "cookies.txt"
