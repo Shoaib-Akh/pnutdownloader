@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Drop in: app/src/main/res/values/colors.xml -->
+<resources>
+
+    <!-- Primary (cyan buttons, links, highlights) -->
+    <color name="primary">#164E63</color>
+    <color name="primary_hover">#155E75</color>
+    <color name="primary_text">#ECFEFF</color>
+    <color name="primary_glow">#06B6D4</color>
+
+    <!-- Background -->
+    <color name="bg_page">#FAFAFA</color>
+    <color name="bg_card">#FFFFFF</color>
+    <color name="bg_tint">#E0F7FA</color>
+
+    <!-- Text -->
+    <color name="text_primary">#18181B</color>
+    <color name="text_secondary">#3F3F46</color>
+    <color name="text_muted">#71717A</color>
+
+    <!-- Feedback -->
+    <color name="success">#22C55E</color>
+    <color name="error">#EF4444</color>
+
+    <!-- Dark mode overrides — put these in res/values-night/colors.xml -->
+    <!--
+    <color name="primary">#06B6D4</color>
+    <color name="primary_hover">#22D3EE</color>
+    <color name="primary_text">#09090B</color>
+    <color name="primary_glow">#22D3EE</color>
+    <color name="bg_page">#09090B</color>
+    <color name="bg_card">#18181B</color>
+    <color name="bg_tint">#164E63</color>
+    <color name="text_primary">#F4F4F5</color>
+    <color name="text_secondary">#A1A1AA</color>
+    <color name="text_muted">#71717A</color>
+    -->
+
+</resources>

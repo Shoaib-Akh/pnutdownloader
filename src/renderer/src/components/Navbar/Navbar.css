@@ -758,6 +758,7 @@
 
 .navbar-quality-badge {
   background: var(--pnut-brand) !important;
+  color: var(--pnut-button-text) !important;
   border-radius: 6px !important;
   box-shadow: none !important;
 }

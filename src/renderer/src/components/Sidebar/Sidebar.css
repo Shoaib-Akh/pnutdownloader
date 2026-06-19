@@ -186,7 +186,7 @@
     position: absolute;
     top: -6px;
     right: -6px;
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    background: var(--pnut-danger);
     color: white;
     font-size: 9px;
     font-weight: 700;
@@ -624,9 +624,9 @@
 }
 
 .sidebar__menu-item--selected {
-  background: var(--pnut-brand) !important;
-  border-color: var(--pnut-brand) !important;
-  color: #ffffff !important;
+  background: var(--pnut-button-bg) !important;
+  border-color: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
   box-shadow: var(--pnut-shadow-sm) !important;
 }
 
@@ -646,8 +646,8 @@
 }
 
 .sidebar__menu-item--selected .sidebar__icon-container {
-  background: rgba(255, 255, 255, 0.18) !important;
-  color: #ffffff !important;
+  background: color-mix(in srgb, var(--pnut-button-text) 16%, transparent) !important;
+  color: var(--pnut-button-text) !important;
 }
 
 .sidebar__icon {
@@ -743,8 +743,8 @@
 }
 
 .sidebar__buy-nuts-button:hover {
-  background: var(--pnut-brand) !important;
-  color: #ffffff !important;
+  background: var(--pnut-button-bg) !important;
+  color: var(--pnut-button-text) !important;
   transform: translateY(-1px) !important;
   box-shadow: var(--pnut-shadow-sm) !important;
 }

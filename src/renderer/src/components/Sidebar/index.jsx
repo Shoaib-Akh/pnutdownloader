@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaHandHoldingHeart, FaInfoCircle, FaGlobe, FaCommentDots, FaStar, FaSun, FaMoon } from 'react-icons/fa';
 import { IoMdDownload } from 'react-icons/io';
 import { GiSquirrel } from 'react-icons/gi';
-import squirrel from '../../assets/Images/squirrel.png';
+import squirrel from '../../assets/Images/squirrel.svg';
 import './Sidebar.css';
-import Logo from '../../assets/Images/logo.png';
-import LogoDark from '../../assets/Images/logoDark.png';
+import Logo from '../../assets/Images/logo.svg';
+import LogoDark from '../../assets/Images/logoDark.svg';
 import { trackDonationButton } from '../../utils/donationService';
 
 function Sidebar({

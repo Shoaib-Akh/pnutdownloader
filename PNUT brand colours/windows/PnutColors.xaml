@@ -1,0 +1,48 @@
+<!-- Drop in: your project folder as PnutColors.xaml
+     Then merge in App.xaml:
+         <Application.Resources>
+             <ResourceDictionary>
+                 <ResourceDictionary.MergedDictionaries>
+                     <ResourceDictionary Source="PnutColors.xaml"/>
+                 </ResourceDictionary.MergedDictionaries>
+             </ResourceDictionary>
+         </Application.Resources>
+     Use as: Background="{StaticResource Primary}" -->
+
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Primary (buttons, links, highlights) -->
+    <SolidColorBrush x:Key="Primary"        Color="#164E63"/>
+    <SolidColorBrush x:Key="PrimaryHover"   Color="#155E75"/>
+    <SolidColorBrush x:Key="PrimaryText"    Color="#ECFEFF"/>
+    <SolidColorBrush x:Key="PrimaryGlow"    Color="#06B6D4"/>
+
+    <!-- Background -->
+    <SolidColorBrush x:Key="BgPage"         Color="#FAFAFA"/>
+    <SolidColorBrush x:Key="BgCard"         Color="#FFFFFF"/>
+    <SolidColorBrush x:Key="BgTint"         Color="#E0F7FA"/>
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextPrimary"    Color="#18181B"/>
+    <SolidColorBrush x:Key="TextSecondary"  Color="#3F3F46"/>
+    <SolidColorBrush x:Key="TextMuted"      Color="#71717A"/>
+
+    <!-- Feedback -->
+    <SolidColorBrush x:Key="Success"        Color="#22C55E"/>
+    <SolidColorBrush x:Key="Error"          Color="#EF4444"/>
+
+    <!-- Dark mode: wrap these in a separate ResourceDictionary and
+         load it conditionally when the app theme is Dark.
+    <SolidColorBrush x:Key="Primary"        Color="#06B6D4"/>
+    <SolidColorBrush x:Key="PrimaryHover"   Color="#22D3EE"/>
+    <SolidColorBrush x:Key="PrimaryText"    Color="#09090B"/>
+    <SolidColorBrush x:Key="BgPage"         Color="#09090B"/>
+    <SolidColorBrush x:Key="BgCard"         Color="#18181B"/>
+    <SolidColorBrush x:Key="BgTint"         Color="#164E63"/>
+    <SolidColorBrush x:Key="TextPrimary"    Color="#F4F4F5"/>
+    <SolidColorBrush x:Key="TextSecondary"  Color="#A1A1AA"/>
+    -->
+
+</ResourceDictionary>

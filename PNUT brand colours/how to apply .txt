@@ -1,0 +1,5 @@
+To apply:
+
+Android — copy brand-assets/android/colors.xml + brand-assets/android/themes.xml into res/values/, add the commented dark-mode block into a res/values-night/colors.xml, set android:theme="@style/AppTheme" in your manifest
+Windows — copy brand-assets/windows/PnutColors.xaml into your project, merge it in App.xaml, then use Background="{StaticResource BgCard}" anywhere
+macOS / iOS — drop brand-assets/apple/Color+Extensions.swift into Xcode, then use Color.bgCard, Color.primary, etc. directly in SwiftUI views — light/dark switching is automatic

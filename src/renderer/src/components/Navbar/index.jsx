@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaPaste, FaDownload } from 'react-icons/fa';
-import Logo from '../../assets/Images/logo.png';
+import Logo from '../../assets/Images/logo.svg';
 import '../common.css';
 import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';

@@ -3,74 +3,74 @@
 
 :root,
 .light-theme {
-  --pnut-bg: #FFFBF2;
+  --pnut-bg: #FAFAFA;
   --pnut-surface: #ffffff;
-  --pnut-surface-raised: #FFF9F0;
-  --pnut-text: #1A0E00;
-  --pnut-text-soft: #5A3E10;
-  --pnut-muted: #7A5828;
-  --pnut-border: rgba(140, 94, 0, 0.18);
-  --pnut-border-strong: rgba(140, 94, 0, 0.30);
-  --pnut-brand: #8C5E00;
-  --pnut-brand-hover: #C04500;
-  --pnut-brand-fill: #F5A623;
-  --pnut-brand-soft: rgba(245, 166, 35, 0.16);
-  --pnut-info: #C04500;
-  --pnut-info-soft: rgba(192, 69, 0, 0.10);
-  --pnut-success: #1A7A3C;
-  --pnut-success-soft: #E8F5EE;
-  --pnut-danger: #B32800;
-  --pnut-danger-soft: #FFEEE8;
-  --pnut-warning: #8C5E00;
-  --pnut-warning-soft: #FFF6E0;
-  --pnut-violet: #C04500;
-  --pnut-violet-soft: rgba(192, 69, 0, 0.10);
+  --pnut-surface-raised: #E0F7FA;
+  --pnut-text: #18181B;
+  --pnut-text-soft: #3F3F46;
+  --pnut-muted: #71717A;
+  --pnut-border: rgba(22, 78, 99, 0.18);
+  --pnut-border-strong: rgba(22, 78, 99, 0.30);
+  --pnut-brand: #164E63;
+  --pnut-brand-hover: #155E75;
+  --pnut-brand-fill: #06B6D4;
+  --pnut-brand-soft: rgba(6, 182, 212, 0.14);
+  --pnut-info: #0891B2;
+  --pnut-info-soft: rgba(6, 182, 212, 0.10);
+  --pnut-success: #22C55E;
+  --pnut-success-soft: rgba(34, 197, 94, 0.12);
+  --pnut-danger: #EF4444;
+  --pnut-danger-soft: rgba(239, 68, 68, 0.10);
+  --pnut-warning: #164E63;
+  --pnut-warning-soft: #E0F7FA;
+  --pnut-violet: #0891B2;
+  --pnut-violet-soft: rgba(6, 182, 212, 0.10);
   --pnut-radius: 8px;
   --pnut-radius-lg: 12px;
   --pnut-sidebar-width: 248px;
-  --pnut-shadow-sm: 0 2px 20px rgba(140, 94, 0, 0.10);
-  --pnut-shadow-md: 0 6px 32px rgba(140, 94, 0, 0.13);
-  --pnut-shadow-lg: 0 16px 56px rgba(140, 94, 0, 0.16);
-  --pnut-ring: 0 0 0 3px rgba(140, 94, 0, 0.16);
-  --pnut-button-bg: #111111;
-  --pnut-button-hover: #2A1C00;
-  --pnut-button-text: #ffffff;
-  --pnut-brand-border: rgba(140, 94, 0, 0.28);
-  --pnut-brand-border-strong: rgba(140, 94, 0, 0.42);
+  --pnut-shadow-sm: 0 2px 20px rgba(22, 78, 99, 0.10);
+  --pnut-shadow-md: 0 6px 32px rgba(22, 78, 99, 0.13);
+  --pnut-shadow-lg: 0 16px 56px rgba(22, 78, 99, 0.16);
+  --pnut-ring: 0 0 0 3px rgba(6, 182, 212, 0.22);
+  --pnut-button-bg: #164E63;
+  --pnut-button-hover: #155E75;
+  --pnut-button-text: #ECFEFF;
+  --pnut-brand-border: rgba(22, 78, 99, 0.28);
+  --pnut-brand-border-strong: rgba(22, 78, 99, 0.42);
 }
 
 .dark-theme {
-  --pnut-bg: #0D0900;
-  --pnut-surface: #221600;
-  --pnut-surface-raised: #2C1E00;
-  --pnut-text: #FFF8EE;
-  --pnut-text-soft: #D4A86A;
-  --pnut-muted: #A08050;
-  --pnut-border: rgba(245, 166, 35, 0.20);
-  --pnut-border-strong: rgba(245, 166, 35, 0.38);
-  --pnut-brand: #FFB93E;
-  --pnut-brand-hover: #FF7545;
-  --pnut-brand-fill: #F5A623;
-  --pnut-brand-soft: rgba(255, 185, 62, 0.10);
-  --pnut-info: #FF7545;
-  --pnut-info-soft: rgba(255, 117, 69, 0.10);
-  --pnut-success: #3DDC84;
-  --pnut-success-soft: rgba(61, 220, 132, 0.12);
-  --pnut-danger: #FF6B6B;
-  --pnut-danger-soft: rgba(255, 107, 107, 0.10);
-  --pnut-warning: #FFB93E;
-  --pnut-warning-soft: rgba(255, 185, 62, 0.10);
-  --pnut-violet: #FF7545;
-  --pnut-violet-soft: rgba(255, 117, 69, 0.10);
+  --pnut-bg: #09090B;
+  --pnut-surface: #18181B;
+  --pnut-surface-raised: #164E63;
+  --pnut-text: #F4F4F5;
+  --pnut-text-soft: #A1A1AA;
+  --pnut-muted: #71717A;
+  --pnut-border: rgba(6, 182, 212, 0.20);
+  --pnut-border-strong: rgba(6, 182, 212, 0.38);
+  --pnut-brand: #06B6D4;
+  --pnut-brand-hover: #22D3EE;
+  --pnut-brand-fill: #22D3EE;
+  --pnut-brand-soft: rgba(6, 182, 212, 0.12);
+  --pnut-info: #22D3EE;
+  --pnut-info-soft: rgba(6, 182, 212, 0.12);
+  --pnut-success: #22C55E;
+  --pnut-success-soft: rgba(34, 197, 94, 0.12);
+  --pnut-danger: #EF4444;
+  --pnut-danger-soft: rgba(239, 68, 68, 0.12);
+  --pnut-warning: #22D3EE;
+  --pnut-warning-soft: rgba(6, 182, 212, 0.12);
+  --pnut-violet: #22D3EE;
+  --pnut-violet-soft: rgba(6, 182, 212, 0.12);
   --pnut-shadow-sm: 0 2px 20px rgba(0, 0, 0, 0.45);
   --pnut-shadow-md: 0 6px 32px rgba(0, 0, 0, 0.55);
   --pnut-shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.70);
-  --pnut-ring: 0 0 0 3px rgba(255, 185, 62, 0.18);
-  --pnut-button-bg: #2A1C00;
-  --pnut-button-hover: #3A2600;
-  --pnut-button-text: #FFF8EE;
-  --pnut-brand-border: rgba(245, 166, 35, 0.28);
-  --pnut-brand-border-strong: rgba(245, 166, 35, 0.42);
+  --pnut-ring: 0 0 0 3px rgba(6, 182, 212, 0.22);
+  --pnut-button-bg: #06B6D4;
+  --pnut-button-hover: #22D3EE;
+  --pnut-button-text: #09090B;
+  --pnut-brand-border: rgba(6, 182, 212, 0.28);
+  --pnut-brand-border-strong: rgba(6, 182, 212, 0.42);
 }
 
 html,
@@ -149,7 +149,7 @@ input:focus-visible,
 .pnut-app {
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(245, 166, 35, 0.10), transparent 26rem),
+    linear-gradient(180deg, rgba(6, 182, 212, 0.10), transparent 26rem),
     var(--pnut-bg);
   color: var(--pnut-text);
   overflow: hidden;

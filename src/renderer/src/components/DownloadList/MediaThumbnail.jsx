@@ -35,9 +35,9 @@ const MediaThumbnail = ({ thumbnail, title, url, onClick, format, bitrate, downl
   const platform = Object.keys(socialIcons).find((key) => url?.includes(key));
   const icon = platform ? socialIcons[platform] : null;
   const fallbackIcon = downloadType === 'audio' ? (
-    <FaMusic className="iconstyle" style={{ fontSize: '24px', color: '#666' }} />
+    <FaMusic className="iconstyle" style={{ fontSize: '24px', color: 'var(--pnut-muted)' }} />
   ) : (
-    <FaVideo className="iconstyle" style={{ fontSize: '24px', color: '#666' }} />
+    <FaVideo className="iconstyle" style={{ fontSize: '24px', color: 'var(--pnut-muted)' }} />
   );
 
   const retryIcon = (

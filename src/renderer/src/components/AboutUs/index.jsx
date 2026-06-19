@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import Logo from '../../assets/Images/logoB.png'
+import Logo from '../../assets/Images/logoB.svg'
 import UpdateNotification from '../UpdateNotification' // adjust path if needed
 import '../common.css'
 import {

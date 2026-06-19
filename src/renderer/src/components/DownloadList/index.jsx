@@ -558,7 +558,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           <h2 style={{
           fontSize: '24px',
           fontWeight: 'bold',
-          color: '#333',
+          color: 'var(--pnut-text)',
           margin: 0
         }}>
             {screenMeta.title}
@@ -572,13 +572,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         marginBottom: '20px',
         display: 'flex',
         alignItems: 'center',
-        border: '1px solid #ddd',
+        border: '1px solid var(--pnut-border)',
         borderRadius: '25px',
         padding: '8px 15px',
-        backgroundColor: '#f9f9f9',
+        backgroundColor: 'var(--pnut-surface)',
         marginTop: '40px'
       }}>
-        <FaSearch style={{ color: '#999', marginRight: '10px' }} />
+        <FaSearch style={{ color: 'var(--pnut-muted)', marginRight: '10px' }} />
         <input
           type="text"
           placeholder="Search downloads"
@@ -591,7 +591,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             flexGrow: 1,
             backgroundColor: 'transparent',
             fontSize: '16px',
-            color: '#333'
+            color: 'var(--pnut-text)'
           }}
         />
       </div>
@@ -603,7 +603,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         alignItems: 'center',
         marginBottom: '20px'
       }}>
-        <span className="download-library__count" style={{ fontSize: '14px', color: "#dc3545" }}>
+        <span className="download-library__count" style={{ fontSize: '14px', color: 'var(--pnut-muted)' }}>
           {searchFilteredList?.length || 0} item{searchFilteredList?.length === 1 ? '' : 's'}
         </span>
         <div className="download-library__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -614,10 +614,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 className="pnut-button"
                 style={{
                   padding: '6px 12px',
-                  border: '1px solid #ddd',
+                  border: '1px solid var(--pnut-border)',
                   borderRadius: '5px',
                   background: 'white',
-                  color: '#333',
+                  color: 'var(--pnut-text)',
                   fontSize: '13px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -744,7 +744,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     top: '8px',
                     right: '8px',
                     background: 'var(--pnut-brand-fill)',
-                    color: '#1A0E00',
+                    color: '#09090B',
                     padding: '2px 8px',
                     borderRadius: '12px',
                     fontSize: '10px',
@@ -757,7 +757,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     <div style={{
                       width: '6px',
                       height: '6px',
-                      background: '#1A0E00',
+                      background: '#09090B',
                       borderRadius: '50%',
                       animation: 'blink 1.5s infinite'
                     }}></div>
@@ -780,7 +780,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     {selectedItems.has(item.id) ? (
                       <FaCheckSquare style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
                     ) : (
-                      <FaSquare style={{ fontSize: '20px', color: '#999' }} />
+                      <FaSquare style={{ fontSize: '20px', color: 'var(--pnut-muted)' }} />
                     )}
                   </div>
                 )}
@@ -789,7 +789,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                   <span style={{
                     fontSize: '16px',
                     fontWeight: '600',
-                    color: '#666',
+                    color: 'var(--pnut-muted)',
                     minWidth: '30px'
                   }}>
                     {index + 1}
@@ -807,7 +807,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
                         fontSize: '12px',
-                        color: '#666',
+                        color: 'var(--pnut-muted)',
                         fontWeight: '600',
                         textAlign: 'center'
                       }}>
@@ -842,7 +842,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                               <div style={{
                                 width: '120px',
                                 height: '70px',
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                background: 'linear-gradient(135deg, var(--pnut-brand) 0%, var(--pnut-brand-fill) 100%)',
                                 borderRadius: '8px',
                                 display: 'none',
                                 alignItems: 'center',
@@ -870,7 +870,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                           <div style={{
                             width: '120px',
                             height: '70px',
-                            background: 'linear-gradient(135deg, #e0e7ff 0%, #cfd9ff 100%)',
+                            background: 'linear-gradient(135deg, var(--pnut-brand-soft) 0%, var(--pnut-surface-raised) 100%)',
                             borderRadius: '8px',
                             display: 'flex',
                             alignItems: 'center',
@@ -879,10 +879,10 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                             flexDirection: 'column',
                             gap: '4px'
                           }}>
-                            <FaVideo style={{ fontSize: '20px', color: '#6366f1' }} />
+                            <FaVideo style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
                             <span style={{
                               fontSize: '8px',
-                              color: '#6366f1',
+                              color: 'var(--pnut-brand)',
                               fontWeight: '600',
                               textAlign: 'center'
                             }}>
@@ -916,7 +916,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                   <h3 style={{
                     fontSize: '15px',
                     fontWeight: '600',
-                    color: '#333',
+                    color: 'var(--pnut-text)',
                     margin: 0,
                     lineHeight: '1.4',
                     whiteSpace: 'normal',
@@ -941,11 +941,11 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     ) : item.isPlaylist ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                         {item.isPlaylistCompleted && (
-                          <FaCheckCircle style={{ color: '#28a745', fontSize: '12px' }} />
+                          <FaCheckCircle style={{ color: 'var(--pnut-success)', fontSize: '12px' }} />
                         )}
                         <span style={{
-                          background: item.isPlaylistCompleted ? '#d4edda' : '#fff3cd',
-                          color: item.isPlaylistCompleted ? '#155724' : '#856404',
+                          background: item.isPlaylistCompleted ? 'var(--pnut-success-soft)' : 'var(--pnut-warning-soft)',
+                          color: item.isPlaylistCompleted ? 'var(--pnut-success)' : 'var(--pnut-warning)',
                           padding: '3px 8px',
                           borderRadius: '10px',
                           fontSize: '11px',
@@ -956,8 +956,8 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       </div>
                     ) : item.isCompleted || item.status === 'Completed' ? (
                       <div style={{
-                        background: '#d4edda',
-                        color: '#155724',
+                        background: 'var(--pnut-success-soft)',
+                        color: 'var(--pnut-success)',
                         padding: '3px 8px',
                         borderRadius: '10px',
                         fontSize: '11px',
@@ -971,8 +971,8 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       </div>
                     ) : item.status === 'Failed' ? (
                       <div style={{
-                        background: '#f8d7da',
-                        color: '#721c24',
+                        background: 'var(--pnut-danger-soft)',
+                        color: 'var(--pnut-danger)',
                         padding: '3px 8px',
                         borderRadius: '10px',
                         fontSize: '11px',
@@ -986,8 +986,8 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       </div>
                     ) : (
                       <div style={{
-                        background: '#d1ecf1',
-                        color: '#0c5460',
+                        background: 'var(--pnut-info-soft)',
+                        color: 'var(--pnut-info)',
                         padding: '3px 8px',
                         borderRadius: '10px',
                         fontSize: '11px',
@@ -1013,8 +1013,8 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     {/* Format Tag */}
                     {!item.isPlaylist && item.format && (
                       <span style={{
-                        background: '#e9ecef',
-                        color: '#495057',
+                        background: 'var(--pnut-surface-raised)',
+                        color: 'var(--pnut-text-soft)',
                         padding: '3px 8px',
                         borderRadius: '10px',
                         fontSize: '11px',
@@ -1028,7 +1028,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     {/* Date */}
                     <span style={{
                       fontSize: '11px',
-                      color: '#666'
+                      color: 'var(--pnut-muted)'
                     }}>
                       {getFormattedDate(item)}
                     </span>
@@ -1046,7 +1046,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                           alignItems: 'center',
                           marginTop: '6px',
                           fontSize: '11px',
-                          color: '#666'
+                          color: 'var(--pnut-muted)'
                         }}>
                           <span>Speed: {speed}</span>
                           <span>Size: {fileSize}</span>
@@ -1067,10 +1067,10 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       title="Open folder"
                       style={{
                         background: 'transparent',
-                        border: '1px solid #ddd',
+                        border: '1px solid var(--pnut-border)',
                         borderRadius: '5px',
                         padding: '6px 10px',
-                        color: '#666',
+                        color: 'var(--pnut-text-soft)',
                         fontSize: '14px'
                       }}
                     >
@@ -1086,7 +1086,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: '#666',
+                          color: 'var(--pnut-text-soft)',
                           fontSize: '16px',
                           padding: '6px',
                           cursor: 'pointer'
@@ -1144,7 +1144,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
             padding: '40px',
             fontSize: '18px',
             fontWeight: 'bold',
-            color: 'gray'
+            color: 'var(--pnut-muted)'
           }}>
             {searchQuery ? 'No matches found.' : screenMeta.empty}
           </div>

@@ -48,23 +48,23 @@
 .platform-icon-name {
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: var(--pnut-text);
   margin: 0 0 4px 0;
 }
 
 .platform-icon-domain {
   font-size: 12px;
-  color: #666;
+  color: var(--pnut-muted);
   margin: 0;
 }
 
 /* Dark theme styles */
 .dark-theme .platform-icon-name {
-  color: #e0e0e0;
+  color: var(--pnut-text);
 }
 
 .dark-theme .platform-icon-domain {
-  color: #aaa;
+  color: var(--pnut-muted);
 }
 
 .dark-theme .platform-icon-card {

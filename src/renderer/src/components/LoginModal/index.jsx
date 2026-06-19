@@ -33,7 +33,7 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
         <p className="modal-message">
           YouTube needs you to sign in before this download can continue.
         </p>
-        <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+        <p style={{ fontSize: '12px', color: 'var(--pnut-muted)', marginTop: '10px' }}>
           Open YouTube, sign in with your Google account, then retry the download.
         </p>
       </Modal.Body>

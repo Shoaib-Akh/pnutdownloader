@@ -73,12 +73,12 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
           <div style={{ fontWeight: 600 }}>{playlist?.playlistTitle || playlist?.title || 'Playlist'}</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 13, color: '#666' }}>{`Select all (${selectedCount}/${totalCount})`}</div>
+            <div style={{ fontSize: 13, color: 'var(--pnut-muted)' }}>{`Select all (${selectedCount}/${totalCount})`}</div>
             <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={isLoading || totalCount === 0} />
           </div>
         </div>
 
-        <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid #eee', borderRadius: 8 }}>
+        <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid var(--pnut-border)', borderRadius: 8 }}>
           {items.map((v) => {
             const checked = !!v.videoId && selectedIds.has(v.videoId)
             return (
@@ -89,7 +89,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
                   alignItems: 'center',
                   gap: 12,
                   padding: '10px 12px',
-                  borderBottom: '1px solid #f2f2f2',
+                  borderBottom: '1px solid var(--pnut-border)',
                 }}
               >
                 <input
@@ -99,7 +99,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
                   disabled={isLoading || !v.videoId}
                 />
 
-                <div style={{ width: 52, height: 38, flex: '0 0 auto', borderRadius: 6, overflow: 'hidden', background: '#f3f3f3' }}>
+                <div style={{ width: 52, height: 38, flex: '0 0 auto', borderRadius: 6, overflow: 'hidden', background: 'var(--pnut-surface-raised)' }}>
                   {v.thumbnail ? (
                     <img src={v.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : null}
@@ -115,7 +115,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
           })}
 
           {items.length === 0 ? (
-            <div style={{ padding: 14, color: '#666' }}>No videos found in this playlist.</div>
+            <div style={{ padding: 14, color: 'var(--pnut-muted)' }}>No videos found in this playlist.</div>
           ) : null}
         </div>
       </Modal.Body>

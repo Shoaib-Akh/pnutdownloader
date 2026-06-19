@@ -8,7 +8,7 @@
   border: none;
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 8px 20px rgba(0, 0, 0, 0.15);
-  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+  background: linear-gradient(135deg, var(--pnut-surface) 0%, var(--pnut-bg) 100%);
   overflow: hidden;
 }
 
@@ -88,22 +88,22 @@
 }
 
 .url-detection-message h4 {
-  color: #333;
+  color: var(--pnut-text);
   font-weight: 600;
   margin-bottom: 12px;
   font-size: 1.3rem;
 }
 
 .url-detection-message p {
-  color: #666;
+  color: var(--pnut-muted);
   font-size: 1rem;
   margin-bottom: 24px;
   line-height: 1.5;
 }
 
 .url-display {
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 2px solid #e9ecef;
+  background: linear-gradient(135deg, var(--pnut-surface) 0%, var(--pnut-surface-raised) 100%);
+  border: 2px solid var(--pnut-border);
   border-radius: 12px;
   padding: 20px;
   margin: 24px 0;
@@ -122,12 +122,12 @@
 
 .url-text {
   background: white;
-  border: 1px solid #ddd;
+  border: 1px solid var(--pnut-border);
   border-radius: 8px;
   padding: 12px 16px;
   font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: #333;
+  color: var(--pnut-text);
   word-break: break-all;
   line-height: 1.4;
   max-height: 120px;
@@ -139,15 +139,15 @@
 }
 
 .url-detection-prompt p {
-  color: #555;
+  color: var(--pnut-text-soft);
   font-size: 1.1rem;
   font-weight: 500;
   margin: 0;
 }
 
 .url-detection-modal-footer {
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
-  border-top: 1px solid #e9ecef;
+  background: linear-gradient(135deg, var(--pnut-surface-raised) 0%, var(--pnut-surface) 100%);
+  border-top: 1px solid var(--pnut-border);
   padding: 24px 32px;
   display: flex;
   justify-content: center;
@@ -155,7 +155,7 @@
 }
 
 .url-detection-cancel-button {
-  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  background: linear-gradient(135deg, var(--pnut-text-soft) 0%, var(--pnut-muted) 100%);
   border: none;
   border-radius: 8px;
   padding: 12px 24px;
@@ -166,9 +166,9 @@
 }
 
 .url-detection-cancel-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  background: linear-gradient(135deg, var(--pnut-muted) 0%, var(--pnut-text-soft) 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+  box-shadow: var(--pnut-shadow-sm);
 }
 
 .url-detection-download-button {

@@ -68,7 +68,7 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
       case PLATFORMS.SOUNDCLOUD:
         return <SiSoundcloud style={{ ...iconStyle, color: '#FF5500' }} />;
       default:
-        return <FaGlobe style={{ ...iconStyle, color: '#666' }} />;
+        return <FaGlobe style={{ ...iconStyle, color: 'var(--pnut-muted)' }} />;
     }
   };
 
