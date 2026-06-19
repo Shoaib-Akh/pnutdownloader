@@ -97,16 +97,21 @@ openPath: (path) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, path),
     ipcRenderer.on(IPC_EVENTS.VIDEO_URL_DETECTED, (_event, url) => callback(url))
   },
 
-  // Remove listener for video URL detection
-  removeVideoUrlDetectedListener: () => {
-    ipcRenderer.removeAllListeners(IPC_EVENTS.VIDEO_URL_DETECTED)
-  },
+// Remove listener for video URL detection
+   removeVideoUrlDetectedListener: () => {
+     ipcRenderer.removeAllListeners(IPC_EVENTS.VIDEO_URL_DETECTED)
+   },
 
-  // New context menu functions
-  moveFile: (sourcePath, destPath) => ipcRenderer.invoke('moveFile', sourcePath, destPath),
-  showFileInFolder: (filePath) => ipcRenderer.invoke('showFileInFolder', filePath),
+   // New context menu functions
+   moveFile: (sourcePath, destPath) => ipcRenderer.invoke('moveFile', sourcePath, destPath),
+   showFileInFolder: (filePath) => ipcRenderer.invoke('showFileInFolder', filePath),
 
-}
+   // Debug logging - receive timestamped logs from main process
+   onDebugLog: (callback) => {
+     ipcRenderer.on(IPC_EVENTS.DEBUG_LOG, (_event, logData) => callback(logData))
+   },
+
+ }
 
 // Expose API to renderer process
 if (process.contextIsolated) {

@@ -81,9 +81,28 @@ const getLogSafeYtdlpArgs = (args) => {
   });
 };
 
+const logWithTimestamp = (level, source, message) => {
+  const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const logMessage = `[${timestamp}] [${source}] ${message}`;
+  if (level === 'error') {
+    console.error(logMessage);
+  } else if (level === 'warn') {
+    console.warn(logMessage);
+  } else {
+    console.log(logMessage);
+  }
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC_EVENTS.DEBUG_LOG, { timestamp, level, source, message });
+    }
+  } catch (err) {
+    // ignore IPC errors
+  }
+};
+
 const logYtdlpCommand = (label, executable, args) => {
-  console.log(`[${label}] yt-dlp executable: ${executable}`);
-  console.log(`[${label}] yt-dlp args: ${getLogSafeYtdlpArgs(args).join(' ')}`);
+  logWithTimestamp('log', label, `yt-dlp executable: ${executable}`);
+  logWithTimestamp('log', label, `yt-dlp args: ${getLogSafeYtdlpArgs(args).join(' ')}`);
 };
 
 const killProcessTree = (proc, label, signal = 'SIGKILL') => {
@@ -1651,7 +1670,7 @@ app.whenReady().then(async () => {
     
     const ytdlpInitialized = await initializeYtdlp();
     console.log('yt-dlp initialized:', ytdlpInitialized, 'path:', ytdlpPath);
-    
+
     try {
       await downloadAndExtractFFmpeg();
       console.log('FFmpeg initialization completed successfully');
@@ -1660,45 +1679,15 @@ app.whenReady().then(async () => {
       // Don't crash the app, but log the error for debugging
       // The app will still work but some features might not
     }
-    
+
     if (!ytdlpInitialized) {
       console.log('yt-dlp not found or not working, downloading...');
       await updateYtdlp().catch(downloadErr => {
         console.error('Failed to download yt-dlp:', downloadErr);
       });
       console.log('yt-dlp path after update:', ytdlpPath);
-    } else {
-      // Verify the version
-      emitDependencyStatus({
-        status: 'verifying',
-        tool: 'yt-dlp',
-        action: 'startup',
-        message: 'Confirming yt-dlp version...',
-        isBusy: true,
-        ready: false,
-        percent: null
-      });
-      try {
-        const version = await checkYtdlpVersion();
-        console.log('yt-dlp version:', version);
-      } catch (err) {
-        console.error('Failed to check yt-dlp version:', err);
-      }
-      
-      // Auto-update check: Run after 30 seconds to not block startup
-      setTimeout(() => {
-        runYtdlpAutoUpdateCheck('Automatic').catch((error) => {
-          console.error('Auto-update failed:', error.message);
-        });
-      }, 30000); // Wait 30 seconds after app start
-      
-      // Set up periodic auto-update check (every 24 hours)
-      setInterval(() => {
-        runYtdlpAutoUpdateCheck('Periodic').catch((error) => {
-          console.error('Periodic yt-dlp update failed:', error.message);
-        });
-      }, 24 * 60 * 60 * 1000); // Check every 24 hours
     }
+    // Removed periodic auto-update check to avoid repeated network requests on app start
 
     const deps = await checkDependencies();
     isInitialized = deps.ready;
@@ -2251,18 +2240,18 @@ const startDownload = async (event, options) => {
       }
 
       const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
-      const downloadLogId = downloadId || `download:${Date.now()}`;
-      console.log(`[${downloadLogId}] Download request:`, {
-        url,
-        isAudioOnly,
-        selectedFormat,
-        selectedQuality,
-        saveTo,
-        selectBitrate,
-        titleFromOptions,
-        playlistTitleFromOptions,
-        forceSingle
-      });
+const downloadLogId = downloadId || `download:${Date.now()}`;
+       logWithTimestamp('log', downloadLogId, 'Download request:', JSON.stringify({
+         url,
+         isAudioOnly,
+         selectedFormat,
+         selectedQuality,
+         saveTo,
+         selectBitrate,
+         titleFromOptions,
+         playlistTitleFromOptions,
+         forceSingle
+       }));
 
       if (!url || typeof url !== 'string') {
         return reject(new Error('Invalid URL.'));
@@ -2514,109 +2503,108 @@ const startDownload = async (event, options) => {
         });
       };
 
-      const fetchAndSanitizeTitle = async () => {
-        try {
-          const platform = detectPlatform(url);
-          const isYouTube = isYouTubePlatform(platform);
-          
-          console.log(`[${downloadId}] Platform detected: ${platform}, isYouTube: ${isYouTube}, isPlaylist: ${isPlaylist}`);
-          
-          // For non-YouTube videos, ALWAYS try full yt-dlp info extraction first
-          // This works for all platforms (Facebook, Instagram, Reddit, TikTok, etc.)
-          if (!isYouTube && !isPlaylist) {
-            try {
-              console.log(`[${downloadId}] Attempting yt-dlp info extraction for non-YouTube video: ${url}`);
-              const videoInfo = await getVideoInfoFromYtDlp();
-              
-              console.log(`[${downloadId}] yt-dlp extraction completed. Title:`, videoInfo?.title || 'N/A');
-              console.log(`[${downloadId}] Full videoInfo keys:`, Object.keys(videoInfo || {}));
-              
-              // Try multiple possible title fields
-              const rawTitle = videoInfo?.title || 
-                               videoInfo?.fulltitle || 
-                               videoInfo?.display_id || 
-                               videoInfo?.id || 
-                               '';
-              
-              if (videoInfo && rawTitle && rawTitle.trim() !== '') {
-                const trimmedTitle = rawTitle.trim();
-                const sanitizedTitle = sanitize(trimmedTitle);
-                
-                if (sanitizedTitle && sanitizedTitle !== 'Unknown' && sanitizedTitle.trim() !== '') {
-                  console.log(`[${downloadId}] Successfully extracted title: ${trimmedTitle} -> ${sanitizedTitle}`);
-                  
-                  // Send full video metadata to renderer
-                  let thumbnail = '';
-                  if (Array.isArray(videoInfo.thumbnails) && videoInfo.thumbnails.length > 0) {
-                    thumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
-                  } else if (videoInfo.thumbnail) {
-                    thumbnail = videoInfo.thumbnail;
-                  }
-                  
-                  // Format duration from seconds to ISO format
-                  let duration = 'PT0S';
-                  if (videoInfo.duration) {
-                    const hours = Math.floor(videoInfo.duration / 3600);
-                    const minutes = Math.floor((videoInfo.duration % 3600) / 60);
-                    const seconds = Math.floor(videoInfo.duration % 60);
-                    duration = 'PT';
-                    if (hours > 0) duration += `${hours}H`;
-                    if (minutes > 0) duration += `${minutes}M`;
-                    if (seconds > 0) duration += `${seconds}S`;
-                    if (duration === 'PT') duration = 'PT0S';
-                  }
-                  
-                  // Send metadata update to renderer
-                  event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-                    downloadId,
-                    title: trimmedTitle,
-                    sanitizedTitle: sanitizedTitle,
-                    thumbnail: thumbnail,
-                    duration: duration,
-                    message: `Video info extracted: ${trimmedTitle}`
-                  });
-                  
-                  return sanitizedTitle;
-                } else {
-                  console.warn(`[${downloadId}] Title was extracted but sanitization resulted in empty/Unknown:`, trimmedTitle);
-                }
-              } else {
-                console.warn(`[${downloadId}] yt-dlp returned info but no valid title found.`);
-                console.warn(`[${downloadId}] Available fields:`, Object.keys(videoInfo || {}));
-                console.warn(`[${downloadId}] VideoInfo sample:`, JSON.stringify(videoInfo, null, 2).substring(0, 1000));
-              }
-            } catch (error) {
-              console.error(`[${downloadId}] Error fetching video info from yt-dlp:`, error.message);
-              console.error(`[${downloadId}] Error stack:`, error.stack);
-              
-              // Send error to renderer for debugging
-              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-                downloadId,
-                message: `Failed to extract video info: ${error.message}`,
-                error: `yt-dlp info extraction failed: ${error.message}`
-              });
-              
-              // Continue to fallback
-            }
-          }
-          
-          // For YouTube or if yt-dlp info extraction failed, use simple title extraction
-          console.log(`[${downloadId}] Using simple title extraction (YouTube or fallback)`);
-          try {
-            const rawTitle = await getTitle();
-            const sanitizedTitle = sanitize(rawTitle);
-            console.log(`[${downloadId}] Simple title extraction result: "${rawTitle}" -> "${sanitizedTitle}"`);
-            return sanitizedTitle || 'Unknown';
-          } catch (titleError) {
-            console.error(`[${downloadId}] Simple title extraction also failed:`, titleError.message);
-            return 'Unknown';
-          }
-        } catch (error) {
-          console.error(`[${downloadId}] Error in fetchAndSanitizeTitle:`, error.message);
-          console.error(`[${downloadId}] Error stack:`, error.stack);
-          return 'Unknown';
-        }
-      };
+const fetchAndSanitizeTitle = async () => {
+         try {
+           const platform = detectPlatform(url);
+           const isYouTube = isYouTubePlatform(platform);
+           
+           logWithTimestamp('log', downloadId, `Platform detected: ${platform}, isYouTube: ${isYouTube}, isPlaylist: ${isPlaylist}`);
+           
+           // For non-YouTube videos, ALWAYS try full yt-dlp info extraction first
+           // This works for all platforms (Facebook, Instagram, Reddit, TikTok, etc.)
+           if (!isYouTube && !isPlaylist) {
+             try {
+               logWithTimestamp('log', downloadId, `Attempting yt-dlp info extraction for non-YouTube video: ${url}`);
+               const videoInfo = await getVideoInfoFromYtDlp();
+               
+               logWithTimestamp('log', downloadId, `yt-dlp extraction completed. Title:`, videoInfo?.title || 'N/A');
+               logWithTimestamp('log', downloadId, `Full videoInfo keys:`, Object.keys(videoInfo || {}));
+               
+               // Try multiple possible title fields
+               const rawTitle = videoInfo?.title || 
+                                videoInfo?.fulltitle || 
+                                videoInfo?.display_id || 
+                                videoInfo?.id || 
+                                '';
+               
+               if (videoInfo && rawTitle && rawTitle.trim() !== '') {
+                 const trimmedTitle = rawTitle.trim();
+                 const sanitizedTitle = sanitize(trimmedTitle);
+                 
+                 if (sanitizedTitle && sanitizedTitle !== 'Unknown' && sanitizedTitle.trim() !== '') {
+                   logWithTimestamp('log', downloadId, `Successfully extracted title: ${trimmedTitle} -> ${sanitizedTitle}`);
+                   
+                   // Send full video metadata to renderer
+                   let thumbnail = '';
+                   if (Array.isArray(videoInfo.thumbnails) && videoInfo.thumbnails.length > 0) {
+                     thumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
+                   } else if (videoInfo.thumbnail) {
+                     thumbnail = videoInfo.thumbnail;
+                   }
+                   
+                   // Format duration from seconds to ISO format
+                   let duration = 'PT0S';
+                   if (videoInfo.duration) {
+                     const hours = Math.floor(videoInfo.duration / 3600);
+                     const minutes = Math.floor((videoInfo.duration % 3600) / 60);
+                     const seconds = Math.floor(videoInfo.duration % 60);
+                     duration = 'PT';
+                     if (hours > 0) duration += `${hours}H`;
+                     if (minutes > 0) duration += `${minutes}M`;
+                     if (seconds > 0) duration += `${seconds}S`;
+                     if (duration === 'PT') duration = 'PT0S';
+                   }
+                   
+                   // Send metadata update to renderer
+                   event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                     downloadId,
+                     title: trimmedTitle,
+                     sanitizedTitle: sanitizedTitle,
+                     thumbnail: thumbnail,
+                     duration: duration,
+                     message: `Video info extracted: ${trimmedTitle}`
+                   });
+                   
+                   return sanitizedTitle;
+                 } else {
+                   logWithTimestamp('warn', downloadId, `Title was extracted but sanitization resulted in empty/Unknown:`, trimmedTitle);
+                 }
+               } else {
+                 logWithTimestamp('warn', downloadId, `yt-dlp returned info but no valid title found.`);
+                 logWithTimestamp('warn', downloadId, `Available fields:`, Object.keys(videoInfo || {}));
+               }
+             } catch (error) {
+               logWithTimestamp('error', downloadId, `Error fetching video info from yt-dlp:`, error.message);
+               logWithTimestamp('error', downloadId, `Error stack:`, error.stack);
+               
+               // Send error to renderer for debugging
+               event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                 downloadId,
+                 message: `Failed to extract video info: ${error.message}`,
+                 error: `yt-dlp info extraction failed: ${error.message}`
+               });
+               
+               // Continue to fallback
+             }
+           }
+           
+           // For YouTube or if yt-dlp info extraction failed, use simple title extraction
+           logWithTimestamp('log', downloadId, `Using simple title extraction (YouTube or fallback)`);
+           try {
+             const rawTitle = await getTitle();
+             const sanitizedTitle = sanitize(rawTitle);
+             logWithTimestamp('log', downloadId, `Simple title extraction result: "${rawTitle}" -> "${sanitizedTitle}"`);
+             return sanitizedTitle || 'Unknown';
+           } catch (titleError) {
+             logWithTimestamp('error', downloadId, `Simple title extraction also failed:`, titleError.message);
+             return 'Unknown';
+           }
+         } catch (error) {
+           logWithTimestamp('error', downloadId, `Error in fetchAndSanitizeTitle:`, error.message);
+           logWithTimestamp('error', downloadId, `Error stack:`, error.stack);
+           return 'Unknown';
+         }
+       };
 
       // Import platform detection utilities
       const detectPlatform = (url) => {
@@ -2681,75 +2669,75 @@ const startDownload = async (event, options) => {
       // Create title promise - this will fetch and sanitize the title
       const title = fetchAndSanitizeTitle();
 
-      const setupDownloadPath = async () => {
-        let sanitizedTitle = 'Unknown';
-        try {
-          sanitizedTitle = await title; // Single sanitized title
-        } catch (e) {
-          console.error(`[${downloadId}] Title promise rejected:`, e);
-        }
-        
-        const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
-        const sanitizedBitrate = customSanitize(selectBitrate) || 'Unknown'; // Sanitize bitrate
-      
-        console.log(`[${downloadId}] Setup path vars:`, { sanitizedTitle, isAudioOnly, sanitizedQuality, sanitizedBitrate });
+const setupDownloadPath = async () => {
+         let sanitizedTitle = 'Unknown';
+         try {
+           sanitizedTitle = await title; // Single sanitized title
+         } catch (e) {
+           logWithTimestamp('error', downloadId, `Title promise rejected:`, e);
+         }
+         
+         const sanitizedQuality = customSanitize(selectedQuality) || 'Unknown'; // Sanitize quality
+         const sanitizedBitrate = customSanitize(selectBitrate) || 'Unknown'; // Sanitize bitrate
+       
+         logWithTimestamp('log', downloadId, `Setup path vars:`, { sanitizedTitle, isAudioOnly, sanitizedQuality, sanitizedBitrate });
 
-        // Create title with quality for display and filenames
-        // Use the extracted title if available, otherwise create fallback
-        let titleWithQuality;
-        if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !sanitizedTitle.startsWith('Unknown Video')) {
-          titleWithQuality = isAudioOnly 
-            ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
-            : `${sanitizedTitle}_${sanitizedQuality}`;
-        
-          console.log(`[${downloadId}] Title with quality (from sanitized):`, titleWithQuality);
-        
-          // Send progress update with title including quality
-          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-            downloadId,
-            sanitizedTitle: titleWithQuality,
-            message: `Using sanitized title: ${titleWithQuality}`
-          });
-        } else {
-          // If we still have "Unknown", let yt-dlp handle the title substitution using output template
-          // This ensures we get the real title even if our pre-fetch failed
-          // We need to ensure we don't end up with "undefined" in the string
-          const safeBitrate = sanitizedBitrate || 'best';
-          const safeQuality = sanitizedQuality || 'best';
-          
-          titleWithQuality = isAudioOnly 
-            ? `%(title)s_${safeBitrate}`
-            : `%(title)s_${safeQuality}`;
-          
-          console.log(`[${downloadId}] Using template title with quality:`, titleWithQuality);
-          console.warn(`[${downloadId}] Warning: Could not extract proper title during pre-fetch, relying on yt-dlp template.`);
-        }
-        
-        // FINAL SAFETY CHECK
-        if (!titleWithQuality) {
-           console.error(`[${downloadId}] CRITICAL: titleWithQuality is undefined! Forcing fallback.`);
-           titleWithQuality = `%(title)s_${isAudioOnly ? (sanitizedBitrate || 'audio') : (sanitizedQuality || 'video')}`;
-        }
-      
-        let downloadPath;
-        if (isPlaylist) {
-          const playlistDir = join(baseDir, playlistTitleSanitized || '%(playlist_title)s');
-          downloadPath = join(playlistDir, `%(title)s.%(ext)s`);         
-        } else {
-          const formatDir = isAudioOnly ? 'Audio' : 'Video';
-          const downloadDir = join(baseDir, formatDir);
-          try {
-            if (!existsSync(downloadDir)) {
-              mkdirSync(downloadDir, { recursive: true });
-            }
-          } catch (dirError) {
-            throw new Error(`Failed to create format directory: ${dirError.message}`);
-          }
-          downloadPath = join(downloadDir, `${titleWithQuality}.%(ext)s`); // Use titleWithQuality for single file
-        }
-        console.log(`[${downloadId}] Final Download path:`, downloadPath); // Debug log
-        return downloadPath;
-      };
+         // Create title with quality for display and filenames
+         // Use the extracted title if available, otherwise create fallback
+         let titleWithQuality;
+         if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !sanitizedTitle.startsWith('Unknown Video')) {
+           titleWithQuality = isAudioOnly 
+             ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
+             : `${sanitizedTitle}_${sanitizedQuality}`;
+         
+           logWithTimestamp('log', downloadId, `Title with quality (from sanitized):`, titleWithQuality);
+         
+           // Send progress update with title including quality
+           event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+             downloadId,
+             sanitizedTitle: titleWithQuality,
+             message: `Using sanitized title: ${titleWithQuality}`
+           });
+         } else {
+           // If we still have "Unknown", let yt-dlp handle the title substitution using output template
+           // This ensures we get the real title even if our pre-fetch failed
+           // We need to ensure we don't end up with "undefined" in the string
+           const safeBitrate = sanitizedBitrate || 'best';
+           const safeQuality = sanitizedQuality || 'best';
+           
+           titleWithQuality = isAudioOnly 
+             ? `%(title)s_${safeBitrate}`
+             : `%(title)s_${safeQuality}`;
+           
+           logWithTimestamp('log', downloadId, `Using template title with quality:`, titleWithQuality);
+           logWithTimestamp('warn', downloadId, `Warning: Could not extract proper title during pre-fetch, relying on yt-dlp template.`);
+         }
+         
+         // FINAL SAFETY CHECK
+         if (!titleWithQuality) {
+            logWithTimestamp('error', downloadId, `CRITICAL: titleWithQuality is undefined! Forcing fallback.`);
+            titleWithQuality = `%(title)s_${isAudioOnly ? (sanitizedBitrate || 'audio') : (sanitizedQuality || 'video')}`;
+         }
+       
+         let downloadPath;
+         if (isPlaylist) {
+           const playlistDir = join(baseDir, playlistTitleSanitized || '%(playlist_title)s');
+           downloadPath = join(playlistDir, `%(title)s.%(ext)s`);         
+         } else {
+           const formatDir = isAudioOnly ? 'Audio' : 'Video';
+           const downloadDir = join(baseDir, formatDir);
+           try {
+             if (!existsSync(downloadDir)) {
+               mkdirSync(downloadDir, { recursive: true });
+             }
+           } catch (dirError) {
+             throw new Error(`Failed to create format directory: ${dirError.message}`);
+           }
+           downloadPath = join(downloadDir, `${titleWithQuality}.%(ext)s`); // Use titleWithQuality for single file
+         }
+         logWithTimestamp('log', downloadId, `Final Download path:`, downloadPath); // Debug log
+         return downloadPath;
+       };
 
       setupDownloadPath().then(async (downloadPath) => {
         // Fetch thumbnail for non-YouTube content before starting download
@@ -2821,39 +2809,39 @@ const startDownload = async (event, options) => {
           }
         });
 
-        downloadProcess.stdout.on('data', (data) => {
-          stallTimeout.reset();
-          const line = data.toString().trim();
-          console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
-          
-          // Capture actual filename from yt-dlp output if we used a template
-          // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
-          const destinationMatch = line.match(/Destination:\s+(.*)$/) || line.match(/\[download\]\s+(.*?)\s+has already been downloaded/);
-          if (destinationMatch && destinationMatch[1]) {
-            resolvedDownloadPath = destinationMatch[1].trim();
-            console.log(`[${downloadId}] Captured actual file path: ${resolvedDownloadPath}`);
-            // Also update the title in the frontend if we can extract it from the filename
-            try {
-              const basename = require('path').basename(resolvedDownloadPath);
-              // Send an update with the likely title (stripping extension)
-              const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
-              if (likelyTitle) {
-                 event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-                   downloadId, 
-                   title: likelyTitle,
-                   message: `Title resolved: ${likelyTitle}`
-                 });
-              }
-            } catch (e) { /* ignore path parsing errors */ }
-          }
-          
-          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, message: line });
-        });
+downloadProcess.stdout.on('data', (data) => {
+           stallTimeout.reset();
+           const line = data.toString().trim();
+           logWithTimestamp('log', downloadLabel, `yt-dlp stdout:`, line);
+           
+           // Capture actual filename from yt-dlp output if we used a template
+           // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
+           const destinationMatch = line.match(/Destination:\s+(.*)$/) || line.match(/\[download\]\s+(.*?)\s+has already been downloaded/);
+           if (destinationMatch && destinationMatch[1]) {
+             resolvedDownloadPath = destinationMatch[1].trim();
+             logWithTimestamp('log', downloadId, `Captured actual file path: ${resolvedDownloadPath}`);
+             // Also update the title in the frontend if we can extract it from the filename
+             try {
+               const basename = require('path').basename(resolvedDownloadPath);
+               // Send an update with the likely title (stripping extension)
+               const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
+               if (likelyTitle) {
+                  event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                    downloadId, 
+                    title: likelyTitle,
+                    message: `Title resolved: ${likelyTitle}`
+                  });
+               }
+             } catch (e) { /* ignore path parsing errors */ }
+           }
+           
+           event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, message: line });
+         });
 
-        downloadProcess.stderr.on('data', (data) => {
-          stallTimeout.reset();
-          const errorMessage = data.toString().trim();
-          console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
+downloadProcess.stderr.on('data', (data) => {
+           stallTimeout.reset();
+           const errorMessage = data.toString().trim();
+           logWithTimestamp('error', downloadLabel, `yt-dlp stderr:`, errorMessage);
           
           // Check if this is a Twitch authentication error
           const isTwitchError = errorMessage.includes('[twitch]') && (
@@ -3029,14 +3017,14 @@ ipcMain.handle(IPC_CHANNELS.SELECT_FOLDER, async () => {
 })
 
 ipcMain.handle(IPC_CHANNELS.DOWNLOAD_VIDEO, async (event, options) => {
-  console.log('Starting download...');
-  try {
-    await startDownload(event, options);
-    console.log('Download completed successfully.');
-  } catch (err) {
-    console.error('Download failed:', err);
-    throw err;
-  }
+   logWithTimestamp('log', 'download', 'Starting download...');
+   try {
+     await startDownload(event, options);
+     logWithTimestamp('log', 'download', 'Download completed successfully.');
+   } catch (err) {
+     logWithTimestamp('error', 'download', 'Download failed:', err);
+     throw err;
+   }
 });
 
 ipcMain.handle(IPC_CHANNELS.SHOW_MESSAGE_BOX, async (_, options) => {
@@ -3044,42 +3032,42 @@ ipcMain.handle(IPC_CHANNELS.SHOW_MESSAGE_BOX, async (_, options) => {
 });
 
 ipcMain.handle(IPC_CHANNELS.RESUME_DOWNLOAD, async (event, options) => {
-  if (!downloadProcess) {
-    console.log('Resuming download...');
-    await startDownload(event, options);
-    return true;
+   if (!downloadProcess) {
+     logWithTimestamp('log', 'download', 'Resuming download...');
+     await startDownload(event, options);
+     return true;
   }
   return false;
 });
 
 ipcMain.handle(IPC_CHANNELS.PAUSE_DOWNLOAD, async () => {
-  console.log('Attempting to pause download...');
-  if (downloadProcess) {
-    console.log('Killing download process with PID:', downloadProcess.pid);
-    
-    // Get current download path for cleanup
-    let currentDownloadPath = null;
-    if (downloadProcess && downloadProcess.resolvedDownloadPath) {
-      currentDownloadPath = downloadProcess.resolvedDownloadPath;
-    }
-    
-    treeKill(downloadProcess.pid, 'SIGKILL', async (err) => {
-      if (err) {
-        console.error('Failed to kill process tree:', err);
-      } else {
-        console.log('Process tree killed successfully.');
-        
-        // Clean up partial file when download is paused
-        if (currentDownloadPath) {
-          await cleanupPartialFile(currentDownloadPath);
-        }
-      }
-    });
-    downloadProcess = null;
-    return true;
-  }
-  console.log('No active download to pause.');
-  return false;
+   logWithTimestamp('log', 'download', 'Attempting to pause download...');
+   if (downloadProcess) {
+     logWithTimestamp('log', 'download', 'Killing download process with PID:', downloadProcess.pid);
+     
+     // Get current download path for cleanup
+     let currentDownloadPath = null;
+     if (downloadProcess && downloadProcess.resolvedDownloadPath) {
+       currentDownloadPath = downloadProcess.resolvedDownloadPath;
+     }
+     
+     treeKill(downloadProcess.pid, 'SIGKILL', async (err) => {
+       if (err) {
+         logWithTimestamp('error', 'download', 'Failed to kill process tree:', err);
+       } else {
+         logWithTimestamp('log', 'download', 'Process tree killed successfully.');
+         
+         // Clean up partial file when download is paused
+         if (currentDownloadPath) {
+           await cleanupPartialFile(currentDownloadPath);
+         }
+       }
+     });
+     downloadProcess = null;
+     return true;
+   }
+   logWithTimestamp('log', 'download', 'No active download to pause.');
+   return false;
 });
 
 function saveDownloadState(state) {

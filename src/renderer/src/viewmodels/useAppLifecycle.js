@@ -162,7 +162,7 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
 
   useEffect(() => {
     const initializeApp = async () => {
-      try {
+try {
         let retries = 0
         const maxRetries = 10
         while (!window.api && retries < maxRetries) {
@@ -197,33 +197,7 @@ const useAppLifecycle = ({ onDetectedUrlDownload } = {}) => {
           }
         }
 
-        const checkDependencies = async () => {
-          try {
-            const status = await refreshDependencyCheck()
-            if (!status) return
-
-            // Use normalized flags: stop polling once fully ready and not busy
-            const isReady = Boolean(status.ready || (status.ffmpeg && status.ytdlp))
-            const isBusy = Boolean(status.isBusy) && !isReady
-
-            if (isReady && !isBusy) {
-              // Dependencies confirmed ready – stop polling
-              return
-            }
-
-            if (isBusy) {
-              // Actively working (downloading/verifying) – check again soon
-              setTimeout(checkDependencies, 2000)
-            } else {
-              // Not ready yet, retry after a longer delay
-              setTimeout(checkDependencies, 20000)
-            }
-          } catch (error) {
-            console.error('Dependency check error:', error)
-            setTimeout(checkDependencies, 5000)
-          }
-        }
-        checkDependencies()
+        await refreshDependencyCheck()
 
         if (window.api.checkForUpdates) {
           window.api.checkForUpdates()

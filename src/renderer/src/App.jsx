@@ -7,6 +7,7 @@ import UrlDetectionModal from './components/UrlDetectionModal'
 import FeedbackModal from './components/FeedbackModal'
 import ErrorBoundary from './components/ErrorBoundary'
 import DependencyLoader from './components/DependencyLoader'
+import DebugLogPanel from './components/DebugLogPanel'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
 import { flushQueuedDonationClicks } from './utils/donationService'
@@ -106,53 +107,54 @@ function App() {
             />
           </aside>
 
-          <div style={{ display: 'none' }}>
-            <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
+<div style={{ display: 'none' }}>
+             <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
+           </div>
+           <main className="app-main-panel">
+             {!showWebView && <Navbar
+               bitrate={bitrate}
+               setBitrate={setBitrate}
+               downloadType={downloadType}
+               setDownloadType={setDownloadType}
+               quality={quality}
+               setQuality={setQuality}
+               format={format}
+               setFormat={setFormat}
+               saveTo={saveTo}
+               setSaveTo={setSaveTo}
+               isSidebarOpen={isSidebarOpen}
+               setPastLinkUrl={setPastLinkUrl}
+             />}
+             <BodySection
+               setPastLinkUrl={setPastLinkUrl}
+               bitrate={bitrate}
+               setBitrate={setBitrate}
+               downloadType={downloadType}
+               quality={quality}
+               format={format}
+               saveTo={saveTo}
+               selectedItem={selectedItem}
+               setIsSidebarOpen={setIsSidebarOpen}
+               isSidebarOpen={isSidebarOpen}
+               setSelectedItem={setSelectedItem}
+               setDownload={setDownload}
+               download={download}
+               setShowWebView={setShowWebView}
+               showWebView={showWebView}
+               downloadListOpen={downloadListOpen}
+               setDownloadListOpen={setDownloadListOpen}
+               pastLinkUrl={pastLinkUrl}
+               aboutUs={aboutUs}
+               updateInfo={updateInfo}
+               setAboutUs={setAboutUs}
+onOpenFeedback={() => setFeedbackModalOpen(true)}
+              />
+            </main>
+            <DebugLogPanel />
           </div>
-          <main className="app-main-panel">
-            {!showWebView && <Navbar
-              bitrate={bitrate}
-              setBitrate={setBitrate}
-              downloadType={downloadType}
-              setDownloadType={setDownloadType}
-              quality={quality}
-              setQuality={setQuality}
-              format={format}
-              setFormat={setFormat}
-              saveTo={saveTo}
-              setSaveTo={setSaveTo}
-              isSidebarOpen={isSidebarOpen}
-              setPastLinkUrl={setPastLinkUrl}
-            />}
-            <BodySection
-              setPastLinkUrl={setPastLinkUrl}
-              bitrate={bitrate}
-              setBitrate={setBitrate}
-              downloadType={downloadType}
-              quality={quality}
-              format={format}
-              saveTo={saveTo}
-              selectedItem={selectedItem}
-              setIsSidebarOpen={setIsSidebarOpen}
-              isSidebarOpen={isSidebarOpen}
-              setSelectedItem={setSelectedItem}
-              setDownload={setDownload}
-              download={download}
-              setShowWebView={setShowWebView}
-              showWebView={showWebView}
-              downloadListOpen={downloadListOpen}
-              setDownloadListOpen={setDownloadListOpen}
-              pastLinkUrl={pastLinkUrl}
-              aboutUs={aboutUs}
-              updateInfo={updateInfo}
-              setAboutUs={setAboutUs}
-              onOpenFeedback={() => setFeedbackModalOpen(true)}
-            />
-          </main>
         </div>
-      </div>
-    </ErrorBoundary>
-  )
-}
+      </ErrorBoundary>
+    )
+  }
 
 export default App

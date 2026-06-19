@@ -1142,16 +1142,16 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           <div style={{
             textAlign: 'center',
             padding: '40px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: 'gray'
-          }}>
-            {searchQuery ? 'No matches found.' : screenMeta.empty}
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
+fontSize: '18px',
+             fontWeight: 'bold',
+             color: 'gray'
+           }}>
+             {searchQuery ? 'No matches found.' : screenMeta.empty}
+           </div>
+         )}
+       </div>
+     </div>
+   )
+ }
 
 export default DownloadList

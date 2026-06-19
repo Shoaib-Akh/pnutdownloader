@@ -41,6 +41,7 @@ export const IPC_CHANNELS = {
 
 export const IPC_EVENTS = {
   CHECK_FOR_UPDATES: 'check-for-updates',
+  DEBUG_LOG: 'debug-log',
   DEPENDENCY_PROGRESS: 'dependency-progress',
   DOWNLOAD_PROGRESS: 'download-progress',
   FILE_DELETED: 'file-deleted',
