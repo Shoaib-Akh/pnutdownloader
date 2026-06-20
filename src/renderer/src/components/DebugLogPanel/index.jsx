@@ -5,7 +5,9 @@ const DebugLogPanel = () => {
   const [logs, setLogs] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
   const logsEndRef = useRef(null);
-
+console.log('====================================');
+console.log("logs",logs);
+console.log('====================================');
   useEffect(() => {
     const handleDebugLog = (logData) => {
       setLogs(prev => [...prev, logData].slice(-100));

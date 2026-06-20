@@ -29,7 +29,7 @@ try {
 const https = require('https');
  const treeKill = require('tree-kill');
 
-const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
+const YTDLP_INFO_TIMEOUT_MS = 90 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
 
 let dependencyStatus = {
@@ -81,9 +81,18 @@ const getLogSafeYtdlpArgs = (args) => {
   });
 };
 
-const logWithTimestamp = (level, source, message) => {
+const logWithTimestamp = (level, source, message, ...details) => {
   const timestamp = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  const logMessage = `[${timestamp}] [${source}] ${message}`;
+  const detailText = details.map((value) => {
+    if (typeof value === 'string') return value
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }).filter(Boolean).join(' ')
+  const renderedMessage = detailText ? `${message} ${detailText}` : message
+  const logMessage = `[${timestamp}] [${source}] ${renderedMessage}`;
   if (level === 'error') {
     console.error(logMessage);
   } else if (level === 'warn') {
@@ -93,16 +102,17 @@ const logWithTimestamp = (level, source, message) => {
   }
   try {
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(IPC_EVENTS.DEBUG_LOG, { timestamp, level, source, message });
+      mainWindow.webContents.send(IPC_EVENTS.DEBUG_LOG, { timestamp, level, source, message: renderedMessage });
     }
-  } catch (err) {
+  } catch {
     // ignore IPC errors
   }
 };
 
 const logYtdlpCommand = (label, executable, args) => {
   logWithTimestamp('log', label, `yt-dlp executable: ${executable}`);
-  logWithTimestamp('log', label, `yt-dlp args: ${getLogSafeYtdlpArgs(args).join(' ')}`);
+  const commandArgs = executable === ytdlpPath ? [...ytdlpPrefixArgs, ...args] : args
+  logWithTimestamp('log', label, `yt-dlp args: ${getLogSafeYtdlpArgs(commandArgs).join(' ')}`);
 };
 
 const killProcessTree = (proc, label, signal = 'SIGKILL') => {
@@ -166,30 +176,157 @@ const getFfmpegExecutableName = () => {
   return getPlatformExecutableName('ffmpeg');
 };
 
-const ffmpegPath = app.isPackaged
-  ? join(process.resourcesPath, getFfmpegExecutableName())
-  : join(__dirname, '../../public', getFfmpegExecutableName())
-const cookiesPath = app.isPackaged
-  ? join(process.resourcesPath, 'cookies.txt')
-  : join(__dirname, '../../public/cookies.txt')
 let mainWindow
 let clipboardMonitorInterval = null
 let lastClipboardText = ''
 let isAppClosing = false;
 const { dirname } = require('path');
-// Get yt-dlp path - always use bundled/downloaded version
-const getYtdlpPath = () => {
-  if (app.isPackaged) {
-    return join(process.resourcesPath, getYtdlpExecutableName());
-  }
-  
-  return join(__dirname, '../../public', getYtdlpExecutableName());
-};
 
-// Initialize with default path, will be updated in app.whenReady()
-let ytdlpPath = app.isPackaged
-  ? join(process.resourcesPath, getYtdlpExecutableName())
-  : join(__dirname, '../../public', getYtdlpExecutableName());
+const getBundledResourcePath = (fileName) => app.isPackaged
+  ? join(process.resourcesPath, fileName)
+  : join(__dirname, '../../public', fileName)
+
+const getRuntimeDir = () => join(app.getPath('userData'), 'runtime')
+const getRuntimeBinDir = () => join(getRuntimeDir(), 'bin')
+const getRuntimeDataDir = () => join(getRuntimeDir(), 'data')
+const getYtdlpVersionFilePath = () => join(getRuntimeDataDir(), 'ytdlp_version.txt')
+
+let managedYtdlpPath = getBundledResourcePath(getYtdlpExecutableName())
+let managedYtdlpScriptPath = getBundledResourcePath('yt-dlp')
+let ytdlpPath = managedYtdlpPath
+let ytdlpPrefixArgs = []
+let ffmpegPath = getBundledResourcePath(getFfmpegExecutableName())
+let cookiesPath = getBundledResourcePath('cookies.txt')
+let usingSystemYtdlp = false
+let usingPythonYtdlp = false
+let ytdlpJsRuntime = 'node'
+
+const findSystemNode = () => {
+  const pathCandidates = (process.env.PATH || '')
+    .split(require('path').delimiter)
+    .filter(Boolean)
+    .map((dir) => join(dir, getPlatformExecutableName('node')))
+  const candidates = process.platform === 'darwin'
+    ? ['/opt/homebrew/bin/node', '/usr/local/bin/node', ...pathCandidates]
+    : pathCandidates
+
+  return [...new Set(candidates)].find((candidate) => existsSync(candidate)) || null
+}
+
+const findSystemPython = () => {
+  if (process.platform !== 'darwin') return null
+
+  const pathCandidates = (process.env.PATH || '')
+    .split(require('path').delimiter)
+    .filter(Boolean)
+    .map((dir) => join(dir, 'python3'))
+  const candidates = [
+    '/opt/homebrew/bin/python3',
+    '/usr/local/bin/python3',
+    ...pathCandidates
+  ]
+
+  return [...new Set(candidates)].find((candidate) => existsSync(candidate)) || null
+}
+
+const findSystemYtdlp = () => {
+  if (process.platform !== 'darwin') return null
+
+  const pathCandidates = (process.env.PATH || '')
+    .split(require('path').delimiter)
+    .filter(Boolean)
+    .map((dir) => join(dir, 'yt-dlp'))
+  const candidates = [
+    '/opt/homebrew/bin/yt-dlp',
+    '/usr/local/bin/yt-dlp',
+    ...pathCandidates
+  ]
+
+  return [...new Set(candidates)].find((candidate) =>
+    candidate !== managedYtdlpPath && existsSync(candidate)
+  ) || null
+}
+
+const copyRuntimeFileIfNeeded = async (sourcePath, targetPath, minimumSize = 1) => {
+  try {
+    const targetStats = await fs.stat(targetPath)
+    if (targetStats.size >= minimumSize) return false
+  } catch {
+    // Missing or invalid target; restore it from the packaged resource below.
+  }
+
+  if (!existsSync(sourcePath)) return false
+  await fs.mkdir(dirname(targetPath), { recursive: true })
+  await fs.copyFile(sourcePath, targetPath)
+  return true
+}
+
+const configureRuntimeDependencyPaths = async () => {
+  const bundledYtdlpPath = getBundledResourcePath(getYtdlpExecutableName())
+  const bundledFfmpegPath = getBundledResourcePath(getFfmpegExecutableName())
+  const bundledCookiesPath = getBundledResourcePath('cookies.txt')
+
+  await fs.mkdir(getRuntimeBinDir(), { recursive: true })
+  await fs.mkdir(getRuntimeDataDir(), { recursive: true })
+
+  cookiesPath = join(getRuntimeDataDir(), 'cookies.txt')
+  if (!app.isPackaged) {
+    await copyRuntimeFileIfNeeded(bundledCookiesPath, cookiesPath)
+  }
+  if (!existsSync(cookiesPath)) {
+    await fs.writeFile(cookiesPath, '# Netscape HTTP Cookie File\n', 'utf8')
+  }
+
+  if (app.isPackaged) {
+    managedYtdlpPath = join(getRuntimeBinDir(), getYtdlpExecutableName())
+    managedYtdlpScriptPath = join(getRuntimeBinDir(), 'yt-dlp')
+    ffmpegPath = join(getRuntimeBinDir(), getFfmpegExecutableName())
+    await copyRuntimeFileIfNeeded(bundledYtdlpPath, managedYtdlpPath, 1000000)
+    await copyRuntimeFileIfNeeded(getBundledResourcePath('yt-dlp'), managedYtdlpScriptPath, 1000000)
+    await copyRuntimeFileIfNeeded(bundledFfmpegPath, ffmpegPath, 1000000)
+  } else {
+    managedYtdlpPath = bundledYtdlpPath
+    managedYtdlpScriptPath = getBundledResourcePath('yt-dlp')
+    ffmpegPath = bundledFfmpegPath
+  }
+
+  const systemPythonPath = findSystemPython()
+  const systemYtdlpPath = findSystemYtdlp()
+  const systemNodePath = findSystemNode()
+  ytdlpJsRuntime = systemNodePath ? `node:${systemNodePath}` : 'node'
+  if (systemPythonPath && existsSync(managedYtdlpScriptPath)) {
+    ytdlpPath = systemPythonPath
+    ytdlpPrefixArgs = [managedYtdlpScriptPath]
+    usingSystemYtdlp = true
+    usingPythonYtdlp = true
+  } else {
+    ytdlpPath = systemYtdlpPath || managedYtdlpPath
+    ytdlpPrefixArgs = []
+    usingSystemYtdlp = Boolean(systemYtdlpPath)
+    usingPythonYtdlp = false
+  }
+
+  if (process.platform !== 'win32') {
+    await fs.chmod(managedYtdlpPath, 0o755).catch(() => {})
+    await fs.chmod(managedYtdlpScriptPath, 0o755).catch(() => {})
+    await fs.chmod(ffmpegPath, 0o755).catch(() => {})
+  }
+
+  console.log('Runtime dependency paths configured:', {
+    ytdlpPath,
+    ffmpegPath,
+    cookiesPath,
+    usingSystemYtdlp,
+    usingPythonYtdlp,
+    ytdlpJsRuntime
+  })
+}
+
+const spawnYtdlp = (args, options = {}) => spawn(
+  ytdlpPath,
+  [...ytdlpPrefixArgs, ...args],
+  options
+)
 // Set icon path based on OS
 let iconPath = ''
 switch (process.platform) {
@@ -562,30 +699,33 @@ function downloadFile(url, destPath, options = {}) {
   });
 }
 
-async function checkYtdlpVersion() {
-  if (!existsSync(ytdlpPath)) {
-    throw new Error(`yt-dlp not found at ${ytdlpPath}`);
+async function checkYtdlpVersion(
+  executablePath = ytdlpPath,
+  prefixArgs = executablePath === ytdlpPath ? ytdlpPrefixArgs : []
+) {
+  if (!existsSync(executablePath)) {
+    throw new Error(`yt-dlp not found at ${executablePath}`);
   }
 
-  const stats = await fs.stat(ytdlpPath);
+  const stats = await fs.stat(executablePath);
   if (stats.size === 0) {
-    throw new Error(`yt-dlp is empty at ${ytdlpPath}`);
+    throw new Error(`yt-dlp is empty at ${executablePath}`);
   }
 
   return new Promise((resolve, reject) => {
-    console.log(`Attempting to spawn yt-dlp at: ${ytdlpPath}`);
+    console.log(`Attempting to spawn yt-dlp at: ${executablePath}`);
     
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
     let proc;
     
-    // Add 10 second timeout
+    // PyInstaller builds can be slow on first launch, so allow a bounded startup window.
     const timeout = setTimeout(() => {
       console.error('yt-dlp version check timed out');
       if (proc) proc.kill();
       reject(new Error('yt-dlp version check timed out'));
     }, 100000);
 
-    proc = spawn(ytdlpPath, ['--version'], {
+    proc = spawn(executablePath, [...prefixArgs, '--version'], {
       ...spawnOptions,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -674,18 +814,18 @@ async function getLatestNightlyRelease() {
 }
 
 // Function to get the download URL for the latest nightly build
-async function getNightlyDownloadUrl() {
+async function getNightlyDownloadUrl(preferredAssetName = null) {
   try {
     const release = await getLatestNightlyRelease();
     console.log(`Latest nightly release: ${release.tag}`);
     
     // Determine which asset to download based on platform
-    let assetName;
-    if (process.platform === 'win32') {
+    let assetName = preferredAssetName;
+    if (!assetName && process.platform === 'win32') {
       assetName = 'yt-dlp.exe';
-    } else if (process.platform === 'darwin') {
+    } else if (!assetName && process.platform === 'darwin') {
       assetName = 'yt-dlp_macos';
-    } else {
+    } else if (!assetName) {
       assetName = 'yt-dlp';
     }
 
@@ -709,9 +849,7 @@ async function getNightlyDownloadUrl() {
 // Function to check if update is needed
 async function checkYtdlpUpdate() {
   try {
-    const versionFile = app.isPackaged
-      ? join(process.resourcesPath, 'ytdlp_version.txt')
-      : join(__dirname, '../../public/ytdlp_version.txt');
+    const versionFile = getYtdlpVersionFilePath();
 
     let lastKnownVersion = null;
     let lastUpdateTime = null;
@@ -770,17 +908,28 @@ async function checkYtdlpUpdate() {
 }
 
 async function updateYtdlp(forceUpdate = false) {
+  if (usingSystemYtdlp && !usingPythonYtdlp) {
+    const version = await checkYtdlpVersion()
+    const message = `Using system-managed yt-dlp ${version}. Update it with its package manager.`
+    console.log(message)
+    emitDependencyStatus({
+      status: 'ready',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message,
+      isBusy: false,
+      ready: true,
+      percent: 100,
+      version,
+      error: null
+    })
+    return { success: true, message, version, managedExternally: true }
+  }
+
   // Determine download URL and target path
   let ytdlpUrl;
   let releaseTag = null;
-  const bundledPath = app.isPackaged
-    ? join(process.resourcesPath, getYtdlpExecutableName())
-    : join(__dirname, '../../public', getYtdlpExecutableName());
-
-  // Always use bundled/downloaded version
-  if (!ytdlpPath || ytdlpPath === bundledPath || !existsSync(ytdlpPath)) {
-    ytdlpPath = bundledPath;
-  }
+  const targetYtdlpPath = usingPythonYtdlp ? managedYtdlpScriptPath : managedYtdlpPath;
   
   try {
     emitDependencyStatus({
@@ -820,7 +969,7 @@ async function updateYtdlp(forceUpdate = false) {
 
     try {
       // Get latest nightly build URL
-      const nightlyInfo = await getNightlyDownloadUrl();
+      const nightlyInfo = await getNightlyDownloadUrl(usingPythonYtdlp ? 'yt-dlp' : null);
       ytdlpUrl = nightlyInfo.url;
       releaseTag = nightlyInfo.tag;
       console.log(`Downloading yt-dlp nightly build: ${releaseTag}`);
@@ -839,7 +988,7 @@ async function updateYtdlp(forceUpdate = false) {
       // Fallback to stable releases if nightly fails
       if (process.platform === 'win32') {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
-      } else if (process.platform === 'darwin') {
+      } else if (process.platform === 'darwin' && !usingPythonYtdlp) {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
       } else {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
@@ -856,7 +1005,7 @@ async function updateYtdlp(forceUpdate = false) {
     }
 
     // Remove old binary if it exists (in case it's corrupted)
-    if (existsSync(ytdlpPath)) {
+    if (existsSync(targetYtdlpPath)) {
       try {
         emitDependencyStatus({
           status: 'updating',
@@ -866,8 +1015,8 @@ async function updateYtdlp(forceUpdate = false) {
           isBusy: true,
           ready: false
         });
-        await fs.unlink(ytdlpPath);
-        console.log(`Removed old yt-dlp binary: ${ytdlpPath}`);
+        await fs.unlink(targetYtdlpPath);
+        console.log(`Removed old yt-dlp binary: ${targetYtdlpPath}`);
         // Wait a bit to ensure file system has released the file
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (err) {
@@ -876,14 +1025,14 @@ async function updateYtdlp(forceUpdate = false) {
     }
     
     console.log(`Downloading yt-dlp from: ${ytdlpUrl}`);
-    await downloadFile(ytdlpUrl, ytdlpPath, {
+    await downloadFile(ytdlpUrl, targetYtdlpPath, {
       tool: 'yt-dlp',
       action: forceUpdate ? 'manual-update' : 'update',
       displayName: 'yt-dlp',
       message: releaseTag ? `Downloading yt-dlp ${releaseTag}...` : 'Downloading yt-dlp...'
     });
     console.log('yt-dlp downloaded successfully');
-    const stats = await fs.stat(ytdlpPath);
+    const stats = await fs.stat(targetYtdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
     emitDependencyStatus({
       status: 'verifying',
@@ -900,7 +1049,7 @@ async function updateYtdlp(forceUpdate = false) {
       let retries = 3;
       while (retries > 0) {
         try {
-          await fs.chmod(ytdlpPath, 0o755);
+          await fs.chmod(targetYtdlpPath, 0o755);
           console.log(`Successfully set executable permissions for yt-dlp`);
           break;
         } catch (err) {
@@ -917,9 +1066,7 @@ async function updateYtdlp(forceUpdate = false) {
     
     // Save version info with timestamp
     if (releaseTag) {
-      const versionFile = app.isPackaged
-        ? join(process.resourcesPath, 'ytdlp_version.txt')
-        : join(__dirname, '../../public/ytdlp_version.txt');
+      const versionFile = getYtdlpVersionFilePath();
       try {
         const timestamp = Date.now().toString();
         const versionData = `${releaseTag}\n${timestamp}`;
@@ -935,9 +1082,10 @@ async function updateYtdlp(forceUpdate = false) {
     // since the file was downloaded and has proper size. PyInstaller bundles might take longer to start.
     if (process.platform !== 'win32') {
       try {
-        const { execSync } = require('child_process');
-        // Increase timeout to 15 seconds for PyInstaller bundles
-        const version = execSync(`"${ytdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }).trim();
+        const { execFileSync } = require('child_process');
+        const verifyExecutable = usingPythonYtdlp ? ytdlpPath : targetYtdlpPath
+        const verifyArgs = usingPythonYtdlp ? [targetYtdlpPath, '--version'] : ['--version']
+        const version = execFileSync(verifyExecutable, verifyArgs, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 100000 }).trim();
         console.log(`Downloaded yt-dlp binary verified successfully, version: ${version}`);
       } catch (verifyErr) {
         // Don't throw error - just warn. File was downloaded successfully and has proper size.
@@ -946,6 +1094,10 @@ async function updateYtdlp(forceUpdate = false) {
         console.log('File downloaded successfully. Verification will happen when yt-dlp is actually used.');
         // Continue - don't throw error
       }
+    }
+
+    if (!usingSystemYtdlp) {
+      ytdlpPath = targetYtdlpPath;
     }
     
     emitDependencyStatus({
@@ -1614,7 +1766,12 @@ async function cancelActiveDownloads({ reason } = {}) {
 }
 
 app.whenReady().then(async () => {
-  // Create window immediately
+  try {
+    await configureRuntimeDependencyPaths()
+  } catch (error) {
+    console.error('Failed to prepare writable runtime dependencies:', error)
+  }
+
   createWindow();
 
   // Start initialization in the background
@@ -1633,16 +1790,20 @@ app.whenReady().then(async () => {
       error: null
     });
 
-    // Initialize yt-dlp path - always use bundled/downloaded version
     const initializeYtdlp = async () => {
-      // Check if bundled version exists
-      const bundledPath = app.isPackaged
-        ? join(process.resourcesPath, getYtdlpExecutableName())
-        : join(__dirname, '../../public', getYtdlpExecutableName());
-      
-      if (existsSync(bundledPath)) {
-        ytdlpPath = bundledPath;
-        // Verify it works
+      const candidates = [
+        { executablePath: ytdlpPath, prefixArgs: [...ytdlpPrefixArgs] },
+        { executablePath: managedYtdlpPath, prefixArgs: [] }
+      ].filter((candidate, index, all) =>
+        candidate.executablePath && all.findIndex((item) =>
+          item.executablePath === candidate.executablePath &&
+          item.prefixArgs.join('\0') === candidate.prefixArgs.join('\0')
+        ) === index
+      )
+
+      for (const candidate of candidates) {
+        if (!existsSync(candidate.executablePath)) continue
+
         try {
           emitDependencyStatus({
             status: 'verifying',
@@ -1653,18 +1814,22 @@ app.whenReady().then(async () => {
             ready: false,
             percent: null
           });
-          await checkYtdlpVersion();
-          console.log('Using bundled yt-dlp at:', bundledPath);
+          await checkYtdlpVersion(candidate.executablePath, candidate.prefixArgs);
+          ytdlpPath = candidate.executablePath
+          ytdlpPrefixArgs = candidate.prefixArgs
+          usingPythonYtdlp = candidate.prefixArgs.length > 0
+          usingSystemYtdlp = usingPythonYtdlp || candidate.executablePath !== managedYtdlpPath
+          console.log('Using yt-dlp command:', ytdlpPath, ...ytdlpPrefixArgs);
           return true;
         } catch (err) {
-          console.warn('Bundled yt-dlp failed verification:', err.message);
-          // If it's a PyInstaller error or binary doesn't work, we'll download a new one
-          if (err.message.includes('Python shared library') || err.message.includes('Failed to spawn')) {
-            console.log('Bundled yt-dlp is corrupted, will download fresh copy...');
-          }
+          console.warn(`yt-dlp verification failed at ${candidate.executablePath}:`, err.message);
         }
       }
-      
+
+      usingSystemYtdlp = false
+      usingPythonYtdlp = false
+      ytdlpPath = managedYtdlpPath
+      ytdlpPrefixArgs = []
       return false;
     };
     
@@ -1988,15 +2153,7 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
     // Continue anyway - old cookies might still work
   }
   
-  const getYtdlpPath = () => {
-    if (app.isPackaged) {
-      return join(process.resourcesPath, getYtdlpExecutableName());
-    }
-    
-    return join(__dirname, '../../public', getYtdlpExecutableName());
-  };
-
-  const currentYtdlpPath = getYtdlpPath();
+  const currentYtdlpPath = ytdlpPath;
   console.log(`[${requestId}] Using yt-dlp path for video info:`, currentYtdlpPath);
   
   return new Promise((resolve, reject) => {
@@ -2011,7 +2168,7 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
     logYtdlpCommand(requestId, currentYtdlpPath, args);
     const startedAt = Date.now();
-    const proc = spawn(currentYtdlpPath, args, spawnOptions);
+    const proc = spawnYtdlp(args, spawnOptions);
 
     let stdout = '';
     let stderr = '';
@@ -2145,14 +2302,6 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
     console.warn('Failed to update cookies before fetching playlist info:', cookieError.message)
   }
 
-  const getYtdlpPath = () => {
-    if (app.isPackaged) {
-      return join(process.resourcesPath, getYtdlpExecutableName())
-    }
-    return join(__dirname, '../../public', getYtdlpExecutableName())
-  }
-
-  const currentYtdlpPath = getYtdlpPath()
   const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {}
 
   return new Promise((resolve, reject) => {
@@ -2162,11 +2311,11 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
       '--cookies', cookiesPath,
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--extractor-retries', '3',
-      '--js-runtimes', 'node',
+      '--js-runtimes', ytdlpJsRuntime,
       url,
     ]
 
-    const proc = spawn(currentYtdlpPath, args, spawnOptions)
+    const proc = spawnYtdlp(args, spawnOptions)
 
     let stdout = ''
     let stderr = ''
@@ -2331,343 +2480,13 @@ const downloadLogId = downloadId || `download:${Date.now()}`;
         }
       }
 
-      const getTitle = () => {
-        return new Promise((titleResolve, titleReject) => {
-          const titleArgs = [
-            shouldDownloadPlaylist ? '--get-filename' : '--get-title',
-            '-o', shouldDownloadPlaylist ? '%(playlist_title)s' : '%(title)s',
-            shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist',
-            '--js-runtimes', 'node',
-            url,
-          ];
-          
-  const getYtdlpPath = () => {
-    if (app.isPackaged) {
-      return join(process.resourcesPath, getYtdlpExecutableName());
-    }
-    
-    return join(__dirname, '../../public', getYtdlpExecutableName());
-  };
-
-          const currentYtdlpPath = getYtdlpPath();
-          const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-          const titleLabel = `${downloadLogId}:title`;
-          logYtdlpCommand(titleLabel, currentYtdlpPath, titleArgs);
-          const startedAt = Date.now();
-          const titleProcess = spawn(currentYtdlpPath, titleArgs, spawnOptions);
-          let titleData = '';
-          let titleStderr = '';
-          let settled = false;
-          const timeout = createYtdlpTimeout({
-            proc: titleProcess,
-            label: titleLabel,
-            timeoutMs: YTDLP_INFO_TIMEOUT_MS,
-            onTimeout: (message) => {
-              if (settled) return;
-              settled = true;
-              titleReject(new Error(message));
-            }
-          });
-
-          titleProcess.stdout.on('data', (data) => {
-            titleData += data.toString().trim();
-            console.log(`[${titleLabel}] yt-dlp stdout chunk: ${data.length} bytes`);
-          });
-
-          titleProcess.stderr.on('data', (data) => {
-            const text = data.toString();
-            titleStderr += text;
-            console.error(`[${titleLabel}] yt-dlp stderr:`, text.trim());
-          });
-
-          titleProcess.on('close', (code) => {
-            if (settled) return;
-            settled = true;
-            timeout.clear();
-            console.log(`[${titleLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms (stdout=${titleData.length} chars, stderr=${titleStderr.length} chars)`);
-            if (code === 0 && titleData) {
-              const titles = titleData.split('\n').filter(Boolean);
-              titleResolve(titles[0] || 'Unknown');
-            } else {
-              titleReject(new Error(titleStderr.trim() || 'Failed to fetch title'));
-            }
-          });
-
-          titleProcess.on('error', (err) => {
-            if (settled) return;
-            settled = true;
-            timeout.clear();
-            console.error(`[${titleLabel}] Failed to spawn yt-dlp:`, err.message);
-            titleReject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
-          });
-        });
-      };
-
-      // Get full video info from yt-dlp for non-YouTube videos
-      const getVideoInfoFromYtDlp = async () => {
-        // Update cookies before fetching info (important for Reddit, Facebook, etc.)
-        try {
-          await updateCookiesFile();
-        } catch (cookieError) {
-          console.warn(`[${downloadId}] Failed to update cookies before fetching video info:`, cookieError.message);
-          // Continue anyway - old cookies might still work
-        }
-
-        return new Promise((resolve, reject) => {
-          const getYtdlpPath = () => {
-            if (app.isPackaged) {
-              return join(process.resourcesPath, getYtdlpExecutableName());
-            }
-            
-            return join(__dirname, '../../public', getYtdlpExecutableName());
-          };
-
-          const currentYtdlpPath = getYtdlpPath();
-          const args = [
-            '-J',
-            '--no-playlist',
-            '--cookies', cookiesPath,
-            '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            '--extractor-retries', '3',
-            '--js-runtimes', 'node',
-            url
-          ];
-
-          const infoLabel = `${downloadLogId}:info`;
-          logYtdlpCommand(infoLabel, currentYtdlpPath, args);
-
-          const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-          const startedAt = Date.now();
-          const proc = spawn(currentYtdlpPath, args, spawnOptions);
-
-          let stdout = '';
-          let stderr = '';
-          let settled = false;
-          const timeout = createYtdlpTimeout({
-            proc,
-            label: infoLabel,
-            timeoutMs: YTDLP_INFO_TIMEOUT_MS,
-            onTimeout: (message) => {
-              if (settled) return;
-              settled = true;
-              reject(new Error(message));
-            }
-          });
-
-          proc.stdout.on('data', (data) => {
-            stdout += data.toString();
-            console.log(`[${infoLabel}] yt-dlp stdout chunk: ${data.length} bytes`);
-          });
-
-          proc.stderr.on('data', (data) => {
-            const text = data.toString();
-            stderr += text;
-            console.error(`[${infoLabel}] yt-dlp stderr:`, text.trim());
-          });
-
-          proc.on('close', (code) => {
-            if (settled) return;
-            settled = true;
-            timeout.clear();
-            console.log(`[${infoLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms (stdout=${stdout.length} chars, stderr=${stderr.length} chars)`);
-            if (code !== 0) {
-              console.error(`[${downloadId}] yt-dlp info extraction failed with code ${code}`);
-              console.error(`[${downloadId}] stderr:`, stderr);
-              reject(new Error(`yt-dlp exited with code ${code}. Error: ${stderr}`));
-              return;
-            }
-
-            try {
-              if (!stdout || stdout.trim().length === 0) {
-                reject(new Error('yt-dlp returned empty output'));
-                return;
-              }
-
-              const json = JSON.parse(stdout);
-              console.log(`[${downloadId}] Successfully parsed yt-dlp JSON, title:`, json.title || 'N/A');
-              resolve(json);
-            } catch (err) {
-              console.error(`[${downloadId}] Failed to parse JSON from yt-dlp:`, err.message);
-              console.error(`[${downloadId}] stdout:`, stdout.substring(0, 500));
-              reject(new Error(`Failed to parse JSON from yt-dlp: ${err.message}`));
-            }
-          });
-
-          proc.on('error', (err) => {
-            if (settled) return;
-            settled = true;
-            timeout.clear();
-            console.error(`[${downloadId}] Failed to spawn yt-dlp:`, err.message);
-            reject(new Error(`Failed to spawn yt-dlp: ${err.message}`));
-          });
-        });
-      };
-
-const fetchAndSanitizeTitle = async () => {
-         try {
-           const platform = detectPlatform(url);
-           const isYouTube = isYouTubePlatform(platform);
-           
-           logWithTimestamp('log', downloadId, `Platform detected: ${platform}, isYouTube: ${isYouTube}, isPlaylist: ${isPlaylist}`);
-           
-           // For non-YouTube videos, ALWAYS try full yt-dlp info extraction first
-           // This works for all platforms (Facebook, Instagram, Reddit, TikTok, etc.)
-           if (!isYouTube && !isPlaylist) {
-             try {
-               logWithTimestamp('log', downloadId, `Attempting yt-dlp info extraction for non-YouTube video: ${url}`);
-               const videoInfo = await getVideoInfoFromYtDlp();
-               
-               logWithTimestamp('log', downloadId, `yt-dlp extraction completed. Title:`, videoInfo?.title || 'N/A');
-               logWithTimestamp('log', downloadId, `Full videoInfo keys:`, Object.keys(videoInfo || {}));
-               
-               // Try multiple possible title fields
-               const rawTitle = videoInfo?.title || 
-                                videoInfo?.fulltitle || 
-                                videoInfo?.display_id || 
-                                videoInfo?.id || 
-                                '';
-               
-               if (videoInfo && rawTitle && rawTitle.trim() !== '') {
-                 const trimmedTitle = rawTitle.trim();
-                 const sanitizedTitle = sanitize(trimmedTitle);
-                 
-                 if (sanitizedTitle && sanitizedTitle !== 'Unknown' && sanitizedTitle.trim() !== '') {
-                   logWithTimestamp('log', downloadId, `Successfully extracted title: ${trimmedTitle} -> ${sanitizedTitle}`);
-                   
-                   // Send full video metadata to renderer
-                   let thumbnail = '';
-                   if (Array.isArray(videoInfo.thumbnails) && videoInfo.thumbnails.length > 0) {
-                     thumbnail = videoInfo.thumbnails[videoInfo.thumbnails.length - 1].url;
-                   } else if (videoInfo.thumbnail) {
-                     thumbnail = videoInfo.thumbnail;
-                   }
-                   
-                   // Format duration from seconds to ISO format
-                   let duration = 'PT0S';
-                   if (videoInfo.duration) {
-                     const hours = Math.floor(videoInfo.duration / 3600);
-                     const minutes = Math.floor((videoInfo.duration % 3600) / 60);
-                     const seconds = Math.floor(videoInfo.duration % 60);
-                     duration = 'PT';
-                     if (hours > 0) duration += `${hours}H`;
-                     if (minutes > 0) duration += `${minutes}M`;
-                     if (seconds > 0) duration += `${seconds}S`;
-                     if (duration === 'PT') duration = 'PT0S';
-                   }
-                   
-                   // Send metadata update to renderer
-                   event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-                     downloadId,
-                     title: trimmedTitle,
-                     sanitizedTitle: sanitizedTitle,
-                     thumbnail: thumbnail,
-                     duration: duration,
-                     message: `Video info extracted: ${trimmedTitle}`
-                   });
-                   
-                   return sanitizedTitle;
-                 } else {
-                   logWithTimestamp('warn', downloadId, `Title was extracted but sanitization resulted in empty/Unknown:`, trimmedTitle);
-                 }
-               } else {
-                 logWithTimestamp('warn', downloadId, `yt-dlp returned info but no valid title found.`);
-                 logWithTimestamp('warn', downloadId, `Available fields:`, Object.keys(videoInfo || {}));
-               }
-             } catch (error) {
-               logWithTimestamp('error', downloadId, `Error fetching video info from yt-dlp:`, error.message);
-               logWithTimestamp('error', downloadId, `Error stack:`, error.stack);
-               
-               // Send error to renderer for debugging
-               event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-                 downloadId,
-                 message: `Failed to extract video info: ${error.message}`,
-                 error: `yt-dlp info extraction failed: ${error.message}`
-               });
-               
-               // Continue to fallback
-             }
-           }
-           
-           // For YouTube or if yt-dlp info extraction failed, use simple title extraction
-           logWithTimestamp('log', downloadId, `Using simple title extraction (YouTube or fallback)`);
-           try {
-             const rawTitle = await getTitle();
-             const sanitizedTitle = sanitize(rawTitle);
-             logWithTimestamp('log', downloadId, `Simple title extraction result: "${rawTitle}" -> "${sanitizedTitle}"`);
-             return sanitizedTitle || 'Unknown';
-           } catch (titleError) {
-             logWithTimestamp('error', downloadId, `Simple title extraction also failed:`, titleError.message);
-             return 'Unknown';
-           }
-         } catch (error) {
-           logWithTimestamp('error', downloadId, `Error in fetchAndSanitizeTitle:`, error.message);
-           logWithTimestamp('error', downloadId, `Error stack:`, error.stack);
-           return 'Unknown';
-         }
-       };
-
-      // Import platform detection utilities
-      const detectPlatform = (url) => {
-        if (!url || typeof url !== 'string') return 'unknown'
-        const urlLower = url.toLowerCase()
-        
-        // YouTube variants
-        if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
-          if (urlLower.includes('music.youtube.com')) return 'youtube_music'
-          if (urlLower.includes('youtubekids.com')) return 'youtube_kids'
-          return 'youtube'
-        }
-        
-        // Other platforms
-        if (urlLower.includes('facebook.com') || urlLower.includes('fb.com') || urlLower.includes('fb.watch')) {
-          return 'facebook'
-        }
-        if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
-          return 'instagram'
-        }
-        if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
-          return 'tiktok'
-        }
-        if (urlLower.includes('twitter.com') || urlLower.includes('x.com') || urlLower.includes('t.co')) {
-          return 'twitter'
-        }
-        if (urlLower.includes('twitch.tv') || urlLower.includes('twitch.com')) {
-          return 'twitch'
-        }
-        if (urlLower.includes('dailymotion.com') || urlLower.includes('dai.ly')) {
-          return 'dailymotion'
-        }
-        if (urlLower.includes('reddit.com') || urlLower.includes('redd.it')) {
-          return 'reddit'
-        }
-        
-        return 'unknown'
-      };
-
-      const isYouTubePlatform = (platform) => {
-        return platform === 'youtube' || 
-               platform === 'youtube_music' || 
-               platform === 'youtube_kids'
-      };
-
-      // Fetch thumbnail for non-YouTube content
-      const fetchThumbnail = async (url) => {
-        try {
-          const platform = detectPlatform(url)
-          if (isYouTubePlatform(platform)) {
-            return null // Skip YouTube content, it already has thumbnails
-          }
-          
-          const thumbnail = await getThumbnailInfo(url)
-          return thumbnail
-        } catch (error) {
-          console.error('Error fetching thumbnail:', error)
-          return null
-        }
-      };
-
-      // Create title promise - this will fetch and sanitize the title
-      const title = fetchAndSanitizeTitle();
+      // Metadata is already fetched by the renderer. Do not start another yt-dlp
+      // process here; the download command can resolve missing titles itself.
+      const title = Promise.resolve(
+        typeof titleFromOptions === 'string' && titleFromOptions.trim()
+          ? sanitize(titleFromOptions.trim())
+          : 'Unknown'
+      );
 
 const setupDownloadPath = async () => {
          let sanitizedTitle = 'Unknown';
@@ -2710,7 +2529,7 @@ const setupDownloadPath = async () => {
              : `%(title)s_${safeQuality}`;
            
            logWithTimestamp('log', downloadId, `Using template title with quality:`, titleWithQuality);
-           logWithTimestamp('warn', downloadId, `Warning: Could not extract proper title during pre-fetch, relying on yt-dlp template.`);
+           logWithTimestamp('log', downloadId, `No supplied title; yt-dlp will resolve it during download.`);
          }
          
          // FINAL SAFETY CHECK
@@ -2740,18 +2559,6 @@ const setupDownloadPath = async () => {
        };
 
       setupDownloadPath().then(async (downloadPath) => {
-        // Fetch thumbnail for non-YouTube content before starting download
-        const thumbnail = await fetchThumbnail(url);
-        
-        // Send thumbnail information to renderer
-        if (thumbnail) {
-          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-            downloadId,
-            thumbnail,
-            message: 'Thumbnail fetched for non-YouTube content'
-          });
-        }
-
         // Detect if this is a Dailymotion URL
         const isDailymotion = url.includes('dailymotion.com') || url.includes('dai.ly');
         
@@ -2762,10 +2569,12 @@ const setupDownloadPath = async () => {
           '--cookies', cookiesPath,
           '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           '--newline',
-          '--ignore-errors',
           '--progress',
+          '--concurrent-fragments', '4',
+          '--print', 'before_dl:PNUT_TITLE:%(title)s',
+          '--print', 'after_move:PNUT_FILEPATH:%(filepath)s',
           '--extractor-retries', '3',
-          '--js-runtimes', 'node',
+          '--js-runtimes', ytdlpJsRuntime,
         ];
 
         // Add Dailymotion-specific options for better compatibility
@@ -2774,25 +2583,21 @@ const setupDownloadPath = async () => {
           args.push('--sleep-requests', '1'); // Add small delay between requests
         }
 
+        if (shouldDownloadPlaylist) {
+          args.push('--ignore-errors');
+        }
+
         args.push(...formatSpecifier.split(' '));
         args.push(url);
         args.push(shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist');
 
-  const getYtdlpPath = () => {
-    if (app.isPackaged) {
-      return join(process.resourcesPath, getYtdlpExecutableName());
-    }
-    
-    return join(__dirname, '../../public', getYtdlpExecutableName());
-  };
-
-        const currentYtdlpPath = getYtdlpPath();
+        const currentYtdlpPath = ytdlpPath;
         const downloadLabel = `${downloadLogId}:download`;
         logYtdlpCommand(downloadLabel, currentYtdlpPath, args);
 
         const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
         const startedAt = Date.now();
-        downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
+        downloadProcess = spawnYtdlp(args, spawnOptions);
         activeDownloads[downloadId] = true;
 
         let resolvedDownloadPath = downloadPath;
@@ -2813,6 +2618,23 @@ downloadProcess.stdout.on('data', (data) => {
            stallTimeout.reset();
            const line = data.toString().trim();
            logWithTimestamp('log', downloadLabel, `yt-dlp stdout:`, line);
+
+           const resolvedTitleMatch = line.match(/(?:^|\n)PNUT_TITLE:(.+?)(?:\r?\n|$)/);
+           if (resolvedTitleMatch?.[1]) {
+             const resolvedTitle = resolvedTitleMatch[1].trim();
+             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+               downloadId,
+               title: resolvedTitle,
+               sanitizedTitle: sanitize(resolvedTitle),
+               message: `Title resolved: ${resolvedTitle}`
+             });
+           }
+
+           const printedPathMatch = line.match(/(?:^|\n)PNUT_FILEPATH:(.+?)(?:\r?\n|$)/);
+           if (printedPathMatch?.[1]) {
+             resolvedDownloadPath = printedPathMatch[1].trim();
+             logWithTimestamp('log', downloadId, `Resolved final file path: ${resolvedDownloadPath}`);
+           }
            
            // Capture actual filename from yt-dlp output if we used a template
            // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
@@ -3352,7 +3174,9 @@ async function checkDependencies() {
       // Ensure executable permissions on Unix-like systems
       if (process.platform !== 'win32') {
         try {
-          await fs.chmod(ytdlpPath, 0o755);
+          if (!usingSystemYtdlp) {
+            await fs.chmod(ytdlpPath, 0o755);
+          }
           await fs.chmod(ffmpegPath, 0o755);
           console.log('Ensured executable permissions for binaries');
         } catch (permErr) {
@@ -3366,13 +3190,15 @@ async function checkDependencies() {
       console.log('FFmpeg size:', ffmpegStats.size);
       console.log('yt-dlp size:', ytdlpStats.size);
       
-      const ready = ffmpegStats.size > 1000000 && ytdlpStats.size > 1000000; // Minimum 1MB each
+      const ffmpegReady = ffmpegStats.size > 1000000
+      const ytdlpReady = usingSystemYtdlp ? ytdlpStats.size > 0 : ytdlpStats.size > 1000000
+      const ready = ffmpegReady && ytdlpReady
       console.log('Dependencies ready:', ready);
 
       return {
         ready: ready,
-        ffmpeg: ffmpegStats.size > 1000000,
-        ytdlp: ytdlpStats.size > 1000000,
+        ffmpeg: ffmpegReady,
+        ytdlp: ytdlpReady,
         ffmpegSize: ffmpegStats.size,
         ytdlpSize: ytdlpStats.size,
         isBusy: Boolean(dependencyStatus?.isBusy),
@@ -3501,78 +3327,6 @@ const getVideoInfo = async (url) => {
   }
 };
 
-// Get thumbnail information from yt-dlp
-const getThumbnailInfo = async (url) => {
-  return new Promise((resolve, reject) => {
-    const args = [
-      '--get-thumbnail',
-      '--no-playlist',
-      '--extractor-retries', '3',
-      '--js-runtimes', 'node',
-      url
-    ];
-    
-  const getYtdlpPath = () => {
-    if (app.isPackaged) {
-      return join(process.resourcesPath, getYtdlpExecutableName());
-    }
-    
-    return join(__dirname, '../../public', getYtdlpExecutableName());
-  };
-
-    const currentYtdlpPath = getYtdlpPath();
-    const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-    const thumbnailProcess = spawn(currentYtdlpPath, args, spawnOptions);
-    
-    let thumbnailData = '';
-    let errorData = '';
-
-    thumbnailProcess.stdout.on('data', (data) => {
-      thumbnailData += data.toString().trim();
-    });
-
-    thumbnailProcess.stderr.on('data', (data) => {
-      errorData += data.toString().trim();
-      console.error('Thumbnail fetch stderr:', data.toString().trim());
-    });
-
-    thumbnailProcess.on('close', (code) => {
-      if (code === 0 && thumbnailData) {
-        const thumbnails = thumbnailData.split('\n').filter(Boolean);
-        resolve(thumbnails[0] || null); // Return first thumbnail URL
-      } else {
-        // Check if this is a Twitch authentication error
-        const isTwitchError = errorData.includes('[twitch]') && (
-          errorData.includes('logged-in') || 
-          errorData.includes('cookies') ||
-          errorData.includes('OAuth token')
-        );
-        
-        if (isTwitchError) {
-          console.warn('Twitch video requires authentication - attempting fallback thumbnail');
-          // Try to extract Twitch video ID and construct a fallback thumbnail URL
-          const twitchMatch = url.match(/twitch\.tv\/(?:videos|\w+)\/?(\d+)?/);
-          if (twitchMatch) {
-            const videoId = twitchMatch[1] || twitchMatch[2];
-            // Use Twitch's default thumbnail pattern
-            const fallbackThumbnail = `https://static-cdn.jtvnw.net/video-twitch-thumbnails/${videoId}.jpg`;
-            resolve(fallbackThumbnail);
-          } else {
-            resolve(null);
-          }
-        } else {
-          console.warn(`Failed to fetch thumbnail with code ${code}: ${errorData}`);
-          resolve(null); // Return null instead of rejecting
-        }
-      }
-    });
-
-    thumbnailProcess.on('error', (err) => {
-      console.error('Thumbnail process error:', err);
-      resolve(null); // Return null instead of rejecting
-    });
-  });
-};
 
 // Helper function to parse cookies from cookies.txt (Netscape format)
 const parseCookiesFromFile = async (domain) => {

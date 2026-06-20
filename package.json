@@ -81,12 +81,16 @@
         "to": "yt-dlp_macos"
       },
       {
+        "from": "public/yt-dlp",
+        "to": "yt-dlp"
+      },
+      {
         "from": "public/ffmpeg.exe",
         "to": "ffmpeg.exe"
       },
       {
-        "from": "public/cookies.txt",
-        "to": "cookies.txt"
+        "from": "public/ffmpeg",
+        "to": "ffmpeg"
       },
       {
         "from": "public/all.json",
