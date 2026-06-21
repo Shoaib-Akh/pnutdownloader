@@ -155,6 +155,7 @@ const useDownloadManager = ({
 
     isProcessing.current = true
     const currentId = downloadQueue.current[0]
+    let removeProgressListener = () => {}
 
     try {
       let storedDownloads = getStoredDownloads()
@@ -318,9 +319,28 @@ const useDownloadManager = ({
         ) {
           onLoginRequired()
         }
+
+        if (progressData?.error) {
+          const latest = getStoredDownloads()
+          const latestIndex = latest.findIndex((i) => i.id === currentId)
+          if (latestIndex !== -1) {
+            const previous = latest[latestIndex]
+            const nextDetails = progressData.details ? String(progressData.details) : ''
+            latest[latestIndex] = {
+              ...previous,
+              lastError: String(progressData.error),
+              errorDetails:
+                nextDetails.length >= (previous.errorDetails?.length || 0)
+                  ? nextDetails
+                  : previous.errorDetails,
+              errorExitCode: progressData.exitCode ?? previous.errorExitCode ?? null,
+            }
+            setStoredDownloads(latest)
+          }
+        }
       }
 
-      window.api.onDownloadProgress(handleProgress)
+      removeProgressListener = window.api.onDownloadProgress(handleProgress) || (() => {})
 
       await window.api.downloadVideo({
         id: currentId,
@@ -374,8 +394,9 @@ const useDownloadManager = ({
       if (failedIndex !== -1) {
         storedDownloads[failedIndex].status = 'Failed'
         storedDownloads[failedIndex].isFailed = true
+        storedDownloads[failedIndex].lastError = storedDownloads[failedIndex].lastError || errorMessage
         setStoredDownloads(storedDownloads)
-        saveDownloadError(storedDownloads[failedIndex], errorMessage)
+        saveDownloadError(storedDownloads[failedIndex], storedDownloads[failedIndex].lastError)
       }
 
       setActiveDownloads((prev) => {
@@ -390,6 +411,7 @@ const useDownloadManager = ({
         return next
       })
     } finally {
+      removeProgressListener()
       downloadQueue.current.shift()
       isProcessing.current = false
       if (downloadQueue.current.length > 0) {
@@ -449,6 +471,9 @@ const useDownloadManager = ({
         isPlaylistCompleted: false,
         isCompleted: false,
         isFailed: false,
+        lastError: '',
+        errorDetails: '',
+        errorExitCode: null,
         isPlaylist: videoInfo?.isPlaylist || false,
         platform: videoInfo?.platform || detectPlatform(normalizedUrl),
         currentItem: 0,
@@ -510,6 +535,9 @@ const useDownloadManager = ({
           status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
           isCompleted: false,
           isFailed: false,
+          lastError: '',
+          errorDetails: '',
+          errorExitCode: null,
           isPlaylist: false,
           platform: PLATFORMS.YOUTUBE,
           currentItem: 0,
@@ -547,6 +575,9 @@ const useDownloadManager = ({
         ...item,
         status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
         isFailed: false,
+        lastError: '',
+        errorDetails: '',
+        errorExitCode: null,
         progress: 0,
         fileSize: 'Unknown',
         speed: 'Unknown',

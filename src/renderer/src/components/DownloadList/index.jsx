@@ -1010,6 +1010,30 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       </div>
                     )}
 
+                    {item.status === 'Failed' && item.lastError && (
+                      <div
+                        title={item.errorDetails || item.lastError}
+                        style={{
+                          width: '100%',
+                          color: 'var(--pnut-danger)',
+                          fontSize: '12px',
+                          lineHeight: '1.4',
+                          whiteSpace: 'normal',
+                          overflowWrap: 'anywhere'
+                        }}
+                      >
+                        {item.lastError}
+                        {item.errorExitCode !== null && item.errorExitCode !== undefined
+                          ? ` (exit code ${item.errorExitCode})`
+                          : ''}
+                        {item.errorDetails && item.errorDetails !== item.lastError && (
+                       
+                        console.log("errro",item.lastError, item.errorDetails)
+                      
+                        )}
+                      </div>
+                    )}
+
                     {/* Format Tag */}
                     {!item.isPlaylist && item.format && (
                       <span style={{

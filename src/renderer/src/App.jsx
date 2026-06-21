@@ -10,6 +10,7 @@ import DependencyLoader from './components/DependencyLoader'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
 import { flushQueuedDonationClicks } from './utils/donationService'
+import DebugLogPanel from '../../../index.jsx'
 import './assets/theme.css'
 import './assets/redesign.css'
 
@@ -67,6 +68,7 @@ function App() {
   return (
     <ErrorBoundary fallbackTitle="App Error" fallbackMessage="An unexpected error occurred in the application.">
       <div className="pnut-app vh-100">
+        <DebugLogPanel />
         {updateAvailable && (
           <UpdateNotification
             updateInfo={updateInfo}

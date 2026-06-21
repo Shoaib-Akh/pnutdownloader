@@ -111,6 +111,10 @@
           "to": "yt-dlp"
         },
         {
+          "from": "public/yt-dlp_macos",
+          "to": "yt-dlp_macos"
+        },
+        {
           "from": "public/ffmpeg",
           "to": "ffmpeg"
         }

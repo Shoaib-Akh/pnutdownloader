@@ -47,7 +47,14 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
   loadDownloadState: () => ipcRenderer.invoke(IPC_CHANNELS.LOAD_DOWNLOAD_STATE),
 
   onDownloadProgress: (callback) => {
-    ipcRenderer.on(IPC_EVENTS.DOWNLOAD_PROGRESS, (_event, progressData) => callback(progressData))
+    const listener = (_event, progressData) => callback(progressData)
+    ipcRenderer.on(IPC_EVENTS.DOWNLOAD_PROGRESS, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.DOWNLOAD_PROGRESS, listener)
+  },
+  onDebugLog: (callback) => {
+    const listener = (_event, logData) => callback(logData)
+    ipcRenderer.on(IPC_EVENTS.DEBUG_LOG, listener)
+    return () => ipcRenderer.removeListener(IPC_EVENTS.DEBUG_LOG, listener)
   },
   openExternal: (url) => shell.openExternal(url),
   getPath: (type) => ipcRenderer.invoke(IPC_CHANNELS.GET_PATH, type),

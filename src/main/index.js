@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
-import { spawn } from 'child_process'
+import { spawn, spawnSync } from 'child_process'
 import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
 import { extractVideoId ,isDownloadableVideoUrl} from '../shared/platformUtils'
@@ -139,8 +139,6 @@ const getPlatformExecutableName = (baseName) => {
 const getYtdlpExecutableName = () => {
   if (process.platform === 'win32') {
     return 'yt-dlp.exe';
-  } else if (process.platform === 'darwin') {
-    return 'yt-dlp';
   }
   return 'yt-dlp';
 };
@@ -160,6 +158,20 @@ let clipboardMonitorInterval = null
 let lastClipboardText = ''
 let isAppClosing = false;
 const { dirname } = require('path');
+
+const emitDebugLog = ({ level = 'info', source = 'main', message, details = '', downloadId = null }, sender = null) => {
+  const target = sender || mainWindow?.webContents;
+  if (!target || target.isDestroyed()) return;
+
+  target.send(IPC_EVENTS.DEBUG_LOG, {
+    timestamp: new Date().toISOString(),
+    level,
+    source,
+    message: String(message || ''),
+    details: details ? String(details) : '',
+    downloadId
+  });
+};
 // Get yt-dlp path - always use bundled/downloaded version
 const getYtdlpPath = () => {
   if (app.isPackaged) {
@@ -167,6 +179,66 @@ const getYtdlpPath = () => {
   }
   
   return join(__dirname, '../../public', getYtdlpExecutableName());
+};
+
+let compatibleMacPythonPath;
+
+const getCompatibleMacPythonPath = () => {
+  if (process.platform !== 'darwin') return null;
+  if (compatibleMacPythonPath !== undefined) return compatibleMacPythonPath;
+
+  const pathCandidates = (process.env.PATH || '')
+    .split(':')
+    .filter(Boolean)
+    .map((dir) => join(dir, 'python3'));
+  const candidates = [
+    '/opt/homebrew/bin/python3',
+    '/usr/local/bin/python3',
+    '/Library/Frameworks/Python.framework/Versions/Current/bin/python3',
+    ...pathCandidates
+  ];
+
+  compatibleMacPythonPath = null;
+  for (const candidate of [...new Set(candidates)]) {
+    if (!existsSync(candidate)) continue;
+    const result = spawnSync(
+      candidate,
+      ['-c', 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")'],
+      { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'ignore'] }
+    );
+    const [major, minor] = String(result.stdout || '').trim().split('.').map(Number);
+    if (result.status === 0 && (major > 3 || (major === 3 && minor >= 10))) {
+      compatibleMacPythonPath = candidate;
+      console.log(`Using Python ${major}.${minor} for fast yt-dlp startup: ${candidate}`);
+      break;
+    }
+  }
+
+  return compatibleMacPythonPath;
+};
+
+const getYtdlpLaunch = (args, scriptPath = getYtdlpPath()) => {
+  if (process.platform !== 'darwin') {
+    return { executable: scriptPath, args, mode: 'native' };
+  }
+
+  const pythonPath = getCompatibleMacPythonPath();
+  if (pythonPath && existsSync(scriptPath)) {
+    return {
+      executable: pythonPath,
+      args: [scriptPath, ...args],
+      mode: 'python'
+    };
+  }
+
+  const standalonePath = app.isPackaged
+    ? join(process.resourcesPath, 'yt-dlp_macos')
+    : join(__dirname, '../../public', 'yt-dlp_macos');
+  return {
+    executable: existsSync(standalonePath) ? standalonePath : scriptPath,
+    args,
+    mode: existsSync(standalonePath) ? 'standalone' : 'native'
+  };
 };
 
 const getYtdlpVersionFilePath = () => {
@@ -575,7 +647,8 @@ async function checkYtdlpVersion() {
       reject(new Error('yt-dlp version check timed out'));
     }, 100000);
 
-    proc = spawn(ytdlpPath, ['--version'], {
+    const launch = getYtdlpLaunch(['--version'], ytdlpPath);
+    proc = spawn(launch.executable, launch.args, {
       ...spawnOptions,
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -2109,9 +2182,10 @@ ipcMain.handle(IPC_CHANNELS.FETCH_VIDEO_INFO, async (event, url) => {
       url
     ];
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-    logYtdlpCommand(requestId, currentYtdlpPath, args);
+    const launch = getYtdlpLaunch(args, currentYtdlpPath);
+    logYtdlpCommand(requestId, launch.executable, launch.args);
     const startedAt = Date.now();
-    const proc = spawn(currentYtdlpPath, args, spawnOptions);
+    const proc = spawn(launch.executable, launch.args, spawnOptions);
 
     let stdout = '';
     let stderr = '';
@@ -2266,7 +2340,8 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
       url,
     ]
 
-    const proc = spawn(currentYtdlpPath, args, spawnOptions)
+    const launch = getYtdlpLaunch(args, currentYtdlpPath)
+    const proc = spawn(launch.executable, launch.args, spawnOptions)
 
     let stdout = ''
     let stderr = ''
@@ -2347,6 +2422,12 @@ const startDownload = async (event, options) => {
       const downloadLogId = downloadId || `download:${Date.now()}`;
       const downloadStartedAt = Date.now();
       console.log(`[${downloadLogId}] ⏱ Download request received at ${new Date().toISOString()}`);
+      emitDebugLog({
+        source: 'download',
+        message: 'Download request received',
+        details: `URL: ${url || '(missing)'}\nFormat: ${selectedFormat || '(default)'}\nQuality: ${selectedQuality || '(default)'}\nAudio only: ${Boolean(isAudioOnly)}\nSave to: ${saveTo || '(default)'}`,
+        downloadId: downloadLogId
+      }, event.sender);
 
       if (downloadToolsUpdateInProgress) {
         const message = 'Download tools are being updated. Try again when the repair/update finishes.';
@@ -2466,9 +2547,10 @@ const startDownload = async (event, options) => {
           const currentYtdlpPath = getYtdlpPath();
           const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
           const titleLabel = `${downloadLogId}:title`;
-          logYtdlpCommand(titleLabel, currentYtdlpPath, titleArgs);
+          const launch = getYtdlpLaunch(titleArgs, currentYtdlpPath);
+          logYtdlpCommand(titleLabel, launch.executable, launch.args);
           const startedAt = Date.now();
-          const titleProcess = spawn(currentYtdlpPath, titleArgs, spawnOptions);
+          const titleProcess = spawn(launch.executable, launch.args, spawnOptions);
           let titleData = '';
           let titleStderr = '';
           let settled = false;
@@ -2548,11 +2630,12 @@ const startDownload = async (event, options) => {
           ];
 
           const infoLabel = `${downloadLogId}:info`;
-          logYtdlpCommand(infoLabel, currentYtdlpPath, args);
+          const launch = getYtdlpLaunch(args, currentYtdlpPath);
+          logYtdlpCommand(infoLabel, launch.executable, launch.args);
 
           const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
           const startedAt = Date.now();
-          const proc = spawn(currentYtdlpPath, args, spawnOptions);
+          const proc = spawn(launch.executable, launch.args, spawnOptions);
 
           let stdout = '';
           let stderr = '';
@@ -2875,6 +2958,12 @@ const startDownload = async (event, options) => {
       };
 
       setupDownloadPath().then(async (downloadPath) => {
+        emitDebugLog({
+          source: 'download',
+          message: 'Output path prepared',
+          details: downloadPath,
+          downloadId: downloadLogId
+        }, event.sender);
         // Fetch thumbnail in background — do NOT await before spawning yt-dlp
         fetchThumbnail(url).then((thumbnail) => {
           if (thumbnail) {
@@ -2930,12 +3019,21 @@ const startDownload = async (event, options) => {
 
         const currentYtdlpPath = getYtdlpPath();
         const downloadLabel = `${downloadLogId}:download`;
-        logYtdlpCommand(downloadLabel, currentYtdlpPath, args);
+        const launch = getYtdlpLaunch(args, currentYtdlpPath);
+        logYtdlpCommand(downloadLabel, launch.executable, launch.args);
+        emitDebugLog({
+          source: 'yt-dlp',
+          message: launch.mode === 'python'
+            ? 'Starting download process (fast Python mode)'
+            : 'Starting download process',
+          details: `Executable: ${launch.executable}${launch.mode === 'python' ? `\nyt-dlp: ${currentYtdlpPath}` : ''}`,
+          downloadId: downloadLogId
+        }, event.sender);
 
         const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
         const startedAt = Date.now();
         console.log(`[${downloadId}] ⏱ yt-dlp spawning after ${startedAt - downloadStartedAt}ms from button click`);
-        downloadProcess = spawn(currentYtdlpPath, args, spawnOptions);
+        downloadProcess = spawn(launch.executable, launch.args, spawnOptions);
         activeDownloads[downloadId] = true;
 
         let resolvedDownloadPath = downloadPath;
@@ -2956,6 +3054,11 @@ const startDownload = async (event, options) => {
           stallTimeout.reset();
           const line = data.toString().trim();
           console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
+          emitDebugLog({
+            source: 'yt-dlp',
+            message: line,
+            downloadId: downloadLogId
+          }, event.sender);
           
           // Capture actual filename from yt-dlp output if we used a template
           // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
@@ -2984,7 +3087,14 @@ const startDownload = async (event, options) => {
         downloadProcess.stderr.on('data', (data) => {
           stallTimeout.reset();
           const errorMessage = data.toString().trim();
+          const stderrIsError = /ERROR:|failed|unable to|not found|forbidden|unsupported/i.test(errorMessage);
           console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
+          emitDebugLog({
+            level: stderrIsError ? 'error' : 'warn',
+            source: 'yt-dlp stderr',
+            message: errorMessage,
+            downloadId: downloadLogId
+          }, event.sender);
           
           // Check if this is a Twitch authentication error
           const isTwitchError = errorMessage.includes('[twitch]') && (
@@ -3062,10 +3172,16 @@ const startDownload = async (event, options) => {
               error: 'Network error occurred. Please check your internet connection and try again.',
               details: errorMessage
             });
-          } else {
+          } else if (stderrIsError) {
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId, 
               error: errorMessage,
+              details: errorMessage
+            });
+          } else {
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+              downloadId,
+              message: errorMessage,
               details: errorMessage
             });
           }
@@ -3080,6 +3196,13 @@ const startDownload = async (event, options) => {
           if (resolvedDownloadPath) {
             await cleanupPartialFile(resolvedDownloadPath);
           }
+          emitDebugLog({
+            level: 'error',
+            source: 'download',
+            message: 'Could not start yt-dlp',
+            details: err.message,
+            downloadId: downloadLogId
+          }, event.sender);
           
           reject(err);
         });
@@ -3091,6 +3214,12 @@ const startDownload = async (event, options) => {
           console.log(`[${downloadLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms`);
 
           if (code === 0) {
+            emitDebugLog({
+              source: 'download',
+              message: 'Download completed successfully',
+              details: resolvedDownloadPath,
+              downloadId: downloadLogId
+            }, event.sender);
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
             resolve();
           } else {
@@ -3138,6 +3267,13 @@ const startDownload = async (event, options) => {
               details: errorDetails,
               exitCode: code
             });
+            emitDebugLog({
+              level: 'error',
+              source: 'download',
+              message: errorMessage,
+              details: errorDetails,
+              downloadId: downloadLogId
+            }, event.sender);
             reject(new Error(`${errorMessage}: ${errorDetails}`));
           }
         });
@@ -3166,6 +3302,13 @@ ipcMain.handle(IPC_CHANNELS.DOWNLOAD_VIDEO, async (event, options) => {
     console.log('Download completed successfully.');
   } catch (err) {
     console.error('Download failed:', err);
+    emitDebugLog({
+      level: 'error',
+      source: 'download',
+      message: 'Download request failed',
+      details: err?.stack || err?.message || String(err),
+      downloadId: options?.id || null
+    }, event.sender);
     throw err;
   }
 });
@@ -3678,7 +3821,8 @@ const getThumbnailInfo = async (url) => {
 
     const currentYtdlpPath = getYtdlpPath();
     const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-    const thumbnailProcess = spawn(currentYtdlpPath, args, spawnOptions);
+    const launch = getYtdlpLaunch(args, currentYtdlpPath);
+    const thumbnailProcess = spawn(launch.executable, launch.args, spawnOptions);
     
     let thumbnailData = '';
     let errorData = '';
