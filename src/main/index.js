@@ -258,11 +258,9 @@ switch (process.platform) {
   case 'win32':
     iconPath = join(__dirname, '../../public/icon.ico')
     break
-  case 'linux':
-    iconPath = icon
-    break
   default:
-    iconPath = join(process.resourcesPath, 'icon.png')
+    // electron-vite resolves this asset in both development and packaged builds.
+    iconPath = icon
 }
 
 ipcMain.handle(IPC_CHANNELS.GET_APP_VERSION, () => {
@@ -1768,6 +1766,12 @@ async function cancelActiveDownloads({ reason } = {}) {
 }
 
 app.whenReady().then(async () => {
+  // Keep the Dock icon in sync with the bundled brand asset. This also avoids
+  // macOS showing a stale icon from an older installation after an update.
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(iconPath);
+  }
+
   // Create window immediately
   createWindow();
 
