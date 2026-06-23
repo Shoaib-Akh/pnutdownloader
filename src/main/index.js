@@ -147,6 +147,62 @@ const getFfmpegExecutableName = () => {
   return getPlatformExecutableName('ffmpeg');
 };
 
+const getStagedBinaryPath = (targetPath) => {
+  if (process.platform === 'win32' && targetPath.toLowerCase().endsWith('.exe')) {
+    return `${targetPath.slice(0, -4)}.download.exe`;
+  }
+
+  return `${targetPath}.download`;
+};
+
+const replaceBinaryFromStagedFile = async (stagedPath, targetPath, displayName) => {
+  const stagedStats = await fs.stat(stagedPath);
+  if (!stagedStats.isFile() || stagedStats.size <= 0) {
+    throw new Error(`Downloaded ${displayName} file is empty`);
+  }
+
+  const hadPreviousBinary = existsSync(targetPath);
+
+  // rename() atomically replaces an existing file on Unix. This keeps the old
+  // working binary available until the fresh download is completely prepared.
+  if (process.platform !== 'win32') {
+    await fs.rename(stagedPath, targetPath);
+    console.log(
+      hadPreviousBinary
+        ? `Replaced previous ${displayName} binary: ${targetPath}`
+        : `Installed ${displayName} binary: ${targetPath}`
+    );
+    return;
+  }
+
+  // Windows cannot rename over an existing executable, so keep a rollback copy
+  // until the new binary is in place.
+  const backupPath = `${targetPath}.backup`;
+  await fs.rm(backupPath, { force: true }).catch(() => {});
+
+  if (hadPreviousBinary) {
+    await fs.rename(targetPath, backupPath);
+  }
+
+  try {
+    await fs.rename(stagedPath, targetPath);
+    await fs.rm(backupPath, { force: true }).catch(() => {});
+    console.log(
+      hadPreviousBinary
+        ? `Replaced previous ${displayName} binary: ${targetPath}`
+        : `Installed ${displayName} binary: ${targetPath}`
+    );
+  } catch (error) {
+    await fs.rm(targetPath, { force: true }).catch(() => {});
+    if (hadPreviousBinary && existsSync(backupPath)) {
+      await fs.rename(backupPath, targetPath).catch((restoreError) => {
+        console.error(`Failed to restore previous ${displayName} binary: ${restoreError.message}`);
+      });
+    }
+    throw error;
+  }
+};
+
 const ffmpegPath = app.isPackaged
   ? join(process.resourcesPath, getFfmpegExecutableName())
   : join(__dirname, '../../public', getFfmpegExecutableName())
@@ -871,6 +927,7 @@ async function checkYtdlpUpdate() {
 async function updateYtdlp(forceUpdate = false, options = {}) {
   const { skipUpdateCheck = false } = options;
   let markedYtdlpUpdateInProgress = false;
+  let stagedYtdlpPath = null;
   // Determine download URL and target path
   let ytdlpUrl;
   let releaseTag = null;
@@ -996,35 +1053,18 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
       return { success: true, message, skipped: true, reason: 'download_active' };
     }
 
-    // Remove old binary if it exists (in case it's corrupted)
-    if (existsSync(ytdlpPath)) {
-      try {
-        emitDependencyStatus({
-          status: 'updating',
-          tool: 'yt-dlp',
-          action: forceUpdate ? 'manual-update' : 'update',
-          message: 'Replacing the old yt-dlp binary...',
-          isBusy: true,
-          ready: false
-        });
-        await fs.unlink(ytdlpPath);
-        console.log(`Removed old yt-dlp binary: ${ytdlpPath}`);
-        // Wait a bit to ensure file system has released the file
-        await new Promise(resolve => setTimeout(resolve, 100));
-      } catch (err) {
-        console.warn(`Failed to remove old binary: ${err.message}, will try to overwrite`);
-      }
-    }
-    
+    stagedYtdlpPath = getStagedBinaryPath(ytdlpPath);
+    await fs.rm(stagedYtdlpPath, { force: true }).catch(() => {});
+
     console.log(`Downloading yt-dlp from: ${ytdlpUrl}`);
-    await downloadFile(ytdlpUrl, ytdlpPath, {
+    await downloadFile(ytdlpUrl, stagedYtdlpPath, {
       tool: 'yt-dlp',
       action: forceUpdate ? 'manual-update' : 'update',
       displayName: 'yt-dlp',
       message: releaseTag ? `Downloading yt-dlp ${releaseTag}...` : 'Downloading yt-dlp...'
     });
     console.log('yt-dlp downloaded successfully');
-    const stats = await fs.stat(ytdlpPath);
+    const stats = await fs.stat(stagedYtdlpPath);
     console.log(`File size after download: ${stats.size} bytes`);
     emitDependencyStatus({
       status: 'verifying',
@@ -1041,7 +1081,7 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
       let retries = 3;
       while (retries > 0) {
         try {
-          await fs.chmod(ytdlpPath, 0o755);
+          await fs.chmod(stagedYtdlpPath, 0o755);
           console.log(`Successfully set executable permissions for yt-dlp`);
           break;
         } catch (err) {
@@ -1056,9 +1096,6 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
       }
     }
     
-    // Save version info with the last successful update check timestamp.
-    await saveYtdlpVersionMetadata(releaseTag);
-    
     // Verify the downloaded binary works (skip on Windows as it might show a console window)
     // Note: Verification is optional - if it fails, we still consider the download successful
     // since the file was downloaded and has proper size. PyInstaller bundles might take longer to start.
@@ -1066,7 +1103,7 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
       try {
         const { execSync } = require('child_process');
         // Increase timeout to 15 seconds for PyInstaller bundles
-        const version = execSync(`"${ytdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }).trim();
+        const version = execSync(`"${stagedYtdlpPath}" --version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 15000 }).trim();
         console.log(`Downloaded yt-dlp binary verified successfully, version: ${version}`);
       } catch (verifyErr) {
         // Don't throw error - just warn. File was downloaded successfully and has proper size.
@@ -1076,6 +1113,20 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
         // Continue - don't throw error
       }
     }
+
+    emitDependencyStatus({
+      status: 'updating',
+      tool: 'yt-dlp',
+      action: forceUpdate ? 'manual-update' : 'update',
+      message: 'Replacing the previous yt-dlp binary...',
+      isBusy: true,
+      ready: false,
+      percent: 100
+    });
+    await replaceBinaryFromStagedFile(stagedYtdlpPath, ytdlpPath, 'yt-dlp');
+
+    // Save version info only after the fresh binary has replaced the previous one.
+    await saveYtdlpVersionMetadata(releaseTag);
     
     emitDependencyStatus({
       status: 'ready',
@@ -1104,6 +1155,9 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
     });
     throw error;
   } finally {
+    if (stagedYtdlpPath) {
+      await fs.rm(stagedYtdlpPath, { force: true }).catch(() => {});
+    }
     if (markedYtdlpUpdateInProgress) {
       downloadToolsUpdateInProgress = false;
     }
@@ -1183,6 +1237,8 @@ async function downloadAndExtractFFmpeg(options = {}) {
   let isZip = false;
   let isTarGz = false;
   let isTarXz = false;
+  const stagedFfmpegPath = getStagedBinaryPath(ffmpegPath);
+  let extractDir = null;
   
   if (process.platform === 'win32') {
     // Windows: Use GitHub releases for reliable static builds
@@ -1252,6 +1308,8 @@ async function downloadAndExtractFFmpeg(options = {}) {
     downloadToolsUpdateInProgress = true;
     markedDownloadToolsUpdateInProgress = true;
 
+    await fs.rm(stagedFfmpegPath, { force: true }).catch(() => {});
+
     if (!existsSync(extractPath)) {
       mkdirSync(extractPath, { recursive: true });
     }
@@ -1278,7 +1336,8 @@ async function downloadAndExtractFFmpeg(options = {}) {
       });
       
       // Extract ZIP file for Windows using PowerShell
-      const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
+      extractDir = join(app.getPath('temp'), `ffmpeg_extract_${process.pid}`);
+      await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
       mkdirSync(extractDir, { recursive: true });
       
       // Use PowerShell Expand-Archive (built into Windows 10+)
@@ -1312,7 +1371,7 @@ async function downloadAndExtractFFmpeg(options = {}) {
       
       const extractedFfmpeg = await findFfmpeg(extractDir);
       if (extractedFfmpeg) {
-        await fs.copyFile(extractedFfmpeg, ffmpegPath);
+        await fs.copyFile(extractedFfmpeg, stagedFfmpegPath);
         // Clean up
         await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
       } else {
@@ -1338,7 +1397,8 @@ async function downloadAndExtractFFmpeg(options = {}) {
         ready: false,
         percent: 100
       });
-      const extractDir = join(app.getPath('temp'), 'ffmpeg_extract');
+      extractDir = join(app.getPath('temp'), `ffmpeg_extract_${process.pid}`);
+      await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
       mkdirSync(extractDir, { recursive: true });
       execSync(`unzip -q -o "${tempTarPath}" -d "${extractDir}"`);
       
@@ -1359,7 +1419,7 @@ async function downloadAndExtractFFmpeg(options = {}) {
       
       const extractedFfmpeg = await findFfmpeg(extractDir);
       if (extractedFfmpeg) {
-        await fs.copyFile(extractedFfmpeg, ffmpegPath);
+        await fs.copyFile(extractedFfmpeg, stagedFfmpegPath);
         // Clean up
         await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
       } else {
@@ -1383,25 +1443,27 @@ async function downloadAndExtractFFmpeg(options = {}) {
         ready: false,
         percent: 100
       });
-      execSync(`tar -xf "${tempTarPath}" -C "${extractPath}" --strip-components=1 --wildcards "*/ffmpeg"`);
-      // Find and move ffmpeg to the correct location
-      const extractedFiles = await fs.readdir(extractPath);
-      const ffmpegFile = extractedFiles.find(f => f === 'ffmpeg');
-      if (ffmpegFile) {
-        await fs.rename(join(extractPath, ffmpegFile), ffmpegPath);
+      extractDir = join(app.getPath('temp'), `ffmpeg_extract_${process.pid}`);
+      await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
+      mkdirSync(extractDir, { recursive: true });
+      execSync(`tar -xf "${tempTarPath}" -C "${extractDir}" --strip-components=1 --wildcards "*/ffmpeg"`);
+      const extractedFfmpeg = join(extractDir, 'ffmpeg');
+      if (!existsSync(extractedFfmpeg)) {
+        throw new Error('FFmpeg binary not found in extracted archive');
       }
+      await fs.copyFile(extractedFfmpeg, stagedFfmpegPath);
     }
 
     await fs.unlink(tempTarPath).catch(() => {});
     
     // Set executable permissions on Unix-like systems
     if (process.platform !== 'win32') {
-      await fs.chmod(ffmpegPath, 0o755).catch(err => 
+      await fs.chmod(stagedFfmpegPath, 0o755).catch(err =>
         console.warn(`Failed to set FFmpeg permissions: ${err.message}`)
       );
     }
 
-    const stats = await fs.stat(ffmpegPath);
+    const stats = await fs.stat(stagedFfmpegPath);
     console.log(`FFmpeg downloaded and extracted successfully. Size: ${stats.size} bytes`);
     emitDependencyStatus({
       status: 'verifying',
@@ -1413,27 +1475,40 @@ async function downloadAndExtractFFmpeg(options = {}) {
       percent: 100
     });
     
-    // Verify the downloaded FFmpeg works
+    // Verify the downloaded FFmpeg works before replacing the previous binary.
+    let ffmpegVersion;
     try {
       const { execSync } = require('child_process');
-      const version = execSync(`"${ffmpegPath}" -version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 });
-      console.log(`FFmpeg verification successful. Version: ${version.split('\n')[0]}`);
-      emitDependencyStatus({
-        status: 'ready',
-        tool: 'ffmpeg',
-        action: forceUpdate ? 'manual-update' : 'install',
-        message: 'FFmpeg is ready.',
-        isBusy: false,
-        ready: true,
-        percent: 100,
-        version: version.split('\n')[0],
-        error: null
-      });
-      return { success: true, message: 'FFmpeg updated successfully', version: version.split('\n')[0] };
+      const version = execSync(`"${stagedFfmpegPath}" -version`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 10000 });
+      ffmpegVersion = version.split('\n')[0];
+      console.log(`FFmpeg verification successful. Version: ${ffmpegVersion}`);
     } catch (verifyErr) {
       console.error(`FFmpeg verification failed: ${verifyErr.message}`);
       throw new Error(`Downloaded FFmpeg binary is not working: ${verifyErr.message}`);
     }
+
+    emitDependencyStatus({
+      status: 'updating',
+      tool: 'ffmpeg',
+      action: forceUpdate ? 'manual-update' : 'install',
+      message: 'Replacing the previous FFmpeg binary...',
+      isBusy: true,
+      ready: false,
+      percent: 100
+    });
+    await replaceBinaryFromStagedFile(stagedFfmpegPath, ffmpegPath, 'FFmpeg');
+    emitDependencyStatus({
+      status: 'ready',
+      tool: 'ffmpeg',
+      action: forceUpdate ? 'manual-update' : 'install',
+      message: 'FFmpeg is ready.',
+      isBusy: false,
+      ready: true,
+      percent: 100,
+      version: ffmpegVersion,
+      error: null
+    });
+    return { success: true, message: 'FFmpeg updated successfully', version: ffmpegVersion };
   } catch (error) {
     console.error(`Failed to download/extract FFmpeg: ${error.message}`);
     console.error(`Platform: ${process.platform}, FFmpeg path: ${ffmpegPath}`);
@@ -1448,6 +1523,13 @@ async function downloadAndExtractFFmpeg(options = {}) {
     });
     throw error;
   } finally {
+    await fs.rm(stagedFfmpegPath, { force: true }).catch(() => {});
+    if (extractDir) {
+      await fs.rm(extractDir, { recursive: true, force: true }).catch(() => {});
+    }
+    if (tempTarPath) {
+      await fs.rm(tempTarPath, { force: true }).catch(() => {});
+    }
     if (markedDownloadToolsUpdateInProgress) {
       downloadToolsUpdateInProgress = false;
     }

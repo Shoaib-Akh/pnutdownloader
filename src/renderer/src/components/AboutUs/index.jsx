@@ -397,7 +397,7 @@ function AboutUs({ onOpenFeedback }) {
                     {dependencyBusy ? 'Repairing...' : 'Repair Downloads'}
                   </button>
                   <span className="small text-center" style={{ color: 'var(--pnut-muted)', fontSize: 11 }}>
-                    Keep the app open until repair finishes.
+                    Downloads fresh tools and replaces the previous copies.
                   </span>
                 </div>
               </div>
