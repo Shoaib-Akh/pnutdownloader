@@ -140,6 +140,9 @@ const getYtdlpExecutableName = () => {
   if (process.platform === 'win32') {
     return 'yt-dlp.exe';
   }
+  if (process.platform === 'darwin') {
+    return 'yt-dlp_macos';
+  }
   return 'yt-dlp';
 };
 
@@ -279,10 +282,13 @@ const getYtdlpLaunch = (args, scriptPath = getYtdlpPath()) => {
   }
 
   const pythonPath = getCompatibleMacPythonPath();
-  if (pythonPath && existsSync(scriptPath)) {
+  const pythonScriptPath = app.isPackaged
+    ? join(process.resourcesPath, 'yt-dlp')
+    : join(__dirname, '../../public', 'yt-dlp');
+  if (pythonPath && existsSync(pythonScriptPath)) {
     return {
       executable: pythonPath,
-      args: [scriptPath, ...args],
+      args: [pythonScriptPath, ...args],
       mode: 'python'
     };
   }
@@ -1030,6 +1036,8 @@ async function updateYtdlp(forceUpdate = false, options = {}) {
       // Fallback to stable releases if nightly fails
       if (process.platform === 'win32') {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe';
+      } else if (process.platform === 'darwin') {
+        ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos';
       } else {
         ytdlpUrl = 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
       }

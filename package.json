@@ -1,6 +1,6 @@
 {
   "name": "PNUTDownloader",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Your favorite video downloader",
   "main": "./out/main/index.js",
   "author": "PNUT Downloader",
@@ -16,7 +16,9 @@
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "rimraf dist out && npm run build && electron-builder --win && electron-builder --publish=always",
-    "build:mac": "rimraf dist out && npm run build && electron-builder --mac && electron-builder --publish=always",
+    "prepare:mac": "node scripts/prepare-mac-dependencies.mjs",
+    "build:mac": "rimraf dist out && npm run prepare:mac && npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --universal --publish never && npm run verify:mac",
+    "verify:mac": "node scripts/verify-mac-build.mjs",
     "build:linux": "npm run build && electron-builder --linux",
     "publish:release": "electron-builder --publish=always",
     "docs": "make -C docs help",
@@ -63,7 +65,6 @@
   "build": {
     "appId": "com.shoaibakh.pnutdownloader",
     "win": {
-      "target": "nsis",
       "icon": "public/icon.ico",
       "extraResources": [
         {
@@ -77,39 +78,17 @@
       ]
     },
     "linux": {
-      "target": "AppImage",
-      "icon": "resources/icon.png",
-      "extraResources": [
-        {
-          "from": "public/yt-dlp",
-          "to": "yt-dlp"
-        },
-        {
-          "from": "public/ffmpeg",
-          "to": "ffmpeg"
-        }
-      ]
+      "icon": "resources/icon.png"
     },
     "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64",
-            "universal"
-          ]
-        }
-      ],
+      "target": "dmg",
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
       "icon": "resources/icon.icns",
       "category": "public.app-category.utilities",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
+      "x64ArchFiles": "Contents/Resources/{ffmpeg,yt-dlp_macos}",
       "extraResources": [
-        {
-          "from": "public/yt-dlp",
-          "to": "yt-dlp"
-        },
         {
           "from": "public/yt-dlp_macos",
           "to": "yt-dlp_macos"
