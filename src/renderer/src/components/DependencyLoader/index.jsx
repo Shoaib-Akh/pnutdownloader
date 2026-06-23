@@ -101,7 +101,7 @@ const DependencyLoader = ({
               style={hasPercent ? { width: `${Math.min(Math.max(percent, 0), 100)}%` } : undefined}
             />
           </div>
-          {(showByteProgress || showSpeed) && (
+          {/* {(showByteProgress || showSpeed) && (
             <div className="dependency-loader__meta">
               {showByteProgress && (
                 <span>
@@ -110,7 +110,7 @@ const DependencyLoader = ({
               )}
               {showSpeed && <span>{formatBytes(speedBps)}/s</span>}
             </div>
-          )}
+          )} */}
         </div>
 
         {/* <div className="dependency-loader__grid">
