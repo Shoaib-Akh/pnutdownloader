@@ -1,5 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, session, dialog, globalShortcut, Notification, clipboard } from 'electron'
-import { join } from 'path'
+import { basename, isAbsolute, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
@@ -1557,9 +1557,9 @@ function createWindow() {
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
     width: 1200,
-    height: 850,
+    height: 760,
     minWidth: 1150,
-    minHeight: 850,
+    minHeight: 800,
     icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {
@@ -3467,6 +3467,219 @@ ipcMain.handle(IPC_CHANNELS.OPEN_PATH, async (event, path) => {
   } catch (error) {
     console.error(`Failed to open path ${path}:`, error);
     throw error;
+  }
+});
+
+const DOWNLOAD_MEDIA_EXTENSIONS = new Set([
+  '.mp4',
+  '.webm',
+  '.mkv',
+  '.avi',
+  '.mov',
+  '.mp3',
+  '.flac',
+  '.wav',
+  '.aac',
+  '.m4a',
+  '.ogg',
+  '.opus'
+]);
+
+const sanitizeDownloadFolderName = (value) =>
+  String(value || 'Unknown')
+    .replace(/[<>:"/\\|?*]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-zA-Z0-9._-]/g, ' ')
+    .replace(/^[.-]+|[.-]+$/g, ' ')
+    .substring(0, 200);
+
+const normalizeDownloadName = (value) =>
+  basename(String(value || ''))
+    .normalize('NFD')
+    .toLowerCase()
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .replace(/[_\-\s]+\d+[pP]$/i, '')
+    .replace(/[_\-\s]+\d+[kK]$/i, '')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const getAccessiblePathType = async (targetPath) => {
+  if (!targetPath || typeof targetPath !== 'string') return null;
+  try {
+    const stats = await fs.stat(targetPath);
+    if (stats.isFile()) return 'file';
+    if (stats.isDirectory()) return 'directory';
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+const listDownloadMediaFiles = async (directory, maxDepth = 0, depth = 0) => {
+  try {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    const files = [];
+
+    for (const entry of entries) {
+      const entryPath = join(directory, entry.name);
+      if (entry.isFile()) {
+        const extension = entry.name.includes('.')
+          ? `.${entry.name.split('.').pop().toLowerCase()}`
+          : '';
+        if (DOWNLOAD_MEDIA_EXTENSIONS.has(extension) && !entry.name.toLowerCase().endsWith('.part')) {
+          files.push(entryPath);
+        }
+      } else if (entry.isDirectory() && depth < maxDepth) {
+        files.push(...(await listDownloadMediaFiles(entryPath, maxDepth, depth + 1)));
+      }
+    }
+
+    return files;
+  } catch {
+    return [];
+  }
+};
+
+const scoreDownloadFileMatch = (filePath, item) => {
+  const candidate = normalizeDownloadName(filePath);
+  const wantedNames = [item?.filename, item?.title]
+    .map(normalizeDownloadName)
+    .filter(Boolean);
+
+  if (!candidate || wantedNames.length === 0) return 0;
+
+  let bestScore = 0;
+  for (const wanted of wantedNames) {
+    if (candidate === wanted) {
+      bestScore = Math.max(bestScore, 1000);
+      continue;
+    }
+
+    if (wanted.length >= 4 && (candidate.includes(wanted) || wanted.includes(candidate))) {
+      bestScore = Math.max(bestScore, 600 - Math.abs(candidate.length - wanted.length));
+    }
+  }
+
+  const extension = `.${filePath.split('.').pop().toLowerCase()}`;
+  const isAudio = ['.mp3', '.flac', '.wav', '.aac', '.m4a', '.ogg', '.opus'].includes(extension);
+  if (bestScore > 0 && (item?.downloadType === 'audio') === isAudio) bestScore += 10;
+  return bestScore;
+};
+
+const revealDownloadedItem = async (item = {}) => {
+  const recordedPaths = [item.filePath, item.outputPath, item.localPath, item.path]
+    .filter((value) => typeof value === 'string' && value.trim());
+
+  for (const recordedPath of recordedPaths) {
+    const pathType = await getAccessiblePathType(recordedPath);
+    if (pathType) {
+      shell.showItemInFolder(recordedPath);
+      return { success: true, path: recordedPath, revealed: pathType, exact: true };
+    }
+  }
+
+  const roots = [];
+  const addRoot = (root) => {
+    if (root && !roots.includes(root)) roots.push(root);
+  };
+  const savedLocation = typeof item.saveTo === 'string' ? item.saveTo.trim() : '';
+  const savedLocationKey = savedLocation.toLowerCase();
+
+  if (savedLocationKey === 'desktop') {
+    addRoot(app.getPath('desktop'));
+  } else if (savedLocationKey === 'downloads' || savedLocationKey === 'download') {
+    addRoot(app.getPath('downloads'));
+  } else if (isAbsolute(savedLocation)) {
+    addRoot(savedLocation);
+  }
+
+  // Always check both standard destinations for older download records.
+  addRoot(app.getPath('downloads'));
+  addRoot(app.getPath('desktop'));
+
+  const formatDirectory = item.downloadType === 'audio' ? 'Audio' : 'Video';
+  const playlistDirectoryName = item.playlistTitle
+    ? sanitizeDownloadFolderName(item.playlistTitle)
+    : null;
+  const searchDirectories = [];
+  const playlistDirectories = [];
+  const fallbackDirectories = [];
+  const addSearchDirectory = (path, maxDepth = 0) => {
+    if (path && !searchDirectories.some((entry) => entry.path === path)) {
+      searchDirectories.push({ path, maxDepth });
+    }
+  };
+
+  for (const root of roots) {
+    const pnutRoot = join(root, 'PNUT Downloader');
+    addSearchDirectory(root, 0); // Files moved directly into a chosen folder.
+
+    if (playlistDirectoryName) {
+      const playlistDirectory = join(pnutRoot, playlistDirectoryName);
+      const legacyPlaylistDirectory = join(pnutRoot, formatDirectory, playlistDirectoryName);
+      playlistDirectories.push(playlistDirectory, legacyPlaylistDirectory);
+      addSearchDirectory(playlistDirectory, 1);
+      addSearchDirectory(legacyPlaylistDirectory, 1);
+    }
+
+    const mediaDirectory = join(pnutRoot, formatDirectory);
+    fallbackDirectories.push(
+      ...(playlistDirectoryName ? [join(pnutRoot, playlistDirectoryName)] : []),
+      mediaDirectory,
+      pnutRoot
+    );
+    addSearchDirectory(mediaDirectory, playlistDirectoryName ? 1 : 0);
+    addSearchDirectory(pnutRoot, 2);
+  }
+
+  let bestMatch = null;
+  for (const directory of searchDirectories) {
+    const files = await listDownloadMediaFiles(directory.path, directory.maxDepth);
+    for (const filePath of files) {
+      const score = scoreDownloadFileMatch(filePath, item);
+      if (score > 0 && (!bestMatch || score > bestMatch.score)) {
+        bestMatch = { path: filePath, score };
+      }
+    }
+    if (bestMatch?.score >= 1000) break;
+  }
+
+  if (bestMatch) {
+    shell.showItemInFolder(bestMatch.path);
+    return { success: true, path: bestMatch.path, revealed: 'file', exact: true };
+  }
+
+  // For a playlist record, reveal the exact playlist folder when no individual file can be matched.
+  for (const playlistDirectory of playlistDirectories) {
+    if ((await getAccessiblePathType(playlistDirectory)) === 'directory') {
+      shell.showItemInFolder(playlistDirectory);
+      return { success: true, path: playlistDirectory, revealed: 'playlist-folder', exact: true };
+    }
+  }
+
+  for (const fallbackDirectory of fallbackDirectories) {
+    if ((await getAccessiblePathType(fallbackDirectory)) === 'directory') {
+      const openError = await shell.openPath(fallbackDirectory);
+      if (!openError) {
+        return { success: true, path: fallbackDirectory, revealed: 'folder', exact: false };
+      }
+    }
+  }
+
+  return {
+    success: false,
+    error: 'Could not locate this download on Desktop or in Downloads. It may have been moved or deleted.'
+  };
+};
+
+ipcMain.handle(IPC_CHANNELS.REVEAL_DOWNLOAD, async (_event, item) => {
+  try {
+    return await revealDownloadedItem(item);
+  } catch (error) {
+    console.error('Failed to reveal downloaded item:', error);
+    return { success: false, error: error.message };
   }
 });
 

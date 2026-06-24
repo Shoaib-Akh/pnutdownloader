@@ -137,6 +137,8 @@ select,
 .download-library__count,
 .navbar-quality-badge {
   font-family: var(--font-mono) !important;
+      color:white !important
+
 }
 
 button:focus-visible,

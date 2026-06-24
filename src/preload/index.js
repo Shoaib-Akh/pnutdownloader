@@ -60,6 +60,7 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
   getPath: (type) => ipcRenderer.invoke(IPC_CHANNELS.GET_PATH, type),
 accessFile: (path) => ipcRenderer.invoke(IPC_CHANNELS.ACCESS_FILE, path),
 openPath: (path) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_PATH, path),
+  revealDownload: (item) => ipcRenderer.invoke(IPC_CHANNELS.REVEAL_DOWNLOAD, item),
   // ✅ New function to read directory contents
   readDirectory: (dirPath) => ipcRenderer.invoke(IPC_CHANNELS.READ_DIRECTORY, dirPath),
 

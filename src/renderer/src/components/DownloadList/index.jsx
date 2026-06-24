@@ -245,7 +245,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         const downloads = JSON.parse(localStorage.getItem('downloadList') || '[]')
         const updatedDownloads = downloads.map(d => {
           if (d.id === item.id) {
-            return { ...d, saveTo: selectedFolder }
+            return { ...d, saveTo: selectedFolder, filePath: destinationPath }
           }
           return d
         })
@@ -283,113 +283,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   
   const handleShowInFinder = async (item) => {
     try {
-      // Get the actual file path (similar to handleThumbnailClick logic)
-      const videoExtensions = ['mp4', 'webm', 'mkv', 'avi']
-      const audioExtensions = ['mp3', 'flac', 'wav', 'aac']
-      const possibleExtensions = item.downloadType === 'audio' ? audioExtensions : videoExtensions
-
-      const customSanitize = (str) => {
-        if (!str) return 'Unknown'
-        return str
-          .replace(/[<>:"/\\|?*]+/g, ' ')
-          .replace(/\s+/g, ' ')
-          .replace(/[^a-zA-Z0-9._-]/g, ' ')
-          .replace(/^[.-]+|[.-]+$/g, ' ')
-          .substring(0, 200)
-      }
-
-      const normalizeForMatch = (value) => {
-        if (!value) return ''
-        return value
-          .toString()
-          .normalize('NFD')
-          .toLowerCase()
-          .replace(/[''‛‹›""「」『』【】〔〕]/g, "'")
-          .replace(/["""„""«»‹›]/g, '"')
-          .replace(/[\s\u2000-\u200F\u2028-\u202F\u205F\u3000]+/g, ' ')
-          .trim()
-          .replace(/[_\-\s]+\d+[pP](\.[a-z0-9]+)?$/i, '')
-          .replace(/[_\-\s]+\d+[kK]$/i, '')
-          .replace(/\.[a-z0-9]{2,5}$/i, '')
-          .replace(/[\|\:\/\\]/g, '_')
-          .replace(/[\u0300-\u036f\u1AB0-\u1AFF\u20D0-\u20FF]/g, '')
-          .replace(/[^\p{L}\p{N}._\-\s'"']/gu, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-      }
-
-      let allPathsToSearch = []
-      if (item.saveTo && typeof item.saveTo === 'string') {
-        try {
-          await window.api.readDirectory(item.saveTo)
-          allPathsToSearch.push(item.saveTo)
-        } catch (err) {
-          console.warn(`saveTo path not accessible: ${item.saveTo}`, err)
-        }
-      }
-
-      const fallbackFolders = [await window.api.getPath('downloads'), await window.api.getPath('desktop')]
-      fallbackFolders.forEach((path) => {
-        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path)
-      })
-
-      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
-      const baseDirectories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`)
-      const playlistSubDir = item.playlistTitle ? customSanitize(item.playlistTitle) : null
-      const directories = playlistSubDir
-        ? [...baseDirectories.map((d) => `${d}/${playlistSubDir}`), ...baseDirectories]
-        : baseDirectories
-
-      const normalizedTitle = normalizeForMatch(item.filename || item.title)
-      let filePath = null
-
-      for (const dir of directories) {
-        try {
-          await window.api.createDirectory(dir)
-          const files = await window.api.readDirectory(dir)
-
-          filePath = files.find((file) => {
-            const fileName = file.toLowerCase()
-            if (fileName.endsWith('.part')) return false
-            const titlePart = fileName.split('.').slice(0, -1).join('.').trim()
-            const hasValidExtension = possibleExtensions.some((ext) => fileName.endsWith(`.${ext}`))
-            const normalizedFileTitle = normalizeForMatch(titlePart)
-            const isExact = normalizedFileTitle === normalizedTitle
-            const isPartial = normalizedFileTitle && normalizedTitle && (normalizedFileTitle.includes(normalizedTitle) || normalizedTitle.includes(normalizedFileTitle))
-            return hasValidExtension && (isExact || isPartial)
-          })
-
-          if (filePath) {
-            filePath = `${dir}/${filePath}`
-            break
-          }
-        } catch (dirError) {
-          console.error(`Error reading directory ${dir}:`, dirError)
-        }
-      }
-
-      if (filePath) {
-        // Show the file in system file explorer
-        if (window.api.showFileInFolder) {
-          await window.api.showFileInFolder(filePath)
-        } else {
-          // Fallback: open the containing folder
-          const folderPath = filePath.substring(0, filePath.lastIndexOf('/'))
-          if (window.api.openPath) {
-            await window.api.openPath(folderPath)
-          } else {
-            const encodedPath = encodeURI(folderPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25')
-            const folderUrl = `file:///${encodedPath}`
-            await window.api.openExternal(folderUrl)
-          }
-        }
-      } else {
-        // Fallback to opening the download folder if file not found
-        handleOpenFolder(item)
-      }
+      await handleOpenFolder(item)
     } catch (error) {
       console.error('Error showing file in finder:', error)
-      alert('Failed to show file in finder. Please check the console for details.')
+      alert(error?.message || 'Failed to show the download in its folder.')
     }
     setOpenDropdown(null)
   }
@@ -1072,9 +969,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                           fontSize: '11px',
                           color: 'var(--pnut-muted)'
                         }}>
-                          <span>Speed: {speed}</span>
                           <span>Size: {fileSize}</span>
-                          <span>ETA: {eta}</span>
                         </div>
                       </div>
                     )}
@@ -1088,7 +983,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                       type="button"
                       className="btn pnut-button pnut-button--icon"
                       onClick={() => handleOpenFolderClick(item)}
-                      title="Open folder"
+                      title="Show in folder"
                       style={{
                         background: 'transparent',
                         border: '1px solid var(--pnut-border)',

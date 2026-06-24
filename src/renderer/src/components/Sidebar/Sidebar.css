@@ -723,30 +723,287 @@
   border-top: 1px solid var(--pnut-border);
 }
 
-.sidebar__logo {
-  width: 74px !important;
-  height: auto !important;
-  margin-bottom: 8px !important;
-  opacity: 0.95;
+.sidebar__coffee-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(111, 78, 55, 0.25);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #fff8e7, #efd09a);
+  color: #6f4e37;
+  font-size: 21px;
+  box-shadow: 0 5px 16px rgba(62, 41, 28, 0.14);
+}
+
+.dark-theme .sidebar__coffee-logo {
+  border-color: rgba(255, 199, 107, 0.3);
+  background: linear-gradient(145deg, #49311d, #25170d);
+  color: #f3c56d;
+  box-shadow: 0 5px 16px rgba(0, 0, 0, 0.3);
 }
 
 .sidebar__buy-nuts-button {
   width: 100% !important;
-  min-height: 38px;
-  padding: 8px 12px !important;
-  border: 1px solid var(--pnut-brand-border) !important;
+  min-height: 52px;
+  padding: 8px 10px !important;
+  gap: 10px;
+  justify-content: flex-start;
+  border: 1px solid rgba(111, 78, 55, 0.32) !important;
   border-radius: var(--pnut-radius) !important;
-  background: var(--pnut-brand-soft) !important;
-  color: var(--pnut-brand) !important;
-  box-shadow: none !important;
+  background: linear-gradient(135deg, #fff8e7 0%, #f6e2bb 100%) !important;
+  color: #3e291c !important;
+  box-shadow: 0 4px 14px rgba(62, 41, 28, 0.12) !important;
   font-size: 13px !important;
+  text-align: left;
+  cursor: pointer;
 }
 
 .sidebar__buy-nuts-button:hover {
-  background: var(--pnut-button-bg) !important;
-  color: var(--pnut-button-text) !important;
+  border-color: rgba(111, 78, 55, 0.55) !important;
+  background: linear-gradient(135deg, #ffe8ad 0%, #efc978 100%) !important;
+  color: #2d1b11 !important;
   transform: translateY(-1px) !important;
-  box-shadow: var(--pnut-shadow-sm) !important;
+  box-shadow: 0 7px 18px rgba(62, 41, 28, 0.18) !important;
+}
+
+.sidebar__buy-nuts-button:active {
+  transform: translateY(0) !important;
+}
+
+.sidebar__coffee-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #6f4e37;
+  color: #ffffff;
+  font-size: 16px;
+  box-shadow: 0 3px 8px rgba(62, 41, 28, 0.2);
+}
+
+.sidebar__coffee-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.sidebar__coffee-title {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sidebar__coffee-subtitle {
+  margin-top: 3px;
+  color: #76583f;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dark-theme .sidebar__buy-nuts-button {
+  border-color: rgba(255, 199, 107, 0.3) !important;
+  background: linear-gradient(135deg, #352313 0%, #25170d 100%) !important;
+  color: #fff5df !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-theme .sidebar__buy-nuts-button:hover {
+  border-color: rgba(255, 199, 107, 0.58) !important;
+  background: linear-gradient(135deg, #49311d 0%, #332012 100%) !important;
+  color: #ffffff !important;
+}
+
+.dark-theme .sidebar__coffee-icon {
+  background: #f3c56d;
+  color: #2d1b11;
+}
+
+.dark-theme .sidebar__coffee-subtitle {
+  color: #d9b77d;
+}
+
+.sidebar__repair-button {
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar__icon-container--repair {
+  background: var(--pnut-warning-soft) !important;
+  color: var(--pnut-warning) !important;
+}
+
+.repair-downloads-modal .modal-dialog {
+  max-width: 520px;
+}
+
+.repair-downloads-modal .modal-content {
+  overflow: hidden;
+  border: 1px solid var(--pnut-border);
+  border-radius: var(--pnut-radius-lg);
+  background: var(--pnut-surface);
+  color: var(--pnut-text);
+  box-shadow: var(--pnut-shadow-lg);
+}
+
+.repair-downloads-modal__header {
+  padding: 22px 24px 12px;
+  border-bottom: 0;
+  background: var(--pnut-surface);
+}
+
+.repair-downloads-modal__title {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: var(--pnut-text);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.repair-downloads-modal__title svg {
+  color: var(--pnut-warning);
+  font-size: 21px;
+}
+
+.repair-downloads-modal__body {
+  padding: 8px 24px 22px;
+  background: var(--pnut-surface);
+  color: var(--pnut-text);
+}
+
+.repair-downloads-modal__lead {
+  margin: 0;
+  color: var(--pnut-text-soft);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.55;
+}
+
+.repair-downloads-modal__notice {
+  margin-top: 16px;
+  padding: 13px 14px;
+  border: 1px solid var(--pnut-brand-border);
+  border-radius: var(--pnut-radius);
+  background: var(--pnut-brand-soft);
+  color: var(--pnut-text-soft);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.repair-downloads-modal__question {
+  margin: 18px 0 0;
+  color: var(--pnut-text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.repair-downloads-modal__status {
+  padding: 16px;
+  border: 1px solid var(--pnut-border);
+  border-radius: var(--pnut-radius);
+  background: var(--pnut-surface-raised);
+}
+
+.repair-downloads-modal__status p {
+  margin: 0;
+  color: var(--pnut-text-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.repair-downloads-modal__status small {
+  display: block;
+  margin-top: 8px;
+  color: var(--pnut-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.repair-downloads-modal__status--success {
+  border-color: color-mix(in srgb, var(--pnut-success) 36%, transparent);
+  background: var(--pnut-success-soft);
+}
+
+.repair-downloads-modal__status--error {
+  border-color: color-mix(in srgb, var(--pnut-danger) 36%, transparent);
+  background: var(--pnut-danger-soft);
+}
+
+.repair-downloads-modal__status--error p {
+  color: var(--pnut-danger);
+}
+
+.repair-downloads-modal__footer {
+  gap: 10px;
+  padding: 16px 24px 22px;
+  border-top: 1px solid var(--pnut-border);
+  background: var(--pnut-surface-raised);
+}
+
+.repair-downloads-modal .repair-downloads-modal__cancel,
+.repair-downloads-modal .repair-downloads-modal__confirm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 15px;
+  border-radius: var(--pnut-radius);
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+.repair-downloads-modal .repair-downloads-modal__cancel {
+  border: 1px solid var(--pnut-border-strong);
+  background: var(--pnut-surface);
+  color: var(--pnut-text-soft);
+}
+
+.repair-downloads-modal .repair-downloads-modal__cancel:hover {
+  border-color: var(--pnut-brand);
+  background: var(--pnut-brand-soft);
+  color: var(--pnut-text);
+}
+
+.repair-downloads-modal .repair-downloads-modal__confirm {
+  border: 1px solid var(--pnut-button-bg);
+  background: var(--pnut-button-bg);
+  color: var(--pnut-button-text);
+}
+
+.repair-downloads-modal .repair-downloads-modal__confirm:hover:not(:disabled) {
+  border-color: var(--pnut-button-hover);
+  background: var(--pnut-button-hover);
+  color: var(--pnut-button-text);
+  transform: translateY(-1px);
+}
+
+.repair-downloads-modal .repair-downloads-modal__confirm:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.repair-downloads-modal__spinner {
+  animation: repair-downloads-spin 0.9s linear infinite;
+}
+
+@keyframes repair-downloads-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 900px) {
@@ -784,8 +1041,30 @@
   }
 
   .theme-toggle__switch,
-  .sidebar__logo,
+  .sidebar__coffee-logo,
   .sidebar__buy-nuts-button {
     display: none !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .repair-downloads-modal .modal-dialog {
+    margin: 12px;
+  }
+
+  .repair-downloads-modal__header,
+  .repair-downloads-modal__body,
+  .repair-downloads-modal__footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .repair-downloads-modal__footer {
+    flex-direction: column-reverse;
+  }
+
+  .repair-downloads-modal .repair-downloads-modal__cancel,
+  .repair-downloads-modal .repair-downloads-modal__confirm {
+    width: 100%;
   }
 }

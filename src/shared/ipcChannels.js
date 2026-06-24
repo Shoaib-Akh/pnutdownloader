@@ -30,6 +30,7 @@ export const IPC_CHANNELS = {
   PAUSE_DOWNLOAD: 'pauseDownload',
   PROXY_IMAGE: 'proxy-image',
   READ_DIRECTORY: 'read-directory',
+  REVEAL_DOWNLOAD: 'reveal-download',
   RESUME_DOWNLOAD: 'resumeDownload',
   SELECT_FOLDER: 'select-folder',
   SHOW_CONFIRM_DIALOG: 'show-confirm-dialog',

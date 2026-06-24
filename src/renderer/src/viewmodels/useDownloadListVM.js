@@ -17,6 +17,193 @@ const isProtectedCDN = (url) => {
 const readDownloads = () => JSON.parse(localStorage.getItem(DOWNLOAD_STORAGE_KEY) || '[]')
 const writeDownloads = (list) => localStorage.setItem(DOWNLOAD_STORAGE_KEY, JSON.stringify(list))
 
+const MEDIA_EXTENSIONS = new Set([
+  'mp4',
+  'webm',
+  'mkv',
+  'avi',
+  'mov',
+  'mp3',
+  'flac',
+  'wav',
+  'aac',
+  'm4a',
+  'ogg',
+  'opus',
+])
+
+const joinFilePath = (...parts) => {
+  const firstPart = String(parts.shift() || '')
+  const separator = firstPart.includes('\\') ? '\\' : '/'
+  return [firstPart.replace(/[\\/]+$/, ''), ...parts.map((part) => String(part).replace(/^[\\/]+|[\\/]+$/g, ''))]
+    .filter(Boolean)
+    .join(separator)
+}
+
+const getParentPath = (filePath) => String(filePath || '').replace(/[\\/][^\\/]+$/, '')
+
+const sanitizePlaylistFolder = (value) =>
+  String(value || 'Unknown')
+    .replace(/[<>:"/\\|?*]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/[^a-zA-Z0-9._-]/g, ' ')
+    .replace(/^[.-]+|[.-]+$/g, ' ')
+    .substring(0, 200)
+
+const normalizeDownloadName = (value) =>
+  String(value || '')
+    .split(/[\\/]/)
+    .pop()
+    .normalize('NFD')
+    .toLowerCase()
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .replace(/[_\-\s]+\d+p$/i, '')
+    .replace(/[_\-\s]+\d+k$/i, '')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const revealPathWithAvailableApi = async (targetPath, isDirectory = false) => {
+  if (window.api?.showFileInFolder) {
+    const result = await window.api.showFileInFolder(targetPath)
+    return result?.success !== false
+  }
+
+  if (window.api?.openPath) {
+    const pathToOpen = isDirectory ? targetPath : getParentPath(targetPath)
+    const result = await window.api.openPath(pathToOpen)
+    return result?.success !== false
+  }
+
+  return false
+}
+
+const revealDownloadWithLegacyApi = async (item) => {
+  const pathExists = async (targetPath) => {
+    if (!targetPath || !window.api?.fileExists) return false
+    try {
+      return Boolean(await window.api.fileExists(targetPath))
+    } catch {
+      return false
+    }
+  }
+
+  const recordedPaths = [item?.filePath, item?.outputPath, item?.localPath, item?.path]
+    .filter((value) => typeof value === 'string' && value.trim())
+
+  for (const recordedPath of recordedPaths) {
+    if (await pathExists(recordedPath)) {
+      const revealed = await revealPathWithAvailableApi(recordedPath)
+      if (revealed) return { success: true, path: recordedPath, exact: true }
+    }
+  }
+
+  if (!window.api?.getPath || !window.api?.readDirectory) {
+    return { success: false, error: 'Folder access is unavailable. Restart PNUT Downloader and try again.' }
+  }
+
+  const roots = []
+  const addRoot = (path) => {
+    if (path && !roots.includes(path)) roots.push(path)
+  }
+  const savedLocation = typeof item?.saveTo === 'string' ? item.saveTo.trim() : ''
+  const savedLocationKey = savedLocation.toLowerCase()
+
+  if (savedLocationKey === 'desktop') {
+    addRoot(await window.api.getPath('desktop'))
+  } else if (savedLocationKey === 'downloads' || savedLocationKey === 'download') {
+    addRoot(await window.api.getPath('downloads'))
+  } else if (savedLocation && (savedLocation.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(savedLocation))) {
+    addRoot(savedLocation)
+  }
+
+  addRoot(await window.api.getPath('downloads'))
+  addRoot(await window.api.getPath('desktop'))
+
+  const mediaFolder = item?.downloadType === 'audio' ? 'Audio' : 'Video'
+  const playlistFolder = item?.playlistTitle ? sanitizePlaylistFolder(item.playlistTitle) : null
+  const directories = []
+  const playlistDirectories = []
+  const fallbackDirectories = []
+  const addDirectory = (directory) => {
+    if (directory && !directories.includes(directory)) directories.push(directory)
+  }
+
+  roots.forEach((root) => {
+    const pnutRoot = joinFilePath(root, 'PNUT Downloader')
+    addDirectory(root) // Supports files moved directly into a custom folder.
+
+    if (playlistFolder) {
+      const exactPlaylistDirectory = joinFilePath(pnutRoot, playlistFolder)
+      const legacyPlaylistDirectory = joinFilePath(pnutRoot, mediaFolder, playlistFolder)
+      playlistDirectories.push(exactPlaylistDirectory, legacyPlaylistDirectory)
+      addDirectory(exactPlaylistDirectory)
+      addDirectory(legacyPlaylistDirectory)
+    }
+
+    const formatDirectory = joinFilePath(pnutRoot, mediaFolder)
+    addDirectory(formatDirectory)
+    fallbackDirectories.push(...(playlistFolder ? [joinFilePath(pnutRoot, playlistFolder)] : []), formatDirectory, pnutRoot)
+  })
+
+  const wantedNames = [item?.filename, item?.title].map(normalizeDownloadName).filter(Boolean)
+  let bestMatch = null
+
+  for (const directory of directories) {
+    let files
+    try {
+      files = await window.api.readDirectory(directory)
+    } catch {
+      continue
+    }
+
+    for (const fileName of files) {
+      const extension = String(fileName).split('.').pop().toLowerCase()
+      if (!MEDIA_EXTENSIONS.has(extension) || String(fileName).toLowerCase().endsWith('.part')) continue
+
+      const candidateName = normalizeDownloadName(fileName)
+      for (const wantedName of wantedNames) {
+        let score = 0
+        if (candidateName === wantedName) score = 1000
+        else if (
+          wantedName.length >= 4 &&
+          (candidateName.includes(wantedName) || wantedName.includes(candidateName))
+        ) {
+          score = 600 - Math.abs(candidateName.length - wantedName.length)
+        }
+
+        if (score > (bestMatch?.score || 0)) {
+          bestMatch = { path: joinFilePath(directory, fileName), score }
+        }
+      }
+    }
+
+    if (bestMatch?.score >= 1000) break
+  }
+
+  if (bestMatch && (await revealPathWithAvailableApi(bestMatch.path))) {
+    return { success: true, path: bestMatch.path, exact: true }
+  }
+
+  for (const playlistDirectory of playlistDirectories) {
+    if ((await pathExists(playlistDirectory)) && (await revealPathWithAvailableApi(playlistDirectory, true))) {
+      return { success: true, path: playlistDirectory, exact: true }
+    }
+  }
+
+  for (const fallbackDirectory of fallbackDirectories) {
+    if ((await pathExists(fallbackDirectory)) && (await revealPathWithAvailableApi(fallbackDirectory, true))) {
+      return { success: true, path: fallbackDirectory, exact: false }
+    }
+  }
+
+  return {
+    success: false,
+    error: 'Could not locate this download on Desktop or in Downloads. It may have been moved or deleted.',
+  }
+}
+
 const useDownloadListVM = () => {
   const [proxiedThumbnails, setProxiedThumbnails] = useState({})
   const [lastUpdated, setLastUpdated] = useState(Date.now())
@@ -174,46 +361,26 @@ const useDownloadListVM = () => {
 
   const handleOpenFolder = useCallback(async (item) => {
     try {
-      const allPathsToSearch = []
+      let result = null
 
-      if (item.saveTo && typeof item.saveTo === 'string') {
+      if (window.api?.revealDownload) {
         try {
-          await window.api.readDirectory(item.saveTo)
-          allPathsToSearch.push(item.saveTo)
-        } catch (err) {
-          console.warn(`saveTo path not accessible: ${item.saveTo}`, err)
+          result = await window.api.revealDownload(item)
+        } catch (nativeError) {
+          console.warn('Native reveal API is unavailable; using compatibility fallback.', nativeError)
         }
       }
 
-      const fallbackFolders = [await window.api.getPath('downloads'), await window.api.getPath('desktop')]
-      fallbackFolders.forEach((path) => {
-        if (!allPathsToSearch.includes(path)) allPathsToSearch.push(path)
-      })
-
-      const subDir = item.downloadType === 'audio' ? 'Audio' : 'Video'
-      const directories = allPathsToSearch.map((path) => `${path}/PNUT Downloader/${subDir}`)
-
-      for (const dir of directories) {
-        try {
-          await window.api.createDirectory(dir)
-          await window.api.readDirectory(dir)
-          if (window.api.openPath) {
-            await window.api.openPath(dir)
-          } else {
-            const encodedPath = encodeURI(dir.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/%/g, '%25')
-            const folderUrl = `file:///${encodedPath}`
-            await window.api.openExternal(folderUrl)
-          }
-          return
-        } catch (err) {
-          console.warn(`Folder not accessible: ${dir}`, err)
-        }
+      if (!result?.success) {
+        result = await revealDownloadWithLegacyApi(item)
       }
 
-      alert('Could not locate the download folder. It may have been moved or is not accessible.')
+      if (!result?.success) {
+        alert(result?.error || 'Could not locate this download. It may have been moved or deleted.')
+      }
     } catch (error) {
       console.error('Error in handleOpenFolder:', error)
-      alert('Failed to open folder. Please check the console for details.')
+      alert(error?.message || 'Failed to show the download in its folder.')
     }
   }, [])
 

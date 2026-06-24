@@ -196,6 +196,14 @@ const useDownloadManager = ({
           return
         }
 
+        if (progressData.file) {
+          stored[itemIdx] = {
+            ...stored[itemIdx],
+            filePath: String(progressData.file),
+          }
+          setStoredDownloads(stored)
+        }
+
         if (progressData.title || progressData.sanitizedTitle || progressData.thumbnail || progressData.duration) {
           stored[itemIdx] = {
             ...stored[itemIdx],
@@ -382,7 +390,7 @@ const useDownloadManager = ({
           type: 'warning',
           title: 'Repair Downloads',
           message: 'Download tools need attention.',
-          detail: 'Open About PNUT and click Repair Downloads. Try the download again after repair finishes.',
+          detail: 'Click Repair Downloads in the sidebar, then try the download again after repair finishes.',
           buttons: ['OK'],
           defaultId: 0
         }).catch(() => {})

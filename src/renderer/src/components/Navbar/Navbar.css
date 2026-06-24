@@ -327,7 +327,7 @@
 /* Quality Badge */
 .navbar-quality-badge {
   background: linear-gradient(135deg, var(--navbar-primary) 0%, var(--navbar-primary-dark) 100%);
-  color: white;
+  color: black !important;
   font-size: 0.65rem;
   padding: 3px 8px;
   border-radius: 10px;
@@ -546,6 +546,7 @@
     padding: 2px 6px;
     height: 16px;
     min-width: 28px;
+    color: black  !important;
   }
 }
 
@@ -724,7 +725,7 @@
 
 .pnut-dropdown__value,
 .navbar-controls .dropdown-toggle span:last-child {
-  color: var(--pnut-text) !important;
+  color: var(--theme-primary) !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   padding-left: 0 !important;
@@ -757,8 +758,8 @@
 }
 
 .navbar-quality-badge {
-  background: var(--pnut-brand) !important;
-  color: var(--pnut-button-text) !important;
+  background: var(--pnut-brand-soft) !important;
+  color: var(--pnut-text) !important;
   border-radius: 6px !important;
   box-shadow: none !important;
 }
