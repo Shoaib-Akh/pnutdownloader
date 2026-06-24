@@ -47,6 +47,20 @@ const extractPlaylistId = (url) => {
   return playlistMatch ? playlistMatch[1] : null
 }
 
+const isPlaylistDownloadUrl = (inputUrl) => {
+  if (!inputUrl || typeof inputUrl !== 'string') return false
+  try {
+    const url = new URL(inputUrl)
+    const host = url.hostname.toLowerCase()
+    if (!host.includes('youtube.com') && !host.includes('youtu.be')) return false
+    return url.pathname.toLowerCase().includes('/playlist') || (
+      url.searchParams.has('list') && !extractVideoId(inputUrl)
+    )
+  } catch {
+    return false
+  }
+}
+
 const useDownloadManager = ({
   downloadType,
   format,
@@ -168,24 +182,46 @@ const useDownloadManager = ({
       }
 
       const item = storedDownloads[itemIndex]
+      const itemIsPlaylist = Boolean(
+        item.isPlaylist || item.playlistTitle || item.playlistBatchId || isPlaylistDownloadUrl(item.url)
+      )
+
+      if (itemIsPlaylist) {
+        console.log('[PlaylistProgress] Starting playlist queue item', {
+          downloadId: currentId,
+          url: item.url,
+          playlistTitle: item.playlistTitle || null,
+          playlistBatchId: item.playlistBatchId || `direct:${item.id}`,
+        })
+      }
+
+      setActiveDownloads((prev) => {
+        const next = new Set(prev)
+        next.add(currentId)
+        return next
+      })
 
       storedDownloads[itemIndex].status = 'Fetching Info...'
       setStoredDownloads(storedDownloads)
 
       storedDownloads[itemIndex] = {
         ...storedDownloads[itemIndex],
-        title: item.isPlaylist ? 'Playlist Item' : item.title || 'Unknown',
-        playlistTitle: item.isPlaylist ? item.playlistTitle || 'Unknown Playlist' : null,
+        title: itemIsPlaylist && (!item.title || item.title === 'Pending...')
+          ? 'Preparing playlist…'
+          : item.title || 'Unknown',
+        playlistTitle: item.playlistTitle || null,
+        playlistBatchId: item.playlistBatchId || (itemIsPlaylist ? `direct:${item.id}` : null),
         thumbnail: item.thumbnail || '',
         filename: item.filename || `${item.title || 'video'}.${format === 'mp3' ? 'mp3' : 'mp4'}`,
         duration: item.duration || 'Unknown',
         fileSize: item.fileSize || 'Unknown',
         status: 'Downloading',
-        isPlaylist: item.isPlaylist || false,
+        isPlaylist: itemIsPlaylist,
       }
       setStoredDownloads(storedDownloads)
 
       const currentFileTypes = new Map()
+      const requestedPlaylistVideos = new Set()
 
       const handleProgress = (progressData) => {
         const stored = getStoredDownloads()
@@ -217,25 +253,81 @@ const useDownloadManager = ({
         }
 
         if (typeof progressData.message === 'string') {
-          if (
-            progressData.message.match(
-              /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-            ) && stored[itemIdx].isPlaylist
-          ) {
-            const match = progressData.message.match(
-              /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
-            )
-            const youtubeUrl = match[0]
+          const playlistTitleMatch = progressData.message.match(
+            /\[download\]\s+Downloading playlist:\s*(.+)$/
+          )
+          if (playlistTitleMatch) {
+            console.log('[PlaylistProgress] Playlist title detected', {
+              downloadId: currentId,
+              playlistTitle: playlistTitleMatch[1].trim(),
+            })
+            stored[itemIdx] = {
+              ...stored[itemIdx],
+              isPlaylist: true,
+              playlistTitle: playlistTitleMatch[1].trim() || stored[itemIdx].playlistTitle,
+              playlistBatchId: stored[itemIdx].playlistBatchId || `direct:${currentId}`,
+            }
+            setStoredDownloads(stored)
+          }
+
+          const youtubeMatch = progressData.message.match(
+            /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+          )
+          const isPlaylistJob = Boolean(
+            stored[itemIdx].isPlaylist ||
+            stored[itemIdx].playlistTitle ||
+            isPlaylistDownloadUrl(stored[itemIdx].url)
+          )
+
+          if (youtubeMatch && isPlaylistJob && !requestedPlaylistVideos.has(youtubeMatch[2])) {
+            const youtubeUrl = youtubeMatch[0]
+            const videoId = youtubeMatch[2]
+            requestedPlaylistVideos.add(videoId)
+
+            console.log('[PlaylistProgress] Current playlist video detected', {
+              downloadId: currentId,
+              currentItem: stored[itemIdx].currentItem || 0,
+              totalItems: stored[itemIdx].totalItems || 0,
+              videoId,
+              videoUrl: youtubeUrl,
+              thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            })
+
+            stored[itemIdx] = {
+              ...stored[itemIdx],
+              title: stored[itemIdx].currentItem
+                ? `Video ${stored[itemIdx].currentItem} of ${stored[itemIdx].totalItems || '…'}`
+                : 'Loading playlist video…',
+              thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+              currentVideoId: videoId,
+              currentVideoUrl: youtubeUrl,
+              status: 'Downloading',
+              isPlaylist: true,
+            }
+            setStoredDownloads(stored)
 
             getVideoInfo(youtubeUrl).then((ytInfo) => {
-              stored[itemIdx] = {
-                ...stored[itemIdx],
-                title: ytInfo?.title || 'Unknown',
-                thumbnail: ytInfo?.thumbnail || stored[itemIdx].thumbnail,
-                duration: ytInfo?.duration || 'Unknown',
+              const latestDownloads = getStoredDownloads()
+              const latestIndex = latestDownloads.findIndex((download) => download.id === currentId)
+              if (latestIndex === -1 || latestDownloads[latestIndex].currentVideoId !== videoId) return
+
+              latestDownloads[latestIndex] = {
+                ...latestDownloads[latestIndex],
+                title: ytInfo?.title || latestDownloads[latestIndex].title,
+                thumbnail: ytInfo?.thumbnail || latestDownloads[latestIndex].thumbnail,
+                duration: ytInfo?.duration || latestDownloads[latestIndex].duration || 'Unknown',
                 status: 'Downloading',
               }
-              setStoredDownloads(stored)
+              console.log('[PlaylistProgress] Current video metadata loaded', {
+                downloadId: currentId,
+                videoId,
+                title: latestDownloads[latestIndex].title,
+                thumbnail: latestDownloads[latestIndex].thumbnail,
+                duration: latestDownloads[latestIndex].duration,
+              })
+              setStoredDownloads(latestDownloads)
+            }).catch((metadataError) => {
+              console.warn('Could not load current playlist video metadata:', metadataError)
             })
           }
 
@@ -297,8 +389,27 @@ const useDownloadManager = ({
           const itemCountMatch = progressData.message.match(/\[download\] Downloading item (\d+) of (\d+)/)
           if (itemCountMatch) {
             const [, currentItem, totalItems] = itemCountMatch
-            stored[itemIdx].currentItem = parseInt(currentItem)
-            stored[itemIdx].totalItems = parseInt(totalItems)
+            console.log('[PlaylistProgress] Playlist item count updated', {
+              downloadId: currentId,
+              currentItem: Number(currentItem),
+              totalItems: Number(totalItems),
+              downloaded: Math.max(Number(currentItem) - 1, 0),
+              remaining: Math.max(Number(totalItems) - Number(currentItem) + 1, 0),
+            })
+            stored[itemIdx] = {
+              ...stored[itemIdx],
+              currentItem: parseInt(currentItem),
+              totalItems: parseInt(totalItems),
+              playlistTotal: parseInt(totalItems),
+              isPlaylist: true,
+              playlistTitle: stored[itemIdx].playlistTitle || null,
+              playlistBatchId: stored[itemIdx].playlistBatchId || `direct:${currentId}`,
+            }
+            setProgressMap((prev) => {
+              const next = new Map(prev)
+              next.set(currentId, { progress: 0, fileSize: 'Unknown', speed: 'Unknown', eta: 'Unknown' })
+              return next
+            })
             setStoredDownloads(stored)
           }
 
@@ -317,6 +428,11 @@ const useDownloadManager = ({
 
           if (progressData.message.includes('Finished downloading playlist:')) {
             stored[itemIdx].isPlaylistCompleted = true
+            console.log('[PlaylistProgress] Playlist download finished', {
+              downloadId: currentId,
+              playlistTitle: stored[itemIdx].playlistTitle,
+              totalItems: stored[itemIdx].totalItems || stored[itemIdx].playlistTotal || 0,
+            })
             setStoredDownloads(stored)
           }
         }
@@ -445,6 +561,14 @@ const useDownloadManager = ({
       }
 
       const videoInfo = options.videoInfo ?? (await getVideoInfo(normalizedUrl))
+      const playlistUrlDetected = isPlaylistDownloadUrl(normalizedUrl)
+
+      console.log('[PlaylistProgress] URL classification', {
+        url: normalizedUrl,
+        playlistUrlDetected,
+        metadataIsPlaylist: Boolean(videoInfo?.isPlaylist),
+        metadataTitle: videoInfo?.playlistTitle || videoInfo?.title || null,
+      })
       if (videoInfo?.unsupportedDownload) {
         return {
           unsupported: true,
@@ -461,8 +585,14 @@ const useDownloadManager = ({
       const newDownload = {
         id: newId,
         url: normalizedUrl,
-        title: videoInfo?.isPlaylist ? 'Playlist Item' : videoInfo?.title || 'Pending...',
-        playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null,
+        title: videoInfo?.isPlaylist
+          ? 'Playlist Item'
+          : playlistUrlDetected
+            ? 'Preparing playlist…'
+            : videoInfo?.title || 'Pending...',
+        playlistTitle: videoInfo?.isPlaylist
+          ? videoInfo.playlistTitle
+          : null,
         thumbnail: videoInfo?.thumbnail || '',
         filename: '',
         quality: quality.toLowerCase(),
@@ -482,7 +612,8 @@ const useDownloadManager = ({
         lastError: '',
         errorDetails: '',
         errorExitCode: null,
-        isPlaylist: videoInfo?.isPlaylist || false,
+        isPlaylist: Boolean(videoInfo?.isPlaylist || playlistUrlDetected),
+        playlistBatchId: playlistUrlDetected ? `direct:${newId}` : null,
         platform: videoInfo?.platform || detectPlatform(normalizedUrl),
         currentItem: 0,
         forceSingle: Boolean(options.forceSingle),
@@ -490,11 +621,6 @@ const useDownloadManager = ({
 
       setStoredDownloads([newDownload, ...stored])
       downloadQueue.current.push(newId)
-      setActiveDownloads((prev) => {
-        const next = new Set(prev)
-        next.add(newId)
-        return next
-      })
 
       if (!isProcessing.current) {
         processQueue()
@@ -520,7 +646,9 @@ const useDownloadManager = ({
     (selectedVideos, playlistTitle) => {
       if (!Array.isArray(selectedVideos) || selectedVideos.length === 0) return
 
-      const downloadsToAdd = selectedVideos.map((video) => {
+      const playlistBatchId = uuidv4()
+      const playlistTotal = selectedVideos.length
+      const downloadsToAdd = selectedVideos.map((video, index) => {
         const newId = uuidv4()
         const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`
         return {
@@ -547,16 +675,13 @@ const useDownloadManager = ({
           errorDetails: '',
           errorExitCode: null,
           isPlaylist: false,
+          playlistBatchId,
+          playlistIndex: index + 1,
+          playlistTotal,
           platform: PLATFORMS.YOUTUBE,
           currentItem: 0,
           forceSingle: true,
         }
-      })
-
-      setActiveDownloads((prev) => {
-        const next = new Set(prev)
-        downloadsToAdd.forEach((d) => next.add(d.id))
-        return next
       })
 
       const stored = getStoredDownloads()

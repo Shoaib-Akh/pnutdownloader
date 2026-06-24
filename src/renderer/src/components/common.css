@@ -1754,3 +1754,262 @@ h1 {
   border-color: var(--pnut-button-bg) !important;
   color: var(--pnut-button-text) !important;
 }
+
+.playlist-progress-card {
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--pnut-brand-border-strong);
+  border-radius: var(--pnut-radius-lg);
+  background:
+    linear-gradient(135deg, rgba(var(--theme-primary-rgb), 0.11), transparent 62%),
+    var(--pnut-surface);
+  box-shadow: var(--pnut-shadow-sm);
+}
+
+.playlist-progress-card--complete {
+  border-color: color-mix(in srgb, var(--pnut-success) 38%, transparent);
+  background:
+    linear-gradient(135deg, var(--pnut-success-soft), transparent 62%),
+    var(--pnut-surface);
+}
+
+.playlist-progress-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px 13px;
+  border-bottom: 1px solid var(--pnut-border);
+}
+
+.playlist-progress-card__eyebrow {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--pnut-brand);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.playlist-progress-card__header h3 {
+  margin: 0;
+  color: var(--pnut-text);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.playlist-progress-card__state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--pnut-warning-soft);
+  color: var(--pnut-warning);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.playlist-progress-card__state.is-complete {
+  background: var(--pnut-success-soft);
+  color: var(--pnut-success);
+}
+
+.playlist-progress-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.playlist-progress-card__folder-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--pnut-border);
+  border-radius: 7px;
+  background: var(--pnut-surface);
+  color: var(--pnut-text-soft);
+  cursor: pointer;
+}
+
+.playlist-progress-card__folder-button:hover {
+  border-color: var(--pnut-brand-border-strong);
+  background: var(--pnut-brand-soft);
+  color: var(--pnut-brand);
+}
+
+.playlist-progress-card__body {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px 18px;
+}
+
+.playlist-progress-card__thumbnail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 132px;
+  height: 76px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--pnut-surface-raised);
+  color: var(--pnut-brand);
+  font-size: 24px;
+}
+
+.playlist-progress-card__thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.playlist-progress-card__thumbnail span {
+  position: absolute;
+  left: 7px;
+  bottom: 6px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.playlist-progress-card__details {
+  min-width: 0;
+}
+
+.playlist-progress-card__current-label {
+  margin-bottom: 3px;
+  color: var(--pnut-brand);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.playlist-progress-card__current-title {
+  overflow: hidden;
+  color: var(--pnut-text);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.playlist-progress-card__summary {
+  margin-top: 5px;
+  color: var(--pnut-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.playlist-progress-card__track {
+  width: 100%;
+  height: 7px;
+  overflow: hidden;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: var(--pnut-border);
+}
+
+.playlist-progress-card__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pnut-brand), var(--pnut-brand-fill));
+  transition: width 0.25s ease;
+}
+
+.playlist-progress-card--complete .playlist-progress-card__fill {
+  background: var(--pnut-success);
+}
+
+.playlist-progress-card__counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(66px, 1fr));
+  gap: 8px;
+}
+
+.playlist-progress-card__counts div {
+  min-width: 66px;
+  padding: 9px 10px;
+  border: 1px solid var(--pnut-border);
+  border-radius: 8px;
+  background: var(--pnut-surface-raised);
+  text-align: center;
+}
+
+.playlist-progress-card__counts strong,
+.playlist-progress-card__counts span {
+  display: block;
+}
+
+.playlist-progress-card__counts strong {
+  color: var(--pnut-text);
+  font-family: var(--font-mono);
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.playlist-progress-card__counts span {
+  margin-top: 3px;
+  color: var(--pnut-muted);
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1050px) {
+  .playlist-progress-card__body {
+    grid-template-columns: 116px minmax(0, 1fr);
+  }
+
+  .playlist-progress-card__thumbnail {
+    width: 116px;
+    height: 68px;
+  }
+
+  .playlist-progress-card__counts {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 700px) {
+  .playlist-progress-card__header,
+  .playlist-progress-card__body {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .playlist-progress-card__body {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .playlist-progress-card__thumbnail {
+    width: 92px;
+    height: 56px;
+  }
+
+  .playlist-progress-card__counts {
+    gap: 6px;
+  }
+
+  .playlist-progress-card__counts div {
+    min-width: 0;
+    padding: 8px 4px;
+  }
+}

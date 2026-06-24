@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
 import { ProgressBar, Dropdown } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
@@ -313,7 +313,10 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       const itemUrl = asText(item.url)
       const itemFormat = asText(item.format).toLowerCase()
       const isPlaylist =
-        itemUrl.includes('playlist') || itemUrl.includes('&list=') || itemUrl.includes('?list=');
+        Boolean(item.playlistTitle || item.playlistBatchId || item.isPlaylist) ||
+        itemUrl.includes('playlist') ||
+        itemUrl.includes('&list=') ||
+        itemUrl.includes('?list=');
       if (selectedItem === 'All Files' || selectedItem === 'All File') return true;
       if (selectedItem === 'Playlist') return isPlaylist;
       if (selectedItem === 'Video') return itemFormat === 'mp4' && !isPlaylist;
@@ -401,6 +404,135 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     const now = new Date();
     return `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}`;
   };
+
+  const playlistGroups = new Map()
+  filteredList.forEach((item) => {
+    const itemUrl = asText(item.url)
+    const isPlaylistRecord = Boolean(
+      item.playlistTitle ||
+      item.playlistBatchId ||
+      item.isPlaylist ||
+      itemUrl.includes('/playlist') ||
+      itemUrl.includes('&list=') ||
+      itemUrl.includes('?list=')
+    )
+    if (!isPlaylistRecord) return
+    const groupKey = item.playlistBatchId || (item.playlistTitle
+      ? `legacy:${item.playlistTitle}`
+      : `direct:${item.id}`)
+    if (!playlistGroups.has(groupKey)) {
+      playlistGroups.set(groupKey, {
+        id: groupKey,
+        title: item.playlistTitle || 'YouTube playlist',
+        items: [],
+      })
+    }
+    playlistGroups.get(groupKey).items.push(item)
+  })
+
+  const playlistSummaries = [...playlistGroups.values()]
+    .map((group) => {
+      const completedItems = group.items.filter(
+        (item) => item.isCompleted || item.status === 'Completed'
+      )
+      const failedItems = group.items.filter(
+        (item) => item.isFailed || item.status === 'Failed'
+      )
+      const downloadingItem = group.items.find(
+        (item) => item.status === 'Downloading' || item.status === 'Fetching Info...'
+      )
+      const nextItem = group.items.find(
+        (item) => item.status === 'Queued' || item.status === 'Waiting'
+      )
+      const displayItem = downloadingItem || nextItem || completedItems.at(-1) || group.items[0]
+      const directPlaylistItem = group.items.length === 1 && group.items[0].isPlaylist
+        ? group.items[0]
+        : null
+      const declaredTotal = Math.max(...group.items.map((item) => Number(item.playlistTotal) || 0))
+      const reportedTotal = Number(directPlaylistItem?.totalItems) || 0
+      const total = Math.max(group.items.length, declaredTotal, reportedTotal)
+      const directPlaylistComplete = Boolean(
+        directPlaylistItem && (
+          directPlaylistItem.isCompleted ||
+          directPlaylistItem.isPlaylistCompleted ||
+          directPlaylistItem.status === 'Completed'
+        )
+      )
+      const completed = directPlaylistItem
+        ? directPlaylistComplete
+          ? total
+          : Math.max((Number(directPlaylistItem.currentItem) || 1) - 1, 0)
+        : completedItems.length
+      const failed = failedItems.length
+      const remaining = Math.max(total - completed, 0)
+      const currentVideoNumber = directPlaylistItem
+        ? Number(directPlaylistItem.currentItem) || Math.min(completed + 1, total)
+        : downloadingItem || nextItem
+          ? Number((downloadingItem || nextItem).playlistIndex) || Math.min(completed + 1, total)
+          : total
+      const currentItemProgress = downloadingItem
+        ? Number(progressMap.get(downloadingItem.id)?.progress) || 0
+        : 0
+      const percent = total > 0
+        ? Math.min(100, ((completed + currentItemProgress / 100) / total) * 100)
+        : 0
+      const isComplete = total > 0 && completed === total
+
+      return {
+        ...group,
+        completed,
+        failed,
+        remaining,
+        total,
+        percent,
+        currentVideoNumber,
+        displayItem,
+        downloadingItem,
+        nextItem,
+        isComplete,
+        thumbnailUrl: displayItem ? getThumbnailUrl(displayItem) : null,
+      }
+    })
+    .filter((group) => {
+      if (!searchQuery) return true
+      const query = searchQuery.toLowerCase()
+      return (
+        asText(group.title).toLowerCase().includes(query) ||
+        group.items.some((item) => asText(item.title || item.filename).toLowerCase().includes(query))
+      )
+    })
+
+  const playlistSummaryDebugState = JSON.stringify(
+    playlistSummaries.map((playlist) => ({
+      id: playlist.id,
+      title: playlist.title,
+      completed: playlist.completed,
+      remaining: playlist.remaining,
+      total: playlist.total,
+      currentVideo: playlist.currentVideoNumber,
+      currentTitle: playlist.displayItem?.title || null,
+      thumbnail: playlist.thumbnailUrl || null,
+      percent: Math.round(playlist.percent),
+    }))
+  )
+
+  useEffect(() => {
+    const summaries = JSON.parse(playlistSummaryDebugState)
+    if (summaries.length > 0) {
+      console.log('[PlaylistProgress] Library summary updated', summaries)
+    }
+  }, [playlistSummaryDebugState])
+
+  const summarizedPlaylistItemIds = new Set(
+    playlistSummaries.flatMap((playlist) => playlist.items.map((item) => item.id))
+  )
+  const displayedPlaylistSummaries = isSelectMode ? [] : playlistSummaries
+  const visibleDownloadItems = isSelectMode
+    ? searchFilteredList
+    : searchFilteredList.filter((item) => !summarizedPlaylistItemIds.has(item.id))
+  const displayedDownloadCount = displayedPlaylistSummaries.length + new Set(
+    visibleDownloadItems.map((item) => item.id)
+  ).size
 
   const screenMeta = {
     'All Files': {
@@ -501,7 +633,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         marginBottom: '20px'
       }}>
         <span className="download-library__count" style={{ fontSize: '14px', color: 'var(--pnut-muted)' }}>
-          {searchFilteredList?.length || 0} item{searchFilteredList?.length === 1 ? '' : 's'}
+          {displayedDownloadCount} item{displayedDownloadCount === 1 ? '' : 's'}
         </span>
         <div className="download-library__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
           {isSelectMode && (
@@ -595,9 +727,113 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         overflowX: 'hidden'
       }}>
         {searchFilteredList?.length > 0 ? (
-          [...new Set(searchFilteredList.map((item) => item.id))].map((uniqueId, index) => {
-            const item = searchFilteredList.find((i) => i.id === uniqueId);
-console.log(`Rendering item:${new Date().toISOString()}`, item.status);
+          <>
+            {displayedPlaylistSummaries.map((playlist) => (
+              <section
+                key={playlist.id}
+                className={`playlist-progress-card${playlist.isComplete ? ' playlist-progress-card--complete' : ''}`}
+                aria-label={`${playlist.title} playlist download progress`}
+              >
+                <div className="playlist-progress-card__header">
+                  <div>
+                    <span className="playlist-progress-card__eyebrow">Playlist download</span>
+                    <h3>{playlist.title || 'Untitled playlist'}</h3>
+                  </div>
+                  <div className="playlist-progress-card__actions">
+                    <span className={`playlist-progress-card__state${playlist.isComplete ? ' is-complete' : ''}`}>
+                      {playlist.isComplete ? (
+                        <>
+                          <FaCheckCircle /> Complete
+                        </>
+                      ) : playlist.downloadingItem ? (
+                        'Downloading now'
+                      ) : playlist.nextItem ? (
+                        'Waiting to start'
+                      ) : playlist.failed > 0 ? (
+                        'Needs attention'
+                      ) : (
+                        'Preparing'
+                      )}
+                    </span>
+                    {playlist.displayItem && (
+                      <button
+                        type="button"
+                        className="playlist-progress-card__folder-button"
+                        onClick={() => handleOpenFolderClick(playlist.displayItem)}
+                        title="Show playlist in folder"
+                        aria-label="Show playlist in folder"
+                      >
+                        <FaFolderOpen />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="playlist-progress-card__body">
+                  <div className="playlist-progress-card__thumbnail">
+                    {playlist.thumbnailUrl ? (
+                      <img
+                        src={playlist.thumbnailUrl}
+                        alt={playlist.displayItem?.title || playlist.title}
+                      />
+                    ) : (
+                      <FaVideo aria-hidden="true" />
+                    )}
+                    {!playlist.isComplete && playlist.displayItem && (
+                      <span>
+                        {playlist.downloadingItem ? 'Now' : 'Next'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="playlist-progress-card__details">
+                    <div className="playlist-progress-card__current-label">
+                      {playlist.isComplete
+                        ? 'Playlist finished'
+                        : `Video ${playlist.currentVideoNumber} of ${playlist.total}`}
+                    </div>
+                    <div className="playlist-progress-card__current-title">
+                      {playlist.displayItem?.title || 'Preparing playlist video…'}
+                    </div>
+                    <div className="playlist-progress-card__summary">
+                      {playlist.completed} of {playlist.total} downloaded · {playlist.remaining} remaining
+                      {playlist.failed > 0 ? ` · ${playlist.failed} failed` : ''}
+                    </div>
+                    <div
+                      className="playlist-progress-card__track"
+                      role="progressbar"
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      aria-valuenow={Math.round(playlist.percent)}
+                      aria-label={`${Math.round(playlist.percent)} percent complete`}
+                    >
+                      <div
+                        className="playlist-progress-card__fill"
+                        style={{ width: `${playlist.percent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="playlist-progress-card__counts">
+                    <div>
+                      <strong>{playlist.completed}</strong>
+                      <span>Downloaded</span>
+                    </div>
+                    <div>
+                      <strong>{playlist.remaining}</strong>
+                      <span>Remaining</span>
+                    </div>
+                    <div>
+                      <strong>{playlist.total}</strong>
+                      <span>Total</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            ))}
+
+            {[...new Set(visibleDownloadItems.map((item) => item.id))].map((uniqueId, index) => {
+            const item = visibleDownloadItems.find((i) => i.id === uniqueId);
             const progress = progressMap.get(item.id)?.progress || 0;
             const speed = progressMap.get(item.id)?.speed || 'Unknown';
             const fileSize = progressMap.get(item.id)?.fileSize || 'Unknown';
@@ -695,7 +931,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
 
                 {/* Thumbnail with Duration Overlay */}
                 <div style={{ position: 'relative', flexShrink: 0 }}>
-                  {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
+                  {!item.thumbnail && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
                     <div style={{ position: 'relative' }}>
                       <Skeleton width={120} height={70} />
                       <div style={{
@@ -823,7 +1059,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical'
                   }}>
-                    {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
+                    {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={300} />
                     ) : (
                       cleanTitle(item.title || item.filename) || 'Untitled'
@@ -833,7 +1069,7 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                   {/* Status, Format, Date */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     {/* Status Badge */}
-                    {item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting' ? (
+                    {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={70} height={22} />
                     ) : item.isPlaylist ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -1056,7 +1292,8 @@ console.log(`Rendering item:${new Date().toISOString()}`, item.status);
                 )}
               </div>
             );
-          })
+            })}
+          </>
         ) : (
           <div style={{
             textAlign: 'center',
