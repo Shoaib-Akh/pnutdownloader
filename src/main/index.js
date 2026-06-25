@@ -8,6 +8,7 @@ import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
 import { extractVideoId ,isDownloadableVideoUrl} from '../shared/platformUtils'
 import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
+import { appendTitleTimestamp } from '../shared/titleUtils'
 
 import { initialize, trackEvent } from "@aptabase/electron/main";
 
@@ -1556,9 +1557,9 @@ function createWindow() {
 
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
-    width: 1200,
+    width: 1250,
     height: 760,
-    minWidth: 1150,
+    minWidth: 1250,
     minHeight: 800,
     icon: iconPath,
     autoHideMenuBar: true,
@@ -2512,7 +2513,7 @@ const startDownload = async (event, options) => {
         return reject(new Error('A download is already in progress.'));
       }
 
-      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, titleTimestamp, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
       const downloadLogId = downloadId || `download:${Date.now()}`;
       const downloadStartedAt = Date.now();
       console.log(`[${downloadLogId}] ⏱ Download request received at ${new Date().toISOString()}`);
@@ -2921,7 +2922,7 @@ const startDownload = async (event, options) => {
         const urlLower = url.toLowerCase()
         
         // YouTube variants
-        if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
+        if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be') || urlLower.includes('youtubekids.com')) {
           if (urlLower.includes('music.youtube.com')) return 'youtube_music'
           if (urlLower.includes('youtubekids.com')) return 'youtube_kids'
           return 'youtube'
@@ -2997,10 +2998,17 @@ const startDownload = async (event, options) => {
         // Create title with quality for display and filenames
         // Use the extracted title if available, otherwise create fallback
         let titleWithQuality;
+        const titlePlatform = detectPlatform(url);
+        const shouldTimestampTitle = !isYouTubePlatform(titlePlatform);
+        const stableTitleTimestamp = titleTimestamp || downloadStartedAt;
         if (sanitizedTitle && sanitizedTitle !== 'Unknown' && !isGeneratedMetadataTitle(sanitizedTitle)) {
           titleWithQuality = isAudioOnly 
             ? `${sanitizedTitle}_${sanitizedBitrate}` // Use underscore to avoid confusion
             : `${sanitizedTitle}_${sanitizedQuality}`;
+
+          if (shouldTimestampTitle) {
+            titleWithQuality = appendTitleTimestamp(titleWithQuality, stableTitleTimestamp);
+          }
         
           console.log(`[${downloadId}] Title with quality (from sanitized):`, titleWithQuality);
         
@@ -3020,6 +3028,10 @@ const startDownload = async (event, options) => {
           titleWithQuality = isAudioOnly 
             ? `%(title)s_${safeBitrate}`
             : `%(title)s_${safeQuality}`;
+
+          if (shouldTimestampTitle) {
+            titleWithQuality = appendTitleTimestamp(titleWithQuality, stableTitleTimestamp);
+          }
           
           console.log(`[${downloadId}] Using template title with quality:`, titleWithQuality);
           console.warn(`[${downloadId}] Warning: Could not extract proper title during pre-fetch, relying on yt-dlp template.`);
@@ -3029,6 +3041,9 @@ const startDownload = async (event, options) => {
         if (!titleWithQuality) {
            console.error(`[${downloadId}] CRITICAL: titleWithQuality is undefined! Forcing fallback.`);
            titleWithQuality = `%(title)s_${isAudioOnly ? (sanitizedBitrate || 'audio') : (sanitizedQuality || 'video')}`;
+           if (shouldTimestampTitle) {
+             titleWithQuality = appendTitleTimestamp(titleWithQuality, stableTitleTimestamp);
+           }
         }
       
         let downloadPath;

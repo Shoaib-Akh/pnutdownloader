@@ -34,6 +34,20 @@ export const SNAPCHAT_MEDIA_PATTERNS = [
   /(?:^|\/\/)story\.snapchat\.com\/(?:p|spotlight|story)\/[^/?#]+/i
 ]
 
+const parseHttpUrl = (value) => {
+  if (!value || typeof value !== 'string') return null
+
+  try {
+    const parsedUrl = new URL(value.trim())
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:' ? parsedUrl : null
+  } catch {
+    return null
+  }
+}
+
+const hostnameMatches = (hostname, ...domains) =>
+  domains.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`))
+
 export const isSnapchatMediaUrl = (url) => {
   if (!url || typeof url !== 'string') return false
   return SNAPCHAT_MEDIA_PATTERNS.some((pattern) => pattern.test(url))
@@ -45,94 +59,94 @@ export const isSnapchatMediaUrl = (url) => {
  * @returns {string} Platform identifier
  */
 export const detectPlatform = (url) => {
-  if (!url || typeof url !== 'string') return PLATFORMS.UNKNOWN
+  const parsedUrl = parseHttpUrl(url)
+  if (!parsedUrl) return PLATFORMS.UNKNOWN
 
-  const urlLower = url.toLowerCase()
+  const hostname = parsedUrl.hostname.toLowerCase()
 
   // YouTube variants - check this first
-  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
-    if (urlLower.includes('music.youtube.com')) return PLATFORMS.YOUTUBE_MUSIC
-    if (urlLower.includes('youtubekids.com')) return PLATFORMS.YOUTUBE_KIDS
+  if (hostnameMatches(hostname, 'youtube.com', 'youtu.be')) {
+    if (hostnameMatches(hostname, 'music.youtube.com')) return PLATFORMS.YOUTUBE_MUSIC
     return PLATFORMS.YOUTUBE
   }
 
   // YouTube Kids standalone (if not caught above)
-  if (urlLower.includes('youtubekids.com')) {
+  if (hostnameMatches(hostname, 'youtubekids.com')) {
     return PLATFORMS.YOUTUBE_KIDS
   }
 
   // Reddit (check before Twitter as URLs may contain similar patterns)
-  if (urlLower.includes('reddit.com')) {
+  if (hostnameMatches(hostname, 'reddit.com')) {
     return PLATFORMS.REDDIT
   }
 
   // Pinterest (check before general patterns)
-  if (urlLower.includes('pinterest.com') || urlLower.includes('pin.it')) {
+  if (hostnameMatches(hostname, 'pinterest.com', 'pin.it')) {
     return PLATFORMS.PINTEREST
   }
 
   // LinkedIn
-  if (urlLower.includes('linkedin.com')) {
+  if (hostnameMatches(hostname, 'linkedin.com')) {
     return PLATFORMS.LINKEDIN
   }
 
   // Facebook - more flexible to catch various video URLs
-  if (urlLower.includes('facebook.com') || urlLower.includes('fb.com') || urlLower.includes('fb.watch')) {
+  if (hostnameMatches(hostname, 'facebook.com', 'fb.com', 'fb.watch')) {
     return PLATFORMS.FACEBOOK
   }
 
   // Instagram
-  if (urlLower.includes('instagram.com') || urlLower.includes('instagr.am')) {
+  if (hostnameMatches(hostname, 'instagram.com', 'instagr.am')) {
     return PLATFORMS.INSTAGRAM
   }
 
   // Snapchat
-  if (urlLower.includes('snapchat.com')) {
+  if (hostnameMatches(hostname, 'snapchat.com')) {
     return PLATFORMS.SNAPCHAT
   }
 
   // TikTok
-  if (urlLower.includes('tiktok.com') || urlLower.includes('vm.tiktok.com')) {
+  if (hostnameMatches(hostname, 'tiktok.com')) {
     return PLATFORMS.TIKTOK
   }
 
   // Twitter/X (check after more specific platforms)
-  if (urlLower.includes('twitter.com') || urlLower.includes('x.com') || urlLower.includes('t.co')) {
+  if (hostnameMatches(hostname, 'twitter.com', 'x.com', 't.co')) {
     return PLATFORMS.TWITTER
   }
 
   // Twitch
-  if (urlLower.includes('twitch.tv') || urlLower.includes('twitch.com')) {
+  if (hostnameMatches(hostname, 'twitch.tv', 'twitch.com')) {
     return PLATFORMS.TWITCH
   }
 
   // Dailymotion
-  if (urlLower.includes('dailymotion.com') || urlLower.includes('dai.ly')) {
+  if (hostnameMatches(hostname, 'dailymotion.com', 'dai.ly')) {
     return PLATFORMS.DAILYMOTION
   }
 
   // Bilibili
-  if (urlLower.includes('bilibili.com') || urlLower.includes('b23.tv')) {
+  if (hostnameMatches(hostname, 'bilibili.com', 'b23.tv')) {
     return PLATFORMS.BILIBILI
   }
 
   // SoundCloud
-  if (urlLower.includes('soundcloud.com')) {
+  if (hostnameMatches(hostname, 'soundcloud.com')) {
     return PLATFORMS.SOUNDCLOUD
   }
 
   // Vimeo
-  if (urlLower.includes('vimeo.com')) {
+  if (hostnameMatches(hostname, 'vimeo.com')) {
     return PLATFORMS.VIMEO
   }
 
   // Rumble
-  if (urlLower.includes('rumble.com')) {
+  if (hostnameMatches(hostname, 'rumble.com')) {
     return PLATFORMS.RUMBLE
   }
 
   // BitChute
-  if (urlLower.includes('bitchute.com')) {
+  if (hostnameMatches(hostname, 'bitchute.com')) {
     return PLATFORMS.BITCHUTE
   }
 
@@ -155,9 +169,11 @@ export const isValidPlatformUrl = (url) => {
  * @returns {boolean} True if YouTube variant
  */
 export const isYouTubePlatform = (platform) => {
-  return platform === PLATFORMS.YOUTUBE || 
-         platform === PLATFORMS.YOUTUBE_MUSIC || 
-         platform === PLATFORMS.YOUTUBE_KIDS
+  return (
+    platform === PLATFORMS.YOUTUBE ||
+    platform === PLATFORMS.YOUTUBE_MUSIC ||
+    platform === PLATFORMS.YOUTUBE_KIDS
+  )
 }
 
 /**
@@ -225,79 +241,111 @@ export const getPlatformUrl = (platform) => {
  * @returns {boolean} True if downloadable
  */
 export const isDownloadableVideoUrl = (url) => {
-  if (!url || typeof url !== 'string') return false
-  
+  const platform = detectPlatform(url)
+  if (platform === PLATFORMS.UNKNOWN) return false
+
   const urlLower = url.toLowerCase()
-  
+
   // YouTube patterns
-  if (urlLower.includes('youtube.com/watch') || 
+  if (
+    isYouTubePlatform(platform) &&
+    (urlLower.includes('youtube.com/watch') ||
       urlLower.includes('youtube.com/shorts/') ||
       urlLower.includes('youtube.com/embed/') ||
       urlLower.includes('youtu.be/') ||
       urlLower.includes('music.youtube.com') ||
       urlLower.includes('youtube.com/playlist') ||
-      urlLower.includes('youtubekids.com')) {
+      urlLower.includes('youtubekids.com'))
+  ) {
     return true
   }
-  
+
   // Facebook patterns - fb.watch is standalone video hosting
-  if (urlLower.includes('facebook.com/') || urlLower.includes('fb.com/')) {
-    if (urlLower.includes('/videos/') || urlLower.includes('/watch') || urlLower.includes('/reel/')) return true
+  if (platform === PLATFORMS.FACEBOOK) {
+    if (
+      urlLower.includes('/videos/') ||
+      urlLower.includes('/watch') ||
+      urlLower.includes('/reel/') ||
+      urlLower.includes('/video.php')
+    )
+      return true
   }
-  
+
   // fb.watch is always video
-  if (urlLower.includes('fb.watch')) {
+  if (platform === PLATFORMS.FACEBOOK && urlLower.includes('fb.watch')) {
     return true
   }
-  
+
   // Instagram patterns
-  if (urlLower.includes('instagram.com/p/') ||
+  if (
+    platform === PLATFORMS.INSTAGRAM &&
+    (urlLower.includes('instagram.com/p/') ||
+      urlLower.includes('instagram.com/reel/') ||
       urlLower.includes('instagram.com/reels/') ||
       urlLower.includes('instagram.com/stories/') ||
-      urlLower.includes('instagr.am/')) {
+      urlLower.includes('instagram.com/tv/') ||
+      urlLower.includes('instagr.am/'))
+  ) {
     return true
   }
 
   // Snapchat public media patterns
-  if (isSnapchatMediaUrl(url)) {
+  if (platform === PLATFORMS.SNAPCHAT && isSnapchatMediaUrl(url)) {
     return true
   }
-  
+
   // TikTok patterns
-  if ((urlLower.includes('tiktok.com/@') && urlLower.includes('/video/')) ||
-      urlLower.includes('vm.tiktok.com/')) {
+  if (
+    platform === PLATFORMS.TIKTOK &&
+    ((urlLower.includes('tiktok.com/@') && urlLower.includes('/video/')) ||
+      urlLower.includes('vm.tiktok.com/') ||
+      urlLower.includes('vt.tiktok.com/') ||
+      urlLower.includes('tiktok.com/t/') ||
+      urlLower.includes('tiktok.com/embed/'))
+  ) {
     return true
   }
-  
+
   // Twitter/X patterns
-  if ((urlLower.includes('twitter.com/') || urlLower.includes('x.com/') || urlLower.includes('t.co/')) && 
-      urlLower.includes('/status/')) {
+  if (
+    platform === PLATFORMS.TWITTER &&
+    (urlLower.includes('/status/') || urlLower.includes('t.co/'))
+  ) {
     return true
   }
-  
+
   // Twitch patterns
-  if (urlLower.includes('twitch.tv/videos/') ||
-      (urlLower.includes('twitch.tv/') && urlLower.includes('/clip/'))) {
+  if (
+    platform === PLATFORMS.TWITCH &&
+    (urlLower.includes('twitch.tv/videos/') ||
+      (urlLower.includes('twitch.tv/') && urlLower.includes('/clip/')) ||
+      urlLower.includes('clips.twitch.tv/'))
+  ) {
     return true
   }
-  
+
   // Dailymotion patterns
-  if (urlLower.includes('dailymotion.com/video/') ||
-      urlLower.includes('dai.ly/')) {
+  if (
+    platform === PLATFORMS.DAILYMOTION &&
+    (urlLower.includes('dailymotion.com/video/') ||
+      urlLower.includes('dailymotion.com/embed/video/') ||
+      urlLower.includes('dai.ly/'))
+  ) {
     return true
   }
-  
+
   // Other supported platforms
-  if (urlLower.includes('vimeo.com/') ||
-      urlLower.includes('soundcloud.com/') ||
-      urlLower.includes('bilibili.com/') ||
-      urlLower.includes('rumble.com/v') ||
-      urlLower.includes('bitchute.com/video/') ||
-      urlLower.includes('reddit.com/') ||
-      urlLower.includes('pinterest.com/') ||
-      urlLower.includes('linkedin.com/')) {
-    return true
+  const otherPlatformPatterns = {
+    [PLATFORMS.VIMEO]: ['vimeo.com/'],
+    [PLATFORMS.SOUNDCLOUD]: ['soundcloud.com/'],
+    [PLATFORMS.BILIBILI]: ['bilibili.com/', 'b23.tv/'],
+    [PLATFORMS.RUMBLE]: ['rumble.com/v', 'rumble.com/embed/'],
+    [PLATFORMS.BITCHUTE]: ['bitchute.com/video/', 'bitchute.com/embed/'],
+    [PLATFORMS.REDDIT]: ['reddit.com/'],
+    [PLATFORMS.PINTEREST]: ['pinterest.com/', 'pin.it/'],
+    [PLATFORMS.LINKEDIN]: ['linkedin.com/']
   }
+  if (otherPlatformPatterns[platform]?.some((pattern) => urlLower.includes(pattern))) return true
 
   return false
 }
@@ -309,7 +357,7 @@ export const isDownloadableVideoUrl = (url) => {
  */
 export const extractVideoId = (url) => {
   if (!url) return null
-  
+
   // Handle various YouTube URL formats
   const patterns = [
     // Standard watch URL: youtube.com/watch?v=VIDEO_ID
@@ -325,14 +373,14 @@ export const extractVideoId = (url) => {
     // YouTube Kids
     /youtubekids\.com\/watch\?v=([^&\s]+)/
   ]
-  
+
   for (const pattern of patterns) {
     const match = url.match(pattern)
     if (match && match[1]) {
       return match[1]
     }
   }
-  
+
   return null
 }
 
@@ -343,20 +391,20 @@ export const extractVideoId = (url) => {
  */
 export const extractPlaylistId = (url) => {
   if (!url) return null
-  
+
   const patterns = [
     // Standard playlist: youtube.com/playlist?list=PLAYLIST_ID
     /(?:youtube\.com|music\.youtube\.com|youtu\.be|youtube\.googleapis\.com|youtubekids\.com)\/(?:playlist|watch)?.*?[?&]list=([^&#]+)/i,
     // Watch with playlist: youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID
     /[?&]list=([^&#]+)/
   ]
-  
+
   for (const pattern of patterns) {
     const match = url.match(pattern)
     if (match && match[1]) {
       return match[1]
     }
   }
-  
+
   return null
 }

@@ -13,3 +13,4 @@ ffmpeg.exe
 public/ffmpeg
 yt-dlp.exe
 yt-dlp_macos
+tests/reports/*.json

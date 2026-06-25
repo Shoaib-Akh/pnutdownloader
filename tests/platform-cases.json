@@ -1,0 +1,289 @@
+{
+  "description": "Canonical URL and live metadata cases for every first-class PNUTDownloader platform.",
+  "platforms": [
+    {
+      "id": "youtube",
+      "displayName": "YouTube",
+      "urls": [
+        "https://www.youtube.com/watch?v=abc123def45",
+        "https://youtu.be/abc123def45",
+        "https://www.youtube.com/shorts/abc123def45",
+        "https://www.youtube.com/embed/abc123def45",
+        "https://www.youtube.com/playlist?list=PL123456789"
+      ],
+      "live": {
+        "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "youtube_music",
+      "displayName": "YouTube Music",
+      "urls": [
+        "https://music.youtube.com/watch?v=abc123def45",
+        "https://music.youtube.com/playlist?list=PL123456789"
+      ],
+      "live": {
+        "url": "https://music.youtube.com/watch?v=jNQXAC9IVRw",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "youtube_kids",
+      "displayName": "YouTube Kids",
+      "urls": ["https://www.youtubekids.com/watch?v=abc123def45"],
+      "live": {
+        "url": "https://www.youtubekids.com/watch?v=jNQXAC9IVRw",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "facebook",
+      "displayName": "Facebook",
+      "urls": [
+        "https://www.facebook.com/creator/videos/123456789",
+        "https://www.facebook.com/watch/?v=123456789",
+        "https://www.facebook.com/reel/123456789",
+        "https://fb.watch/abc123/",
+        "https://www.facebook.com/video.php?v=123456789"
+      ],
+      "live": {
+        "url": "https://www.facebook.com/reel/1195289147628387",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": true
+      }
+    },
+    {
+      "id": "instagram",
+      "displayName": "Instagram",
+      "urls": [
+        "https://www.instagram.com/p/ABC_123-/",
+        "https://www.instagram.com/reel/ABC_123-/",
+        "https://www.instagram.com/reels/ABC_123-/",
+        "https://www.instagram.com/tv/ABC_123-/",
+        "https://www.instagram.com/stories/creator/123456789/"
+      ],
+      "live": {
+        "url": "https://www.instagram.com/reel/Chunk8-jurw/",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": true
+      }
+    },
+    {
+      "id": "snapchat",
+      "displayName": "Snapchat",
+      "urls": [
+        "https://www.snapchat.com/spotlight/abc123xyz",
+        "https://www.snapchat.com/@creator/spotlight/abc123xyz",
+        "https://www.snapchat.com/@creator/story/abc123xyz",
+        "https://www.snapchat.com/stories/creator/abc123xyz",
+        "https://story.snapchat.com/p/abc123xyz"
+      ],
+      "live": {
+        "url": "https://www.snapchat.com/spotlight/W7_EDlXWTBiXAEEniNoMPwAAYYWtidGhudGZpAX1TKn0JAX1TKnXJAAAAAA",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "tiktok",
+      "displayName": "TikTok",
+      "urls": [
+        "https://www.tiktok.com/@creator/video/1234567890123456789",
+        "https://vm.tiktok.com/ZMabc123/",
+        "https://vt.tiktok.com/ZMabc123/",
+        "https://www.tiktok.com/t/ZMabc123/",
+        "https://www.tiktok.com/embed/v2/1234567890123456789"
+      ],
+      "live": {
+        "url": "https://www.tiktok.com/@leenabhushan/video/6748451240264420610",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "twitter",
+      "displayName": "Twitter",
+      "urls": [
+        "https://twitter.com/creator/status/1234567890123456789",
+        "https://x.com/creator/status/1234567890123456789",
+        "https://t.co/abc123xyz"
+      ],
+      "live": {
+        "url": "https://x.com/historyinmemes/status/1790637656616943991",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "twitch",
+      "displayName": "Twitch",
+      "urls": [
+        "https://www.twitch.tv/videos/1234567890",
+        "https://www.twitch.tv/creator/clip/ClipSlug123",
+        "https://clips.twitch.tv/ClipSlug123"
+      ],
+      "live": {
+        "url": "https://clips.twitch.tv/FaintLightGullWholeWheat",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "dailymotion",
+      "displayName": "Dailymotion",
+      "urls": [
+        "https://www.dailymotion.com/video/x8u4owg",
+        "https://www.dailymotion.com/embed/video/x8u4owg",
+        "https://dai.ly/x8u4owg"
+      ],
+      "live": {
+        "url": "https://www.dailymotion.com/video/x8u4owg",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "bilibili",
+      "displayName": "Bilibili",
+      "urls": [
+        "https://www.bilibili.com/video/BV13x41117TL",
+        "https://www.bilibili.com/video/av1074402/",
+        "https://b23.tv/abc123"
+      ],
+      "live": {
+        "url": "https://www.bilibili.com/video/BV13x41117TL",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "reddit",
+      "displayName": "Reddit",
+      "urls": [
+        "https://www.reddit.com/r/videos/comments/6rrwyj/that_small_heart_attack/",
+        "https://reddit.com/r/aww/comments/90bu6w/example/"
+      ],
+      "live": {
+        "url": "https://www.reddit.com/r/videos/comments/6rrwyj/that_small_heart_attack/",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "pinterest",
+      "displayName": "Pinterest",
+      "urls": ["https://www.pinterest.com/pin/664281013778109217/", "https://pin.it/abc123xyz"],
+      "live": {
+        "url": "https://www.pinterest.com/pin/664281013778109217/",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "linkedin",
+      "displayName": "LinkedIn",
+      "urls": [
+        "https://www.linkedin.com/posts/creator_example-activity-1234567890123456789-abcd",
+        "https://www.linkedin.com/feed/update/urn:li:activity:1234567890123456789/"
+      ],
+      "live": {
+        "url": "https://www.linkedin.com/posts/the-mathworks_2_what-is-mathworks-cloud-center-activity-7151241570371948544-4Gu7",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": true
+      }
+    },
+    {
+      "id": "soundcloud",
+      "displayName": "SoundCloud",
+      "urls": [
+        "https://soundcloud.com/creator/track-name",
+        "https://www.soundcloud.com/creator/track-name"
+      ],
+      "live": {
+        "url": "https://soundcloud.com/ethmusic/lostin-powers-she-so-heavy",
+        "media": "audio",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "vimeo",
+      "displayName": "Vimeo",
+      "urls": [
+        "https://vimeo.com/56015672",
+        "https://player.vimeo.com/video/54469442",
+        "https://vimeo.com/channels/keypeele/75629013"
+      ],
+      "live": {
+        "url": "https://vimeo.com/76979871",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "rumble",
+      "displayName": "Rumble",
+      "urls": [
+        "https://rumble.com/vdmum1-moose-the-dog-helps-girls-dig-a-snow-fort.html",
+        "https://rumble.com/embed/v5pv5f"
+      ],
+      "live": {
+        "url": "https://rumble.com/embed/v5pv5f",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    },
+    {
+      "id": "bitchute",
+      "displayName": "BitChute",
+      "urls": [
+        "https://www.bitchute.com/video/UGlrF9o9b-Q/",
+        "https://www.bitchute.com/embed/lbb5G1hjPhw/"
+      ],
+      "live": {
+        "url": "https://www.bitchute.com/video/UGlrF9o9b-Q/",
+        "media": "video",
+        "requireThumbnail": true,
+        "requiresCookies": false
+      }
+    }
+  ],
+  "nonDownloadable": [
+    "https://www.youtube.com/",
+    "https://www.facebook.com/creator/",
+    "https://www.instagram.com/creator/",
+    "https://www.snapchat.com/add/creator",
+    "https://www.tiktok.com/@creator",
+    "https://www.twitch.tv/creator",
+    "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
+    "https://example.com/video/123"
+  ],
+  "invalid": [
+    "https://example.com/youtube.com/watch?v=abc123def45",
+    "https://example.com/?next=https://www.instagram.com/reel/ABC123/",
+    "https://youtube.com.example.org/watch?v=abc123def45",
+    "ftp://youtube.com/watch?v=abc123def45",
+    "not a URL",
+    ""
+  ]
+}

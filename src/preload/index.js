@@ -12,7 +12,7 @@ const api = {
   saveWebViewCookies: () => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WEBVIEW_COOKIES),
   showMessageBox: (options) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_MESSAGE_BOX, options),
 trackEvent: (eventName, props) => trackEvent(eventName, props),
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, playlistTitle, forceSingle }) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, titleTimestamp, playlistTitle, forceSingle }) =>
     ipcRenderer.invoke(IPC_CHANNELS.DOWNLOAD_VIDEO, {
       url,
       isAudioOnly,
@@ -22,6 +22,7 @@ trackEvent: (eventName, props) => trackEvent(eventName, props),
       selectBitrate,
       id,
       title,
+      titleTimestamp,
       playlistTitle,
       forceSingle
     }),

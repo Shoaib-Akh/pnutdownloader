@@ -291,6 +291,120 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     setOpenDropdown(null)
   }
 
+  const handleDeletePlaylist = (playlist) => {
+    const playlistItems = playlist?.items || []
+    if (playlistItems.length === 0) return
+
+    if (playlistItems.length === 1) {
+      handleDelete(playlistItems[0])
+    } else {
+      deleteSelected(new Set(playlistItems.map((item) => item.id)))
+    }
+
+    setOpenDropdown(null)
+  }
+
+  const renderDownloadActions = (
+    item,
+    {
+      dropdownKey = item?.id,
+      className = 'download-row__actions',
+      folderTitle = 'Show in folder',
+      menuClassName = '',
+      onDeleteClick,
+      onRetryClick,
+    } = {}
+  ) => {
+    if (!item) return null
+
+    return (
+      <div className={className} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+        <button
+          type="button"
+          className="btn pnut-button pnut-button--icon"
+          onClick={() => handleOpenFolderClick(item)}
+          title={folderTitle}
+          style={{
+            background: 'transparent',
+            border: '1px solid var(--pnut-border)',
+            borderRadius: '5px',
+            padding: '6px 10px',
+            color: 'var(--pnut-text-soft)',
+            fontSize: '14px'
+          }}
+        >
+          <FaFolderOpen />
+        </button>
+        <Dropdown
+          show={openDropdown === dropdownKey}
+          onToggle={(isOpen) => setOpenDropdown(isOpen ? dropdownKey : null)}
+        >
+          <Dropdown.Toggle
+            as="button"
+            className="download-row__menu-button"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--pnut-text-soft)',
+              fontSize: '16px',
+              padding: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <FaEllipsisV />
+          </Dropdown.Toggle>
+          <Dropdown.Menu align="end" className={`dropdown-menu ${menuClassName}`.trim()}>
+            <Dropdown.Item
+              onClick={() => {
+                setOpenDropdown(null)
+                if (typeof onRetryClick === 'function') {
+                  onRetryClick()
+                } else if (typeof onRetry === 'function') {
+                  onRetry(item.id)
+                }
+              }}
+            >
+              Retry <FaRedoAlt className="me-2" />
+            </Dropdown.Item>
+            <Dropdown.Item
+              onClick={() => {
+                handleAddToFolder(item)
+              }}
+            >
+              Move to folder <FaFolderOpen className="me-2" />
+            </Dropdown.Item>
+            <Dropdown.Item
+              onClick={() => {
+                handleCopy(item)
+              }}
+            >
+              Copy link <FaCopy className="me-2" />
+            </Dropdown.Item>
+            <Dropdown.Item
+              onClick={() => {
+                handleShowInFinder(item)
+              }}
+            >
+              Show in folder <FaExternalLinkAlt className="me-2" />
+            </Dropdown.Item>
+            <Dropdown.Item
+              onClick={() => {
+                if (typeof onDeleteClick === 'function') {
+                  onDeleteClick()
+                } else {
+                  handleDelete(item)
+                }
+                setOpenDropdown(null)
+              }}
+            >
+              Delete <FaTrash className="me-2" />
+            </Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
+      </div>
+    )
+  }
+
   // const filteredList =
   //   JSON.parse(localStorage.getItem('downloadList')) ||
   //   videoInfo
@@ -471,7 +585,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           ? Number((downloadingItem || nextItem).playlistIndex) || Math.min(completed + 1, total)
           : total
       const currentItemProgress = downloadingItem
-        ? Number(progressMap.get(downloadingItem.id)?.progress) || 0
+        ? Number(progressMap.get(downloadingItem.id)?.progress) || Number(downloadingItem.progress) || 0
         : 0
       const percent = total > 0
         ? Math.min(100, ((completed + currentItemProgress / 100) / total) * 100)
@@ -487,6 +601,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         percent,
         currentVideoNumber,
         displayItem,
+        failedItem: failedItems[0] || null,
         downloadingItem,
         nextItem,
         isComplete,
@@ -728,12 +843,15 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       }}>
         {searchFilteredList?.length > 0 ? (
           <>
-            {displayedPlaylistSummaries.map((playlist) => (
-              <section
-                key={playlist.id}
-                className={`playlist-progress-card${playlist.isComplete ? ' playlist-progress-card--complete' : ''}`}
-                aria-label={`${playlist.title} playlist download progress`}
-              >
+            {displayedPlaylistSummaries.map((playlist) => {
+              const playlistActionItem = playlist.failedItem || playlist.displayItem || playlist.items[0]
+
+              return (
+                <section
+                  key={playlist.id}
+                  className={`playlist-progress-card${playlist.isComplete ? ' playlist-progress-card--complete' : ''}`}
+                  aria-label={`${playlist.title} playlist download progress`}
+                >
                 <div className="playlist-progress-card__header">
                   <div>
                     <span className="playlist-progress-card__eyebrow">Playlist download</span>
@@ -755,17 +873,18 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                         'Preparing'
                       )}
                     </span>
-                    {playlist.displayItem && (
-                      <button
-                        type="button"
-                        className="playlist-progress-card__folder-button"
-                        onClick={() => handleOpenFolderClick(playlist.displayItem)}
-                        title="Show playlist in folder"
-                        aria-label="Show playlist in folder"
-                      >
-                        <FaFolderOpen />
-                      </button>
-                    )}
+                    {renderDownloadActions(playlistActionItem, {
+                      dropdownKey: `playlist:${playlist.id}`,
+                      className: 'download-row__actions playlist-progress-card__item-actions',
+                      folderTitle: 'Show playlist in folder',
+                      menuClassName: 'playlist-progress-card__menu',
+                      onDeleteClick: () => handleDeletePlaylist(playlist),
+                      onRetryClick: () => {
+                        if (playlistActionItem && typeof onRetry === 'function') {
+                          onRetry(playlistActionItem.id)
+                        }
+                      },
+                    })}
                   </div>
                 </div>
 
@@ -829,12 +948,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                     </div>
                   </div>
                 </div>
-              </section>
-            ))}
+                </section>
+              )
+            })}
 
             {[...new Set(visibleDownloadItems.map((item) => item.id))].map((uniqueId, index) => {
             const item = visibleDownloadItems.find((i) => i.id === uniqueId);
-            const progress = progressMap.get(item.id)?.progress || 0;
+            const progress = progressMap.get(item.id)?.progress || item.progress || 0;
             const speed = progressMap.get(item.id)?.speed || 'Unknown';
             const fileSize = progressMap.get(item.id)?.fileSize || 'Unknown';
             const eta = progressMap.get(item.id)?.eta || 'Unknown';
@@ -985,15 +1105,21 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                                 left: 0,
                                 flexDirection: 'column',
                                 gap: '4px'
-                              }}>
+                              }} title={item.title || 'Video'}>
                                 <FaVideo style={{ fontSize: '20px', color: '#ffffff' }} />
                                 <span style={{
                                   fontSize: '8px',
                                   color: '#ffffff',
                                   fontWeight: '600',
-                                  textAlign: 'center'
+                                  textAlign: 'center',
+                                  width: '108px',
+                                  lineHeight: '10px',
+                                  overflow: 'hidden',
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical'
                                 }}>
-                                  Failed
+                                  {item.title || 'Video'}
                                 </span>
                               </div>
                             </>
@@ -1011,15 +1137,21 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                             position: 'relative',
                             flexDirection: 'column',
                             gap: '4px'
-                          }}>
+                          }} title={item.title || 'Video'}>
                             <FaVideo style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
                             <span style={{
                               fontSize: '8px',
                               color: 'var(--pnut-brand)',
                               fontWeight: '600',
-                              textAlign: 'center'
+                              textAlign: 'center',
+                              width: '108px',
+                              lineHeight: '10px',
+                              overflow: 'hidden',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
                             }}>
-                              No thumbnail
+                              {item.title || 'Video'}
                             </span>
                           </div>
                         )
@@ -1213,83 +1345,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 </div>
 
                 {/* Action Buttons */}
-                {!isSelectMode && (
-                  <div className="download-row__actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      className="btn pnut-button pnut-button--icon"
-                      onClick={() => handleOpenFolderClick(item)}
-                      title="Show in folder"
-                      style={{
-                        background: 'transparent',
-                        border: '1px solid var(--pnut-border)',
-                        borderRadius: '5px',
-                        padding: '6px 10px',
-                        color: 'var(--pnut-text-soft)',
-                        fontSize: '14px'
-                      }}
-                    >
-                      <FaFolderOpen />
-                    </button>
-                    <Dropdown
-                      show={openDropdown === item.id}
-                      onToggle={(isOpen) => setOpenDropdown(isOpen ? item.id : null)}
-                    >
-                      <Dropdown.Toggle
-                        as="button"
-                        className="download-row__menu-button"
-                        style={{
-                          background: 'transparent',
-                          border: 'none',
-                          color: 'var(--pnut-text-soft)',
-                          fontSize: '16px',
-                          padding: '6px',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <FaEllipsisV />
-                      </Dropdown.Toggle>
-                      <Dropdown.Menu className="dropdown-menu">
-                        <Dropdown.Item
-                          onClick={() => {
-                            setOpenDropdown(null)
-                            if (typeof onRetry === 'function') onRetry(item.id)
-                          }}
-                        >
-                          Retry <FaRedoAlt className="me-2" />
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => {
-                            handleAddToFolder(item);
-                          }}
-                        >
-                          Move to folder <FaFolderOpen className="me-2" />
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => {
-                            handleCopy(item);
-                          }}
-                        >
-                          Copy link <FaCopy className="me-2" />
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => {
-                            handleShowInFinder(item);
-                          }}
-                        >
-                          Show in folder <FaExternalLinkAlt className="me-2" />
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                          onClick={() => {
-                            handleDelete(item);
-                          }}
-                        >
-                          Delete <FaTrash className="me-2" />
-                        </Dropdown.Item>
-                      </Dropdown.Menu>
-                    </Dropdown>
-                  </div>
-                )}
+                {!isSelectMode && renderDownloadActions(item)}
               </div>
             );
             })}

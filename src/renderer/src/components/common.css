@@ -1757,7 +1757,8 @@ h1 {
 
 .playlist-progress-card {
   flex: 0 0 auto;
-  overflow: hidden;
+  position: relative;
+  overflow: visible;
   border: 1px solid var(--pnut-brand-border-strong);
   border-radius: var(--pnut-radius-lg);
   background:
@@ -1774,8 +1775,10 @@ h1 {
 }
 
 .playlist-progress-card__header {
+  position: relative;
+  z-index: 3;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
   padding: 15px 18px 13px;
@@ -1826,27 +1829,42 @@ h1 {
   flex: 0 0 auto;
 }
 
-.playlist-progress-card__folder-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--pnut-border);
-  border-radius: 7px;
-  background: var(--pnut-surface);
-  color: var(--pnut-text-soft);
-  cursor: pointer;
+.playlist-progress-card__item-actions {
+  position: relative;
+  opacity: 1;
+  gap: 6px !important;
 }
 
-.playlist-progress-card__folder-button:hover {
-  border-color: var(--pnut-brand-border-strong);
-  background: var(--pnut-brand-soft);
-  color: var(--pnut-brand);
+.playlist-progress-card__item-actions .pnut-button,
+.playlist-progress-card__item-actions .download-row__menu-button {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+  background: var(--pnut-surface-raised) !important;
+}
+
+.playlist-progress-card__menu {
+  min-width: 158px !important;
+  max-width: 170px;
+  padding: 6px 0 !important;
+  border-radius: 12px !important;
+  z-index: 2200 !important;
+}
+
+.playlist-progress-card__menu .dropdown-item {
+  gap: 12px;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
+  line-height: 1.2;
+}
+
+.playlist-progress-card__menu .dropdown-item:hover {
+  transform: none;
 }
 
 .playlist-progress-card__body {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: 132px minmax(0, 1fr) auto;
   align-items: center;

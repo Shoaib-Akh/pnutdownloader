@@ -12,6 +12,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "test": "jest",
+    "test:platforms": "jest tests/platformMatrix.test.js --runInBand",
+    "test:platforms:live": "node tests/live-platform-smoke.mjs",
     "test:watch": "jest --watch",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

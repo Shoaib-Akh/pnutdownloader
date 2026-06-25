@@ -17,6 +17,70 @@ const isProtectedCDN = (url) => {
 const readDownloads = () => JSON.parse(localStorage.getItem(DOWNLOAD_STORAGE_KEY) || '[]')
 const writeDownloads = (list) => localStorage.setItem(DOWNLOAD_STORAGE_KEY, JSON.stringify(list))
 
+const isPlaylistLike = (item) => {
+  const url = String(item?.url || '')
+  return Boolean(
+    item?.isPlaylist ||
+    item?.playlistTitle ||
+    item?.playlistBatchId ||
+    url.includes('/playlist') ||
+    url.includes('&list=') ||
+    url.includes('?list=')
+  )
+}
+
+const findDownloadIndexForProgress = (downloads, progressData) => {
+  if (!Array.isArray(downloads) || downloads.length === 0) return -1
+
+  if (progressData?.downloadId) {
+    const exactIndex = downloads.findIndex((item) => item.id === progressData.downloadId)
+    if (exactIndex !== -1) return exactIndex
+  }
+
+  const activePlaylistIndex = downloads.findIndex(
+    (item) =>
+      isPlaylistLike(item) &&
+      (item.status === 'Downloading' || item.status === 'Fetching Info...' || item.status === 'Queued')
+  )
+  if (activePlaylistIndex !== -1) return activePlaylistIndex
+
+  return downloads.findIndex(
+    (item) => item.status === 'Downloading' || item.status === 'Fetching Info...'
+  )
+}
+
+const getYoutubeVideoFromMessage = (message) => {
+  const match = String(message || '').match(
+    /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
+  )
+  if (!match) return null
+  return {
+    url: match[0],
+    id: match[2],
+    thumbnail: `https://i.ytimg.com/vi/${match[2]}/hqdefault.jpg`,
+  }
+}
+
+const getFilenameTitle = (filePath) => {
+  const fileName = String(filePath || '').split(/[\\/]/).pop()
+  if (!fileName) return ''
+  return fileName
+    .replace(/\.[a-z0-9]{2,5}$/i, '')
+    .replace(/\.f\d+$/i, '')
+    .trim()
+}
+
+const parseDownloadProgressPercent = (message) => {
+  const match = String(message || '').match(/\[download\]\s+(\d+(?:\.\d+)?)%\s+of\s+~?\s*([^\s]+)(?:\s+at\s+([^\s]+)\s+ETA\s+([^\s]+))?/)
+  if (!match) return null
+  return {
+    progress: Number(match[1]) || 0,
+    fileSize: match[2] || 'Unknown',
+    speed: match[3] || 'N/A',
+    eta: match[4] || 'N/A',
+  }
+}
+
 const MEDIA_EXTENSIONS = new Set([
   'mp4',
   'webm',
@@ -209,14 +273,160 @@ const useDownloadListVM = () => {
   const [lastUpdated, setLastUpdated] = useState(Date.now())
   const [downloadListData, setDownloadListData] = useState(readDownloads())
 
-  // Listen for progress events to refresh thumbnails and force rerender
+  // Listen for progress events to refresh the list even if the queue-owned listener
+  // was reset by HMR/remount while a native download keeps running.
   useEffect(() => {
     const handleDownloadProgress = (progressData) => {
-      if (progressData.thumbnail && progressData.downloadId) {
-        const list = readDownloads()
-        const updated = list.map((item) =>
-          item.id === progressData.downloadId ? { ...item, thumbnail: progressData.thumbnail } : item
-        )
+      const list = readDownloads()
+      const itemIndex = findDownloadIndexForProgress(list, progressData)
+      if (itemIndex === -1) return
+
+      const current = list[itemIndex]
+      const message = typeof progressData?.message === 'string' ? progressData.message : ''
+      const playlistRecord = isPlaylistLike(current)
+      let nextItem = { ...current }
+      let changed = false
+
+      const apply = (patch) => {
+        nextItem = { ...nextItem, ...patch }
+        changed = true
+      }
+
+      if (progressData?.thumbnail) {
+        apply({ thumbnail: progressData.thumbnail })
+      }
+
+      const incomingTitle = progressData?.title || (!playlistRecord ? progressData?.sanitizedTitle : null)
+      if (incomingTitle && !/^Preparing playlist/i.test(String(incomingTitle))) {
+        apply({ title: String(incomingTitle).trim() })
+      }
+
+      if (progressData?.duration) {
+        apply({ duration: progressData.duration })
+      }
+
+      if (progressData?.file) {
+        apply({ filePath: String(progressData.file) })
+      }
+
+      if (progressData?.error) {
+        apply({
+          status: 'Failed',
+          isFailed: true,
+          lastError: String(progressData.error),
+          errorDetails: progressData.details ? String(progressData.details) : nextItem.errorDetails,
+          errorExitCode: progressData.exitCode ?? nextItem.errorExitCode ?? null,
+        })
+      }
+
+      if (progressData?.status === 'Download complete!') {
+        apply({
+          status: 'Completed',
+          isCompleted: true,
+          isPlaylistCompleted: playlistRecord || nextItem.isPlaylistCompleted,
+          progress: 100,
+          ...(progressData.file ? { filePath: String(progressData.file) } : {}),
+        })
+      }
+
+      if (message) {
+        const playlistTitleMatch = message.match(/\[download\]\s+Downloading playlist:\s*(.+)$/)
+        if (playlistTitleMatch) {
+          apply({
+            isPlaylist: true,
+            playlistTitle: playlistTitleMatch[1].trim() || nextItem.playlistTitle,
+            playlistBatchId: nextItem.playlistBatchId || `direct:${nextItem.id}`,
+            status: 'Downloading',
+          })
+        }
+
+        const playlistTotalMatch = message.match(/\[youtube:tab\]\s+Playlist\s+(.+?):\s+Downloading\s+(\d+)\s+items?\s+of\s+(\d+)/)
+        if (playlistTotalMatch) {
+          const [, playlistTitle, visibleItems, totalItems] = playlistTotalMatch
+          const total = Number(totalItems) || Number(visibleItems) || nextItem.totalItems || 1
+          apply({
+            isPlaylist: true,
+            playlistTitle: playlistTitle.trim() || nextItem.playlistTitle,
+            playlistBatchId: nextItem.playlistBatchId || `direct:${nextItem.id}`,
+            currentItem: Number(nextItem.currentItem) || 1,
+            totalItems: total,
+            playlistTotal: total,
+            status: 'Downloading',
+          })
+        }
+
+        const itemCountMatch = message.match(/\[download\]\s+Downloading item\s+(\d+)\s+of\s+(\d+)/)
+        if (itemCountMatch) {
+          const currentItem = Number(itemCountMatch[1]) || 1
+          const totalItems = Number(itemCountMatch[2]) || currentItem
+          apply({
+            isPlaylist: true,
+            playlistBatchId: nextItem.playlistBatchId || `direct:${nextItem.id}`,
+            currentItem,
+            totalItems,
+            playlistTotal: totalItems,
+            progress: 0,
+            status: 'Downloading',
+          })
+        }
+
+        const currentVideo = getYoutubeVideoFromMessage(message)
+        if (currentVideo && isPlaylistLike(nextItem)) {
+          apply({
+            isPlaylist: true,
+            currentVideoId: currentVideo.id,
+            currentVideoUrl: currentVideo.url,
+            thumbnail: currentVideo.thumbnail,
+            title: Number(nextItem.currentItem)
+              ? `Video ${nextItem.currentItem} of ${nextItem.totalItems || '…'}`
+              : nextItem.title || 'Loading playlist video…',
+            status: 'Downloading',
+          })
+        }
+
+        const destinationMatch = message.match(/Destination:\s+(.*)$/) || message.match(/\[download\]\s+(.*?)\s+has already been downloaded/)
+        if (destinationMatch?.[1]) {
+          const filePath = destinationMatch[1].trim()
+          const fileTitle = getFilenameTitle(filePath)
+          apply({
+            filePath,
+            ...(fileTitle ? { title: fileTitle } : {}),
+            status: 'Downloading',
+          })
+        }
+
+        const progressDetails = parseDownloadProgressPercent(message)
+        if (progressDetails) {
+          apply({
+            progress: progressDetails.progress,
+            fileSize: progressDetails.fileSize,
+            speed: progressDetails.speed,
+            eta: progressDetails.eta,
+            status: 'Downloading',
+          })
+        }
+
+        if (message.includes('Finished downloading playlist:')) {
+          apply({
+            isPlaylistCompleted: true,
+            status: 'Completed',
+            isCompleted: true,
+            progress: 100,
+          })
+        }
+      }
+
+      if (changed) {
+        const updated = [...list]
+        updated[itemIndex] = nextItem
+        console.log('[PlaylistProgress] Download list progress applied', {
+          downloadId: nextItem.id,
+          playlistTitle: nextItem.playlistTitle,
+          currentItem: nextItem.currentItem,
+          totalItems: nextItem.totalItems,
+          title: nextItem.title,
+          progress: nextItem.progress,
+        })
         writeDownloads(updated)
         setDownloadListData(updated)
         setLastUpdated(Date.now())
@@ -247,16 +457,14 @@ const useDownloadListVM = () => {
     window.addEventListener('storage', handleStorageChange)
     window.addEventListener('downloadListUpdated', handleDownloadListUpdated)
 
-    if (window.api?.onDownloadProgress) {
-      window.api.onDownloadProgress(handleDownloadProgress)
-    }
+    const removeProgressListener = window.api?.onDownloadProgress
+      ? window.api.onDownloadProgress(handleDownloadProgress)
+      : null
 
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('downloadListUpdated', handleDownloadListUpdated)
-      if (window.api?.removeListener) {
-        window.api.removeListener('download-progress')
-      }
+      if (typeof removeProgressListener === 'function') removeProgressListener()
     }
   }, [])
 
