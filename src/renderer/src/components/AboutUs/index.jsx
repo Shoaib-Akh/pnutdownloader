@@ -287,23 +287,6 @@ function AboutUs({ onOpenFeedback }) {
         </h4>
       </div>
 
-      <div className="row g-4 mb-5">
-        <div className="col-md-12">
-          <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'var(--pnut-surface)' }}>
-            <div className="card-body p-3 d-flex justify-content-around align-items-center">
-              <div className="text-center">
-                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Total Downloads</h3>
-                <div className="h2 fw-bold" style={{ color: 'var(--pnut-brand)' }}>{userStats.totalDownloads}</div>
-              </div>
-              <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--pnut-border)' }}></div>
-              <div className="text-center">
-                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Download Errors</h3>
-                <div className="h2 fw-bold" style={{ color: 'var(--pnut-danger)' }}>{userStats.errorCount}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="row g-4 mb-3">
         <div className="col-md-6 mt-2">
@@ -334,7 +317,23 @@ function AboutUs({ onOpenFeedback }) {
           </div>
         </div>
       </div>
-
+ <div className="row g-4 mb-5">
+        <div className="col-md-12">
+          <div className="card border-0 shadow-sm" style={{ borderRadius: '15px', background: 'var(--pnut-surface)' }}>
+            <div className="card-body p-3 d-flex justify-content-around align-items-center">
+              <div className="text-center">
+                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Total Downloads</h3>
+                <div className="h2 fw-bold" style={{ color: 'var(--pnut-brand)' }}>{userStats.totalDownloads}</div>
+              </div>
+              <div style={{ width: '1px', height: '40px', backgroundColor: 'var(--pnut-border)' }}></div>
+              <div className="text-center">
+                <h3 className="h6 text-muted mb-1 text-uppercase fw-bold">Download Errors</h3>
+                <div className="h2 fw-bold" style={{ color: 'var(--pnut-danger)' }}>{userStats.errorCount}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="row g-4 mb-3">
         <div className="col-md-12">
           <div
@@ -408,44 +407,36 @@ function AboutUs({ onOpenFeedback }) {
         </div>
       </div>
 
-      <div className="mt-3 row align-items-start">
-        <div className="col-md-6 d-flex flex-column justify-content-center align-items-center">
-          <h2 className="h5 fw-semibold text-dark mt-2" style={{ fontSize: 18, color: 'var(--pnut-text)' }}>
-            Community
+      <div className="mt-3 row align-items-start about-us-links">
+        <div className="col-md-4 d-flex flex-column justify-content-center align-items-center about-us-links__column">
+          <h2 className="h5 fw-semibold text-dark mt-2 about-us-links__heading">
+            Updates
           </h2>
-          <p className="text-muted mb-2 small">Join the community and stay updated.</p>
-          <h3 className="mb-2" style={{ fontSize: 14, color: 'var(--pnut-brand)' }}>
+          <p className="text-muted mb-2 small about-us-links__subtitle">Keep the app current.</p>
+          <h3 className="mb-2 about-us-links__version">
             Current Version: <b>{appVersion}</b>
           </h3>
 
-          <div className="d-flex flex-column gap-2 mb-3 align-items-center">
+          <div className="d-flex flex-column gap-2 mb-3 align-items-center about-us-links__actions">
             <button
-              className="btn px-3"
-              style={{ background: 'var(--pnut-button-bg)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: 'var(--pnut-shadow-sm)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-button-text)' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-md)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--primary"
               onClick={() => window.api && window.api.checkForUpdates()}
             >
+              <FaSyncAlt className="me-2" />
               Check for Update
             </button>
+          </div>
+        </div>
 
+        <div className="col-md-4 d-flex flex-column justify-content-center align-items-center about-us-links__column">
+          <h2 className="h5 fw-semibold text-dark mt-2 about-us-links__heading">
+            Community
+          </h2>
+          <p className="text-muted mb-2 small about-us-links__subtitle">Join the community and stay updated.</p>
+
+          <div className="d-flex flex-column gap-2 mb-3 align-items-center about-us-links__actions">
             <button
-              className="btn px-3"
-              style={{ background: '#ff4500', border: 'none', fontSize: 13, width: 220, borderRadius: '8px', boxShadow: '0 4px 12px rgba(255, 69, 0, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(255, 69, 0, 0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(255, 69, 0, 0.25)';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--reddit"
               type="button"
               aria-label="Join our Reddit community"
               onClick={() => {
@@ -462,16 +453,7 @@ function AboutUs({ onOpenFeedback }) {
             </button>
 
             <button
-              className="btn px-3"
-              style={{ background: '#1877f2', border: 'none', fontSize: 13, width: 220, borderRadius: '8px', boxShadow: '0 4px 12px rgba(24, 119, 242, 0.25)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'white' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(24, 119, 242, 0.35)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(24, 119, 242, 0.25)';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--facebook"
               type="button"
               aria-label="Visit our Facebook page"
               onClick={() => {
@@ -489,39 +471,21 @@ function AboutUs({ onOpenFeedback }) {
           </div>
         </div>
 
-        <div className="col-md-6 d-flex flex-column justify-content-center align-items-center" style={{ cursor: 'default' }}>
-          <h3 className="mb-2" style={{ fontSize: 16, fontWeight: '600', color: 'var(--pnut-text)' }}>Quick Links</h3>
-          <div className="d-flex flex-column gap-2">
+        <div className="col-md-4 d-flex flex-column justify-content-center align-items-center about-us-links__column">
+          <h3 className="mb-2 about-us-links__heading">Quick Links</h3>
+          <div className="d-flex flex-column gap-2 about-us-links__actions">
             <button
               onClick={() => {
                 window.api?.trackEvent?.('feedback_button_clicked')
                 onOpenFeedback?.()
               }}
-              className="btn px-3"
-              style={{ background: 'var(--pnut-button-bg)', border: 'none', fontSize: 13, width: 160, borderRadius: '8px', boxShadow: 'var(--pnut-shadow-sm)', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-button-text)' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-md)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--primary"
             >
               <FaEnvelope className="me-2" />
               Contact us
             </button>
             <button
-              className="btn px-3"
-              style={{ background: 'var(--pnut-surface)', border: '1px solid var(--pnut-border)', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-text)', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--secondary"
               onClick={() => {
                 if (window.api) {
                   window.api.openExternal(
@@ -534,16 +498,7 @@ function AboutUs({ onOpenFeedback }) {
               Privacy Policy
             </button>
             <button
-              className="btn px-3"
-              style={{ background: 'var(--pnut-surface)', border: '1px solid var(--pnut-border)', fontSize: 13, width: 200, borderRadius: '8px', boxShadow: 'none', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', color: 'var(--pnut-text)', whiteSpace: 'nowrap' }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = 'var(--pnut-shadow-sm)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = 'none';
-              }}
+              className="btn px-3 about-us-links__button about-us-links__button--secondary"
               onClick={() => {
                 if (window.api) {
                   window.api.openExternal(

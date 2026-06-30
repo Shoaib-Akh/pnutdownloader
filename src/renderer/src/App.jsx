@@ -125,6 +125,7 @@ function App() {
               setSaveTo={setSaveTo}
               isSidebarOpen={isSidebarOpen}
               setPastLinkUrl={setPastLinkUrl}
+              isLoading={Boolean(pastLinkUrl)}
             />}
             <BodySection
               setPastLinkUrl={setPastLinkUrl}

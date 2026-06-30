@@ -1587,8 +1587,8 @@ function createWindow() {
         type: 'warning',
         title: 'Confirm Exit',
         message: dependencyBusy
-          ? 'FFmpeg or yt-dlp is still downloading/updating. Closing now can leave the dependency incomplete. Keep PNUT Downloader open until it finishes?'
-          : 'Are you sure you want to exit PNUT Downloader?',
+          ? ''
+          : 'Are you sure you want is still downloading/updating. Closing now can leave the dependency incomplete. Keep PNUT Downloader open until it finishes?to exit PNUT Downloader?',
         buttons: dependencyBusy ? ['Keep Waiting', 'Close Anyway'] : ['Yes', 'No'],
         defaultId: dependencyBusy ? 0 : 1, // Default to safest option
         cancelId: dependencyBusy ? 0 : 1,

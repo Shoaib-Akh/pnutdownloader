@@ -581,6 +581,14 @@
   opacity: 0.7;
 }
 
+.navbar-download-btn:disabled,
+.navbar-download-btn:disabled:hover {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none !important;
+  box-shadow: var(--pnut-shadow-sm) !important;
+}
+
 .navbar-download-btn.loading svg {
   animation: pulse 1.5s ease-in-out infinite;
 }

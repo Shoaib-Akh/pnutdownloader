@@ -16,7 +16,6 @@ const DebugLogPanel = () => {
   const [isVisible, setIsVisible] = useState(false)
   const logsEndRef = useRef(null)
   const errorCount = logs.filter((log) => log.level === 'error').length
-console.log("errorCount",errorCount);
 
 
   useEffect(() => {

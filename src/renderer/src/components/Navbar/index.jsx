@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaPaste, FaDownload } from 'react-icons/fa';
+import { Button } from 'react-bootstrap';
+import { FaPaste, FaDownload, FaTimes } from 'react-icons/fa';
 import Logo from '../../assets/Images/logo.svg';
 import '../common.css';
 import './Navbar.css';
@@ -7,7 +8,7 @@ import CustomDropdown from '../CustomDropdown';
 import { extractYotubePastLink, isDuplicateDownload } from '../commonFunction';
 import { isValidPlatformUrl, detectPlatform } from '../platformUtils';
 
-function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick }) {
+function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, setSaveTo, saveTo, bitrate, quality, setDownloadType, downloadType, onDownloadClick, isLoading = false }) {
   const [urlInput, setUrlInput] = useState('');
   const formatOptions = {
     Video: ['MP4', 'AVI', 'MKV'],
@@ -190,42 +191,60 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     return true;
   };
 
+  const validateDownloadUrl = (url) => {
+    const normalizedUrl = url?.trim();
+
+    if (!normalizedUrl || (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://'))) {
+      alert('Please paste a valid URL before downloading.');
+      return null;
+    }
+
+    if (!isValidPlatformUrl(normalizedUrl)) {
+      alert('The URL is not from a supported platform (YouTube, Facebook, Instagram, TikTok, Snapchat, etc.)');
+      return null;
+    }
+
+    const platform = detectPlatform(normalizedUrl);
+    const isYouTube = platform.includes('youtube');
+    if (isYouTube) {
+      const videoId = extractYotubePastLink(normalizedUrl);
+      if (!videoId) {
+        alert('The YouTube URL does not contain a valid video or playlist');
+        return null;
+      }
+    }
+
+    return normalizedUrl;
+  };
+
+  const submitUrlForDownload = (url) => {
+    if (isLoading) return;
+
+    const normalizedUrl = validateDownloadUrl(url);
+    if (!normalizedUrl) return;
+
+    if (checkDuplicateAndWarn(normalizedUrl)) return;
+    setPastLinkUrl(normalizedUrl);
+  };
+
   const handlePasteClick = async () => {
     try {
       if (window.api && window.api.trackEvent) {
         window.api.trackEvent('Paste');
       }
-      const clipboardText = await navigator.clipboard.readText();
+      const clipboardText = (await navigator.clipboard.readText()).trim();
       if (clipboardText.startsWith('http://') || clipboardText.startsWith('https://')) {
-        setUrlInput(clipboardText);
-        if (!isValidPlatformUrl(clipboardText)) {
-          alert('The URL is not from a supported platform (YouTube, Facebook, Instagram, TikTok, Snapchat, etc.)');
-          return;
-        }
+        const normalizedUrl = validateDownloadUrl(clipboardText);
+        if (!normalizedUrl) return;
 
-        // For YouTube URLs, extract video ID for additional validation
-        const platform = detectPlatform(clipboardText);
-        const isYouTube = platform.includes('youtube');
-        if (isYouTube) {
-          const videoId = extractYotubePastLink(clipboardText);
-          if (!videoId) {
-            alert('The YouTube URL does not contain a valid video or playlist');
-            return;
-          }
-        }
-
-        if (checkDuplicateAndWarn(clipboardText)) return;
+        setUrlInput(normalizedUrl);
 
         if (window.api && window.api.showVideoUrlNotification) {
           try {
-            await window.api.showVideoUrlNotification(clipboardText);
+            await window.api.showVideoUrlNotification(normalizedUrl);
           } catch (notifError) {
             console.warn('Failed to show notification:', notifError);
           }
-        }
-
-        if (setPastLinkUrl) {
-          setPastLinkUrl(clipboardText);
         }
       } else {
         alert('Copied content is not a valid URL.');
@@ -235,27 +254,35 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
     }
   };
 
+  const handleClearClick = () => {
+    setUrlInput('');
+  };
+
   const handleInputChange = (e) => {
     setUrlInput(e.target.value);
   };
 
   const handleInputKeyPress = (e) => {
     if (e.key === 'Enter' && urlInput) {
-      if (urlInput.startsWith('http://') || urlInput.startsWith('https://')) {
-        if (checkDuplicateAndWarn(urlInput)) return;
-        setPastLinkUrl(urlInput);
-      }
+      submitUrlForDownload(urlInput);
     }
   };
 
   const handleDownloadButtonClick = () => {
-    if (urlInput && (urlInput.startsWith('http://') || urlInput.startsWith('https://'))) {
-      if (checkDuplicateAndWarn(urlInput)) return;
-      setPastLinkUrl(urlInput);
-    } else if (onDownloadClick) {
-      onDownloadClick();
+    if (urlInput) {
+      submitUrlForDownload(urlInput);
+      return;
     }
+
+    if (onDownloadClick) {
+      onDownloadClick();
+      return;
+    }
+
+    alert('Paste a video link first.');
   };
+
+  const hasUrlInput = Boolean(urlInput.trim());
 
   return (
     <nav className="navbar-modern" role="navigation" aria-label="Main navigation">
@@ -266,11 +293,11 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
         {/* Paste Button */}
         <button 
           className="navbar-paste-btn"
-          onClick={handlePasteClick}
-          aria-label="Paste URL from clipboard"
-          title="Paste URL from clipboard"
+          onClick={hasUrlInput ? handleClearClick : handlePasteClick}
+          aria-label={hasUrlInput ? 'Clear URL input' : 'Paste URL from clipboard'}
+          title={hasUrlInput ? 'Clear URL input' : 'Paste URL from clipboard'}
         >
-          <FaPaste /> <span className="btn-text">Paste</span>
+          {hasUrlInput ? <FaTimes /> : <FaPaste />} <span className="btn-text">{hasUrlInput ? 'Clear' : 'Paste'}</span>
         </button>
 
         {/* Input Field */}
@@ -287,14 +314,26 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
         />
 
         {/* Download Button */}
-        <button
+        <Button
+          type="button"
           className="navbar-download-btn"
           onClick={handleDownloadButtonClick}
+          disabled={isLoading}
           aria-label="Download video"
           title="Download video"
         >
-          <FaDownload /> <span className="btn-text"></span>
-        </button>
+          {isLoading ? (
+            <>
+              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+              <span className="btn-text">Adding...</span>
+            </>
+          ) : (
+            <>
+              <FaDownload className="me-2" />
+              <span className="btn-text">Download</span>
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Secondary Controls on Right */}

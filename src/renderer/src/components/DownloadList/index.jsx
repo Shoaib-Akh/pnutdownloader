@@ -328,21 +328,12 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     if (!item) return null
 
     return (
-      <>
-      <div className={className} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+      <div className={className}>
         <button
           type="button"
-          className="btn pnut-button pnut-button--icon"
+          className="btn pnut-button pnut-button--icon download-row__folder-button"
           onClick={() => handleOpenFolderClick(item)}
           title={folderTitle}
-          style={{
-            background: 'transparent',
-            border: '1px solid var(--pnut-border)',
-            borderRadius: '5px',
-            padding: '6px 10px',
-            color: 'var(--pnut-text-soft)',
-            fontSize: '14px'
-          }}
         >
           <FaFolderOpen />
         </button>
@@ -353,14 +344,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           <Dropdown.Toggle
             as="button"
             className="download-row__menu-button"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--pnut-text-soft)',
-              fontSize: '16px',
-              padding: '6px',
-              cursor: 'pointer'
-            }}
           >
             <FaEllipsisV />
           </Dropdown.Toggle>
@@ -421,7 +404,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           </Dropdown.Menu>
         </Dropdown>
       </div>
-      </>
     )
   }
 
@@ -708,23 +690,12 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   }
 
   return (
-    <div className="download-library container-fluid p-0" style={{ padding: '30px 20px 20px 20px' }}>
+    <div className="download-library container-fluid p-0">
       {/* Header Section */}
-      <div className="download-library__header" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        paddingTop: '20px'
-      }}>
+      <div className="download-library__header">
         <div>
           <p className="pnut-eyebrow">{screenMeta.eyebrow}</p>
-          <h2 style={{
-          fontSize: '24px',
-          fontWeight: 'bold',
-          color: 'var(--pnut-text)',
-          margin: 0
-        }}>
+          <h2>
             {screenMeta.title}
           </h2>
           <p className="download-library__subtitle">{screenMeta.subtitle}</p>
@@ -732,62 +703,28 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       </div>
 
       {/* Search Bar */}
-      <div className="download-library__search" style={{
-        marginBottom: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        border: '1px solid var(--pnut-border)',
-        borderRadius: '25px',
-        padding: '8px 15px',
-        backgroundColor: 'var(--pnut-surface)',
-        marginTop: '40px'
-      }}>
-        <FaSearch style={{ color: 'var(--pnut-muted)', marginRight: '10px' }} />
+      <div className="download-library__search">
+        <FaSearch className="download-library__search-icon" />
         <input
           type="text"
           placeholder="Search downloads"
           value={searchQuery}
           onChange={handleSearchChange}
           className="download-library__search-input"
-          style={{
-            border: 'none',
-            outline: 'none',
-            flexGrow: 1,
-            backgroundColor: 'transparent',
-            fontSize: '16px',
-            color: 'var(--pnut-text)'
-          }}
         />
       </div>
 
       {/* Total and Select Button */}
-      <div className="download-library__toolbar" style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <span className="download-library__count" style={{ fontSize: '14px', color: 'var(--pnut-muted)' }}>
+      <div className="download-library__toolbar">
+        <span className="download-library__count">
           {displayedDownloadCount} item{displayedDownloadCount === 1 ? '' : 's'}
         </span>
-        <div className="download-library__actions" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div className="download-library__actions">
           {isSelectMode && (
             <>
               <button
                 onClick={handleSelectAll}
-                className="pnut-button"
-                style={{
-                  padding: '6px 12px',
-                  border: '1px solid var(--pnut-border)',
-                  borderRadius: '5px',
-                  background: 'white',
-                  color: 'var(--pnut-text)',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
+                className="pnut-button download-library__action-button"
               >
                 {(() => {
                   const currentList = searchQuery
@@ -809,19 +746,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
               {selectedItems.size > 0 && (
                 <button
                   onClick={handleDeleteSelectedItems}
-                  className="pnut-button pnut-button--danger"
-                  style={{
-                    padding: '6px 12px',
-                    border: '1px solid var(--pnut-danger)',
-                    borderRadius: '5px',
-                    background: 'var(--pnut-danger)',
-                    color: '#ffffff',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                  }}
+                  className="pnut-button pnut-button--danger download-library__action-button"
                 >
                   <FaTrash /> Delete Selected ({selectedItems.size})
                 </button>
@@ -830,19 +755,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           )}
           <button
             onClick={handleSelectModeToggle}
-            className="pnut-button"
-            style={{
-              padding: '6px 12px',
-              border: isSelectMode ? '1px solid var(--pnut-button-bg)' : '1px solid var(--pnut-border)',
-              borderRadius: '5px',
-              background: isSelectMode ? 'var(--pnut-button-bg)' : 'var(--pnut-surface)',
-              color: isSelectMode ? 'var(--pnut-button-text)' : 'var(--pnut-text)',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
+            className={`pnut-button download-library__action-button${isSelectMode ? ' download-library__action-button--active' : ''}`}
           >
             {isSelectMode ? 'Cancel' : 'Select'}
           </button>
@@ -850,17 +763,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       </div>
 
       {/* Download List - Card Layout */}
-      <div className="download-library__list" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '20px',
-        height: 'calc(100vh - 250px)',
-        overflowY: 'auto',
-        paddingRight: '15px',
-        paddingLeft: '5px',
-        paddingBottom: '20px',
-        overflowX: 'hidden'
-      }}>
+      <div className="download-library__list">
         {searchFilteredList?.length > 0 ? (
           <>
             {displayedPlaylistSummaries.map((playlist) => {
@@ -938,19 +841,11 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                       {playlist.completed} of {playlist.total} downloaded · {playlist.remaining} remaining
                       {playlist.failed > 0 ? ` · ${playlist.failed} failed` : ''}
                     </div>
-                    <div
-                      className="playlist-progress-card__track"
-                      role="progressbar"
-                      aria-valuemin="0"
-                      aria-valuemax="100"
-                      aria-valuenow={Math.round(playlist.percent)}
+                    <ProgressBar
+                      now={playlist.percent}
+                      className="playlist-progress-card__progress"
                       aria-label={`${Math.round(playlist.percent)} percent complete`}
-                    >
-                      <div
-                        className="playlist-progress-card__fill"
-                        style={{ width: `${playlist.percent}%` }}
-                      />
-                    </div>
+                    />
                   </div>
 
                   <div className="playlist-progress-card__counts">
@@ -985,105 +880,40 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
               <div
                 key={item.id}
                 className={`download-row ${activeDownloads?.has(item.id) ? 'download-row--active' : ''} ${selectedItems.has(item.id) ? 'download-row--selected' : ''}`}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '18px',
-                  padding: '20px',
-                  background: activeDownloads?.has(item.id)
-                    ? 'linear-gradient(135deg, var(--pnut-info-soft) 0%, var(--pnut-surface) 100%)'
-                    : selectedItems.has(item.id)
-                      ? 'linear-gradient(135deg, var(--pnut-brand-soft) 0%, var(--pnut-surface) 100%)'
-                      : 'var(--pnut-surface)',
-                  borderRadius: '10px',
-                  border: activeDownloads?.has(item.id) || selectedItems.has(item.id)
-                    ? '2px solid var(--pnut-brand-border-strong)'
-                    : '1px solid var(--pnut-border)',
-                  transition: 'all 0.3s ease',
-                  boxShadow: activeDownloads?.has(item.id) || selectedItems.has(item.id) ? 'var(--pnut-shadow-sm)' : 'none',
-                  position: 'relative'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = 'var(--pnut-shadow-md)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = activeDownloads?.has(item.id) || selectedItems.has(item.id) ? 'var(--pnut-shadow-sm)' : 'none';
-                }}
               >
                 {/* Active Download Indicator */}
                 {activeDownloads?.has(item.id) && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    right: '8px',
-                    background: 'var(--pnut-brand-fill)',
-                    color: '#09090B',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '10px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    animation: 'pulse 2s infinite'
-                  }}>
-                    <div style={{
-                      width: '6px',
-                      height: '6px',
-                      background: '#09090B',
-                      borderRadius: '50%',
-                      animation: 'blink 1.5s infinite'
-                    }}></div>
+                  <div className="download-row__active-badge">
+                    <div className="download-row__active-dot"></div>
                     Active
                   </div>
                 )}
                 {/* Checkbox for select mode */}
                 {isSelectMode && (
                   <div
+                    className="download-row__select-toggle"
                     onClick={() => handleItemSelect(item.id)}
-                    style={{
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '24px',
-                      height: '24px'
-                    }}
                   >
                     {selectedItems.has(item.id) ? (
-                      <FaCheckSquare style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
+                      <FaCheckSquare className="download-row__select-icon download-row__select-icon--selected" />
                     ) : (
-                      <FaSquare style={{ fontSize: '20px', color: 'var(--pnut-muted)' }} />
+                      <FaSquare className="download-row__select-icon" />
                     )}
                   </div>
                 )}
                 {/* Number */}
                 {!isSelectMode && (
-                  <span style={{
-                    fontSize: '16px',
-                    fontWeight: '600',
-                    color: 'var(--pnut-muted)',
-                    minWidth: '30px'
-                  }}>
+                  <span className="download-row__index">
                     {index + 1}
                   </span>
                 )}
 
                 {/* Thumbnail with Duration Overlay */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div className="download-row__thumbnail">
                   {!item.thumbnail && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
-                    <div style={{ position: 'relative' }}>
+                    <div className="download-row__thumbnail-skeleton">
                       <Skeleton width={120} height={70} />
-                      <div style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        fontSize: '12px',
-                        color: 'var(--pnut-muted)',
-                        fontWeight: '600',
-                        textAlign: 'center'
-                      }}>
+                      <div className="download-row__thumbnail-status">
                         {item.status === 'Fetching Info...' ? 'Getting info' : 'In queue'}
                       </div>
                     </div>
@@ -1097,48 +927,18 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                               <img
                                 src={thumbnailUrl}
                                 alt={item.title}
-                                style={{
-                                  width: '120px',
-                                  height: '70px',
-                                  objectFit: 'cover',
-                                  borderRadius: '8px',
-                                  cursor: item.isCompleted ? 'pointer' : 'default'
-                                }}
+                                className={`download-row__thumbnail-image${item.isCompleted ? ' download-row__thumbnail-image--clickable' : ''}`}
                                 onClick={() => item.isCompleted && handleThumbnailClick(item)}
                                 onError={(e) => {
-                                  e.target.style.display = 'none'
-                                  if (e.target.nextSibling) {
-                                    e.target.nextSibling.style.display = 'flex'
+                                  e.currentTarget.classList.add('download-row__thumbnail-image--hidden')
+                                  if (e.currentTarget.nextElementSibling) {
+                                    e.currentTarget.nextElementSibling.classList.add('download-row__thumbnail-fallback--visible')
                                   }
                                 }}
                               />
-                              <div style={{
-                                width: '120px',
-                                height: '70px',
-                                background: 'linear-gradient(135deg, var(--pnut-brand) 0%, var(--pnut-brand-fill) 100%)',
-                                borderRadius: '8px',
-                                display: 'none',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                flexDirection: 'column',
-                                gap: '4px'
-                              }} title={item.title || 'Video'}>
-                                <FaVideo style={{ fontSize: '20px', color: '#ffffff' }} />
-                                <span style={{
-                                  fontSize: '8px',
-                                  color: '#ffffff',
-                                  fontWeight: '600',
-                                  textAlign: 'center',
-                                  width: '108px',
-                                  lineHeight: '10px',
-                                  overflow: 'hidden',
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical'
-                                }}>
+                              <div className="download-row__thumbnail-fallback download-row__thumbnail-fallback--error" title={item.title || 'Video'}>
+                                <FaVideo className="download-row__thumbnail-fallback-icon" />
+                                <span className="download-row__thumbnail-fallback-title">
                                   {item.title || 'Video'}
                                 </span>
                               </div>
@@ -1146,48 +946,16 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                           )
                         }
                         return (
-                          <div style={{
-                            width: '120px',
-                            height: '70px',
-                            background: 'linear-gradient(135deg, var(--pnut-brand-soft) 0%, var(--pnut-surface-raised) 100%)',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                            flexDirection: 'column',
-                            gap: '4px'
-                          }} title={item.title || 'Video'}>
-                            <FaVideo style={{ fontSize: '20px', color: 'var(--pnut-brand)' }} />
-                            <span style={{
-                              fontSize: '8px',
-                              color: 'var(--pnut-brand)',
-                              fontWeight: '600',
-                              textAlign: 'center',
-                              width: '108px',
-                              lineHeight: '10px',
-                              overflow: 'hidden',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical'
-                            }}>
+                          <div className="download-row__thumbnail-fallback download-row__thumbnail-fallback--placeholder" title={item.title || 'Video'}>
+                            <FaVideo className="download-row__thumbnail-fallback-icon" />
+                            <span className="download-row__thumbnail-fallback-title">
                               {item.title || 'Video'}
                             </span>
                           </div>
                         )
                       })()}
                       {duration && (
-                        <div style={{
-                          position: 'absolute',
-                          bottom: '6px',
-                          left: '6px',
-                          background: 'rgba(0, 0, 0, 0.7)',
-                          color: 'white',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          fontSize: '11px',
-                          fontWeight: '600'
-                        }}>
+                        <div className="download-row__duration">
                           {duration}
                         </div>
                       )}
@@ -1196,21 +964,9 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 </div>
 
                 {/* Content Section */}
-                <div className="download-row__content" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', minWidth: 0 }}>
+                <div className="download-row__content">
                   {/* Title */}
-                  <h3 style={{
-                    fontSize: '15px',
-                    fontWeight: '600',
-                    color: 'var(--pnut-text)',
-                    margin: 0,
-                    lineHeight: '1.4',
-                    whiteSpace: 'normal',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical'
-                  }}>
+                  <h3 className="download-row__title">
                     {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={300} />
                     ) : (
@@ -1219,65 +975,31 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                   </h3>
 
                   {/* Status, Format, Date */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div className="download-row__meta">
                     {/* Status Badge */}
                     {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={70} height={22} />
                     ) : item.isPlaylist ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div className="download-row__playlist-status">
                         {item.isPlaylistCompleted && (
-                          <FaCheckCircle style={{ color: 'var(--pnut-success)', fontSize: '12px' }} />
+                          <FaCheckCircle className="download-row__status-icon download-row__status-icon--success" />
                         )}
-                        <span style={{
-                          background: item.isPlaylistCompleted ? 'var(--pnut-success-soft)' : 'var(--pnut-warning-soft)',
-                          color: item.isPlaylistCompleted ? 'var(--pnut-success)' : 'var(--pnut-warning)',
-                          padding: '3px 8px',
-                          borderRadius: '10px',
-                          fontSize: '11px',
-                          fontWeight: '600'
-                        }}>
+                        <span className={`download-row__status-badge ${item.isPlaylistCompleted ? 'download-row__status-badge--success' : 'download-row__status-badge--warning'}`}>
                           {item.isPlaylistCompleted ? 'Done' : `${item.currentItem || 0}/${item.totalItems || 0} videos`}
                         </span>
                       </div>
                     ) : item.isCompleted || item.status === 'Completed' ? (
-                      <div style={{
-                        background: 'var(--pnut-success-soft)',
-                        color: 'var(--pnut-success)',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <FaCheckCircle style={{ fontSize: '12px' }} />
+                      <div className="download-row__status-badge download-row__status-badge--success">
+                        <FaCheckCircle className="download-row__status-icon" />
                         Done
                       </div>
                     ) : item.status === 'Failed' ? (
-                      <div style={{
-                        background: 'var(--pnut-danger-soft)',
-                        color: 'var(--pnut-danger)',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}>
-                        <FaTimesCircle style={{ fontSize: '12px' }} />
+                      <div className="download-row__status-badge download-row__status-badge--danger">
+                        <FaTimesCircle className="download-row__status-icon" />
                         Failed
                       </div>
                     ) : (
-                      <div style={{
-                        background: 'var(--pnut-info-soft)',
-                        color: 'var(--pnut-info)',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: '600'
-                      }}>
+                      <div className="download-row__status-badge download-row__status-badge--info">
                         {item.status === "Downloading" ? (
                           <>
                             Downloading
@@ -1295,68 +1017,26 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                       </div>
                     )}
 
-                    {/* {item.status === 'Failed' && item.lastError && (
-                      <div
-                        title={item.errorDetails || item.lastError}
-                        style={{
-                          width: '100%',
-                          color: 'var(--pnut-danger)',
-                          fontSize: '12px',
-                          lineHeight: '1.4',
-                          whiteSpace: 'normal',
-                          overflowWrap: 'anywhere'
-                        }}
-                      >
-                        {item.lastError}
-                        {item.errorExitCode !== null && item.errorExitCode !== undefined
-                          ? ` (exit code ${item.errorExitCode})`
-                          : ''}
-                        {item.errorDetails && item.errorDetails !== item.lastError && (
-                       
-                        console.log("errro",item.lastError, item.errorDetails)
-                      
-                        )}
-                      </div>
-                    )} */}
-
                     {/* Format Tag */}
                     {!item.isPlaylist && item.format && (
-                      <span style={{
-                        background: 'var(--pnut-surface-raised)',
-                        color: 'var(--pnut-text-soft)',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontSize: '11px',
-                        fontWeight: '500',
-                        textTransform: 'uppercase'
-                      }}>
+                      <span className="download-row__format">
                         {item.format}
                       </span>
                     )}
 
                     {/* Date */}
-                    <span style={{
-                      fontSize: '11px',
-                      color: 'var(--pnut-muted)'
-                    }}>
+                    <span className="download-row__date">
                       {getFormattedDate(item)}
                     </span>
                     {/* Progress Bar for Downloading */}
                     {!item.isCompleted && item.status !== 'Completed' && item.status === 'Downloading' && progress > 0 && (
-                      <div style={{ width: '100%', marginTop: '4px' }}>
+                      <div className="download-row__progress">
                         <ProgressBar
                           now={progress || 0}
-                          style={{ height: '5px' }}
+                          className="download-row__progress-bar"
                         />
                         {/* Download Speed Info */}
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          marginTop: '6px',
-                          fontSize: '11px',
-                          color: 'var(--pnut-muted)'
-                        }}>
+                        <div className="download-row__progress-info">
                           <span>Size: {fileSize}</span>
                         </div>
                       </div>
@@ -1371,13 +1051,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             })}
           </>
         ) : (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px',
-            fontSize: '18px',
-            fontWeight: 'bold',
-            color: 'var(--pnut-muted)'
-          }}>
+          <div className="download-library__empty">
 {searchQuery ? 'No matches found.' : screenMeta.empty}
            </div>
          )}
@@ -1394,42 +1068,24 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="custom-modal-body">
-          <p style={{ margin: 0 }}>{confirmMessage}</p>
+          <p className="modal-message">{confirmMessage}</p>
         </Modal.Body>
         <Modal.Footer className="custom-modal-footer">
           <button
             type="button"
-            className="pnut-button"
+            className="pnut-button download-confirm-modal__button"
             onClick={() => setShowConfirmModal(false)}
-            style={{
-              padding: '6px 12px',
-              border: '1px solid var(--pnut-border)',
-              borderRadius: '5px',
-              background: 'var(--pnut-surface)',
-              color: 'var(--pnut-text)',
-              fontSize: '13px',
-              cursor: 'pointer'
-            }}
           >
             Cancel
           </button>
           <button
             type="button"
-            className="pnut-button pnut-button--danger"
+            className="pnut-button pnut-button--danger download-confirm-modal__button"
             onClick={() => {
               setShowConfirmModal(false)
               if (pendingCallback) {
                 pendingCallback()
               }
-            }}
-            style={{
-              padding: '6px 12px',
-              border: '1px solid var(--pnut-danger)',
-              borderRadius: '5px',
-              background: 'var(--pnut-danger)',
-              color: '#ffffff',
-              fontSize: '13px',
-              cursor: 'pointer'
             }}
           >
             Confirm
