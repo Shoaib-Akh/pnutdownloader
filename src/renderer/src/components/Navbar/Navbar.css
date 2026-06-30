@@ -171,7 +171,6 @@
   border: none;
   border-left: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 0 12px 12px 0;
-  padding: 12px 28px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -672,7 +671,7 @@
   background: var(--pnut-button-bg) !important;
   color: var(--pnut-button-text) !important;
   border-left: 1px solid var(--pnut-button-bg) !important;
-  padding: 0 22px !important;
+  padding: 0 15px !important;
   font-size: 14px !important;
   font-weight: 800 !important;
   box-shadow: var(--pnut-shadow-sm) !important;

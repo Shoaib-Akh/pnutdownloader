@@ -293,7 +293,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
           aria-label="Download video"
           title="Download video"
         >
-          <FaDownload /> <span className="btn-text">Download</span>
+          <FaDownload /> <span className="btn-text"></span>
         </button>
       </div>
 

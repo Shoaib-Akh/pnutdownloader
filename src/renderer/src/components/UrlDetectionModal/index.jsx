@@ -22,9 +22,7 @@ import { detectPlatform, PLATFORMS, getPlatformName } from '../platformUtils';
 
 function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false }) {
   // Debug log
-  React.useEffect(() => {
-    console.log('UrlDetectionModal - isOpen:', isOpen, 'url:', url);
-  }, [isOpen, url]);
+  
 
   const handleDownloadClick = () => {
     if (onDownload) {

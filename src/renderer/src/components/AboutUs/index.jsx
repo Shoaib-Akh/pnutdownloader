@@ -346,7 +346,7 @@ function AboutUs({ onOpenFeedback }) {
               overflow: 'hidden',
             }}
           >
-            <div className="card-body p-3" style={{ background: 'linear-gradient(135deg, rgba(var(--theme-primary-rgb), 0.08), transparent 58%)' }}>
+            {/* <div className="card-body p-3" style={{ background: 'linear-gradient(135deg, rgba(var(--theme-primary-rgb), 0.08), transparent 58%)' }}>
               <div className="d-flex align-items-start justify-content-between gap-3 flex-wrap">
                 <div style={{ minWidth: 240, flex: 1 }}>
                   <div className="d-flex align-items-center gap-2 mb-2">
@@ -403,7 +403,7 @@ function AboutUs({ onOpenFeedback }) {
               </div>
 
              
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

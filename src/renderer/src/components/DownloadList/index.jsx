@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { FaCheckCircle, FaRegClock, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaTh, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
-import { ProgressBar, Dropdown } from 'react-bootstrap'
+import { FaCheckCircle, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt, FaStopCircle } from 'react-icons/fa'
+import { ProgressBar, Dropdown, Modal } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
@@ -14,6 +14,9 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   const [searchQuery, setSearchQuery] = useState('')
   const [isSelectMode, setIsSelectMode] = useState(false)
   const [selectedItems, setSelectedItems] = useState(new Set())
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [confirmMessage, setConfirmMessage] = useState('')
+  const [pendingCallback, setPendingCallback] = useState(null)
 
   const {
     getThumbnailUrl,
@@ -65,6 +68,12 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
 
   const handleDelete = (items) => {
     deleteItem(items)
+  }
+
+  const handleStop = async (item) => {
+    if (window.api?.pauseDownload) {
+      window.api.pauseDownload(item.id)
+    }
   }
 
   // Handle select mode toggle
@@ -313,11 +322,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       menuClassName = '',
       onDeleteClick,
       onRetryClick,
+      onStopClick,
     } = {}
   ) => {
     if (!item) return null
 
     return (
+      <>
       <div className={className} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
         <button
           type="button"
@@ -354,17 +365,15 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             <FaEllipsisV />
           </Dropdown.Toggle>
           <Dropdown.Menu align="end" className={`dropdown-menu ${menuClassName}`.trim()}>
-            <Dropdown.Item
+<Dropdown.Item
               onClick={() => {
                 setOpenDropdown(null)
-                if (typeof onRetryClick === 'function') {
-                  onRetryClick()
-                } else if (typeof onRetry === 'function') {
-                  onRetry(item.id)
-                }
+                setConfirmMessage('Are you sure you want to stop this download?')
+                setPendingCallback(() => typeof onStopClick === 'function' ? onStopClick : () => handleStop(item))
+                setShowConfirmModal(true)
               }}
             >
-              Retry <FaRedoAlt className="me-2" />
+              Stop <FaStopCircle className="me-2" />
             </Dropdown.Item>
             <Dropdown.Item
               onClick={() => {
@@ -373,6 +382,17 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             >
               Move to folder <FaFolderOpen className="me-2" />
             </Dropdown.Item>
+            <Dropdown.Item
+              onClick={() => {
+                setOpenDropdown(null)
+                setConfirmMessage('Are you sure you want to retry this download?')
+                setPendingCallback(() => typeof onRetryClick === 'function' ? onRetryClick : () => typeof onRetry === 'function' ? () => onRetry(item.id) : null)
+                setShowConfirmModal(true)
+              }}
+            >
+              Retry <FaRedoAlt className="me-2" />
+            </Dropdown.Item>
+           
             <Dropdown.Item
               onClick={() => {
                 handleCopy(item)
@@ -387,14 +407,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             >
               Show in folder <FaExternalLinkAlt className="me-2" />
             </Dropdown.Item>
+            
             <Dropdown.Item
               onClick={() => {
-                if (typeof onDeleteClick === 'function') {
-                  onDeleteClick()
-                } else {
-                  handleDelete(item)
-                }
                 setOpenDropdown(null)
+                setConfirmMessage('Are you sure you want to delete this download?')
+                setPendingCallback(() => typeof onDeleteClick === 'function' ? onDeleteClick : () => handleDelete(item))
+                setShowConfirmModal(true)
               }}
             >
               Delete <FaTrash className="me-2" />
@@ -402,6 +421,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           </Dropdown.Menu>
         </Dropdown>
       </div>
+      </>
     )
   }
 
@@ -1275,7 +1295,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                       </div>
                     )}
 
-                    {item.status === 'Failed' && item.lastError && (
+                    {/* {item.status === 'Failed' && item.lastError && (
                       <div
                         title={item.errorDetails || item.lastError}
                         style={{
@@ -1297,7 +1317,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                       
                         )}
                       </div>
-                    )}
+                    )} */}
 
                     {/* Format Tag */}
                     {!item.isPlaylist && item.format && (
@@ -1358,10 +1378,64 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             fontWeight: 'bold',
             color: 'var(--pnut-muted)'
           }}>
-            {searchQuery ? 'No matches found.' : screenMeta.empty}
-          </div>
-        )}
+{searchQuery ? 'No matches found.' : screenMeta.empty}
+           </div>
+         )}
       </div>
+
+      <Modal
+        show={showConfirmModal}
+        onHide={() => setShowConfirmModal(false)}
+        centered
+      >
+        <Modal.Header className="custom-modal-header">
+          <Modal.Title className="custom-modal-title">
+            Confirm Action
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="custom-modal-body">
+          <p style={{ margin: 0 }}>{confirmMessage}</p>
+        </Modal.Body>
+        <Modal.Footer className="custom-modal-footer">
+          <button
+            type="button"
+            className="pnut-button"
+            onClick={() => setShowConfirmModal(false)}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid var(--pnut-border)',
+              borderRadius: '5px',
+              background: 'var(--pnut-surface)',
+              color: 'var(--pnut-text)',
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="pnut-button pnut-button--danger"
+            onClick={() => {
+              setShowConfirmModal(false)
+              if (pendingCallback) {
+                pendingCallback()
+              }
+            }}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid var(--pnut-danger)',
+              borderRadius: '5px',
+              background: 'var(--pnut-danger)',
+              color: '#ffffff',
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            Confirm
+          </button>
+        </Modal.Footer>
+      </Modal>
     </div>
   )
 }
