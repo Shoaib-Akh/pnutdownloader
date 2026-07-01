@@ -47,6 +47,28 @@ function BodySection({
   updateInfo,
   onOpenFeedback
 }) {
+  const getLoginTargetForUrl = (sourceUrl = '') => {
+    const urlLower = String(sourceUrl).toLowerCase()
+
+    if (urlLower.includes('instagram.com')) {
+      return { platformName: 'Instagram', url: 'https://www.instagram.com/accounts/login/' }
+    }
+    if (urlLower.includes('facebook.com') || urlLower.includes('fb.com') || urlLower.includes('fb.watch')) {
+      return { platformName: 'Facebook', url: 'https://www.facebook.com/login/' }
+    }
+    if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) {
+      return { platformName: 'X', url: 'https://x.com/login' }
+    }
+    if (urlLower.includes('tiktok.com')) {
+      return { platformName: 'TikTok', url: 'https://www.tiktok.com/login' }
+    }
+    if (urlLower.includes('dailymotion.com') || urlLower.includes('dai.ly')) {
+      return { platformName: 'Dailymotion', url: 'https://www.dailymotion.com/signin' }
+    }
+
+    return { platformName: 'YouTube', url: 'https://www.youtube.com' }
+  }
+
   const [showLoginPopup, setShowLoginPopup] = useState(false)
   const [showDonationModal, setShowDonationModal] = useState(false)
   const [isWebViewReady, setIsWebViewReady] = useState(false)
@@ -62,6 +84,7 @@ function BodySection({
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false)
   const [playlistModalLoading, setPlaylistModalLoading] = useState(false)
   const [playlistData, setPlaylistData] = useState(null)
+  const [loginTarget, setLoginTarget] = useState(getLoginTargetForUrl())
   const webviewRef = useRef(null)
   const hasBrowserUrl = Boolean(url)
 
@@ -79,7 +102,10 @@ function BodySection({
     saveTo,
     bitrate,
     onDonationPrompt: () => setShowDonationModal(true),
-    onLoginRequired: () => setShowLoginPopup(true)
+    onLoginRequired: (sourceUrl) => {
+      setLoginTarget(getLoginTargetForUrl(sourceUrl || pastLinkUrl || currentWebViewUrl))
+      setShowLoginPopup(true)
+    }
   })
 
   const handleCopyUrl = () => {
@@ -354,13 +380,11 @@ function BodySection({
   }
 
   const handleLogin = () => {
-    window.api.trackEvent('youtube-login')
-    // Navigate to YouTube - when user signs in here, cookies will be saved
-    // Use youtube.com home page which will redirect to login if needed
-    const youtubeUrl = 'https://www.youtube.com'
-    setCurrentWebViewUrl(youtubeUrl)
-    setUrl(youtubeUrl)
-    setLastUrl(youtubeUrl)
+    const target = loginTarget || getLoginTargetForUrl()
+    window.api.trackEvent(`${target.platformName.toLowerCase()}-login`)
+    setCurrentWebViewUrl(target.url)
+    setUrl(target.url)
+    setLastUrl(target.url)
     setShowWebView(true)
     setIsSidebarOpen(false)
     setSelectedItem('')
@@ -564,6 +588,7 @@ function BodySection({
           isOpen={showLoginPopup}
           onClose={() => setShowLoginPopup(false)}
           handleLogin={handleLogin}
+          platformName={loginTarget.platformName}
         />
       )}
       {showDonationModal && (

@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, Button } from 'react-bootstrap';
 import '../common.css'; 
 
-function LoginModal({ isOpen, onClose, handleLogin }) {
+function LoginModal({ isOpen, onClose, handleLogin, platformName = 'YouTube' }) {
   return (
     <Modal
       show={isOpen}
@@ -18,7 +18,7 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
     >
       <Modal.Header className="custom-modal-header">
         <Modal.Title id="login-modal-title" className="custom-modal-title">
-          YouTube sign in needed
+          {platformName} sign in needed
         </Modal.Title>
         <button
           type="button"
@@ -31,10 +31,10 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
       </Modal.Header>
       <Modal.Body className="custom-modal-body">
         <p className="modal-message">
-          YouTube needs you to sign in before this download can continue.
+          {platformName} needs you to sign in before this download can continue.
         </p>
         <p style={{ fontSize: '12px', color: 'var(--pnut-muted)', marginTop: '10px' }}>
-          Open YouTube, sign in with your Google account, then retry the download.
+          Open {platformName}, sign in, then retry the download.
         </p>
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer">
@@ -42,10 +42,10 @@ function LoginModal({ isOpen, onClose, handleLogin }) {
         <Button
           onClick={handleLogin}
           className="custom-login-button"
-          aria-label="Log in to YouTube"
+          aria-label={`Log in to ${platformName}`}
           variant="primary"
         >
-          Open YouTube sign in
+          Open {platformName} sign in
         </Button>
       </Modal.Footer>
     </Modal>

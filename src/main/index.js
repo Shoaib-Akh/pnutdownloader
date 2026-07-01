@@ -22,6 +22,27 @@ const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
 const YTDLP_AUTO_UPDATE_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
 const YTDLP_AUTO_UPDATE_POLL_MS = 24 * 60 * 60 * 1000;
+const WEBVIEW_SESSION_PARTITION = 'persist:main';
+
+const getBrowserCookieSessions = () => {
+  const sessions = [{ label: 'defaultSession', value: session.defaultSession }];
+
+  try {
+    const webviewSession = session.fromPartition(WEBVIEW_SESSION_PARTITION);
+    if (webviewSession && webviewSession !== session.defaultSession) {
+      sessions.push({ label: WEBVIEW_SESSION_PARTITION, value: webviewSession });
+    }
+  } catch (err) {
+    console.warn(`Failed to access ${WEBVIEW_SESSION_PARTITION} cookie session:`, err.message);
+  }
+
+  return sessions;
+};
+
+const isYouTubeUrl = (url = '') => {
+  const urlLower = String(url).toLowerCase();
+  return urlLower.includes('youtube.com') || urlLower.includes('youtu.be');
+};
 
 let dependencyStatus = {
   status: 'idle',
@@ -1720,29 +1741,35 @@ function createWindow() {
     }
   });
 
-  // Listen for cookie changes to immediately update when cookies are set
-  // Use defaultSession to catch cookies from all browser windows
-  session.defaultSession.cookies.on('changed', async (event, cookie, cause, removed) => {
-    if (!removed && cookie.domain) {
-      const cookieDomain = cookie.domain.toLowerCase();
-      const isSupportedPlatform = platformDomains.some(domain => {
-        const normalizedDomain = domain.startsWith('.') ? domain.substring(1) : domain;
-        return cookieDomain.includes(normalizedDomain);
-      });
-      
-      if (isSupportedPlatform) {
-        console.log(`Cookie changed for ${cookie.domain}, updating cookies file...`);
-        // Debounce: wait a bit to avoid too frequent updates
-        setTimeout(async () => {
-          try {
-            await updateCookiesFile();
-            console.log('Cookies automatically updated due to cookie change');
-          } catch (error) {
-            console.warn('Failed to auto-update cookies:', error.message);
-          }
-        }, 1000);
-      }
+  // Listen for cookie changes in both the main window and embedded browser sessions.
+  getBrowserCookieSessions().forEach((browserSession) => {
+    if (cookieChangeListenerSessions.has(browserSession.label)) {
+      return;
     }
+
+    cookieChangeListenerSessions.add(browserSession.label);
+    browserSession.value.cookies.on('changed', async (event, cookie, cause, removed) => {
+      if (!removed && cookie.domain) {
+        const cookieDomain = cookie.domain.toLowerCase();
+        const isSupportedPlatform = platformDomains.some(domain => {
+          const normalizedDomain = domain.startsWith('.') ? domain.substring(1) : domain;
+          return cookieDomain.includes(normalizedDomain);
+        });
+
+        if (isSupportedPlatform) {
+          console.log(`Cookie changed for ${cookie.domain} in ${browserSession.label}, updating cookies file...`);
+          // Debounce: wait a bit to avoid too frequent updates
+          setTimeout(async () => {
+            try {
+              await updateCookiesFile();
+              console.log('Cookies automatically updated due to cookie change');
+            } catch (error) {
+              console.warn('Failed to auto-update cookies:', error.message);
+            }
+          }, 1000);
+        }
+      }
+    });
   });
 
   // Start clipboard monitoring to detect downloadable video URLs
@@ -2151,18 +2178,29 @@ async function updateCookiesFile() {
       'dailymotion.com'
     ];
 
-    const allCookies = [];
+    const cookiesByKey = new Map();
     
-    for (const domain of domains) {
-      try {
-        const cookies = await session.defaultSession.cookies.get({ domain });
-        if (cookies && cookies.length > 0) {
-          allCookies.push(...cookies);
+    for (const browserSession of getBrowserCookieSessions()) {
+      for (const domain of domains) {
+        try {
+          const cookies = await browserSession.value.cookies.get({ domain });
+          if (cookies && cookies.length > 0) {
+            cookies.forEach((cookie) => {
+              const normalizedDomain = cookie.domain.startsWith('.') ? cookie.domain : `.${cookie.domain}`;
+              const key = `${normalizedDomain}\t${cookie.path}\t${cookie.name}`;
+              cookiesByKey.set(key, {
+                ...cookie,
+                domain: normalizedDomain
+              });
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to get cookies for ${domain} from ${browserSession.label}:`, err.message);
         }
-      } catch (err) {
-        console.warn(`Failed to get cookies for ${domain}:`, err.message);
       }
     }
+
+    const allCookies = Array.from(cookiesByKey.values());
 
     if (!allCookies.length) {
       console.warn('No cookies found for any platform.');
@@ -2178,10 +2216,7 @@ async function updateCookiesFile() {
     ];
 
     allCookies.forEach((cookie) => {
-      let domain = cookie.domain;
-      if (!domain.startsWith('.')) {
-        domain = '.' + domain;
-      }
+      const domain = cookie.domain;
       const includeSubdomains = 'TRUE';
       const isSecure = cookie.secure ? 'TRUE' : 'FALSE';
       const expiry = cookie.expirationDate ? Math.floor(cookie.expirationDate) : 0;
@@ -2201,10 +2236,27 @@ async function updateCookiesFile() {
 
     const fileContent = lines.join('\n');
     writeFileSync(cookiesPath, fileContent, 'utf8');
-    console.log(`Cookies updated successfully at: ${cookiesPath} (${allCookies.length} cookies from ${domains.length} platforms)`);
+    console.log(`Cookies updated successfully at: ${cookiesPath} (${allCookies.length} cookies from ${domains.length} platforms across ${getBrowserCookieSessions().length} sessions)`);
   } catch (error) {
     console.error('Error updating cookies:', error);
   }
+}
+
+async function getCookieHeaderFromBrowserSessions(domain) {
+  const sessionsToCheck = getBrowserCookieSessions().reverse();
+
+  for (const browserSession of sessionsToCheck) {
+    try {
+      const cookies = await browserSession.value.cookies.get({ domain });
+      if (cookies && cookies.length > 0) {
+        return cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
+      }
+    } catch (cookieError) {
+      console.warn(`Failed to read ${domain} cookies from ${browserSession.label}:`, cookieError.message);
+    }
+  }
+
+  return null;
 }
 
 ipcMain.handle(IPC_CHANNELS.GET_YOUTUBE_COOKIES, async () => {
@@ -2470,6 +2522,7 @@ ipcMain.handle(IPC_CHANNELS.FETCH_PLAYLIST_ENTRIES, async (event, url) => {
 
 let downloadProcess = null;
 const activeDownloads = {};
+const cookieChangeListenerSessions = new Set();
 
 function hasActiveDownloads() {
   return Boolean(downloadProcess) || Object.keys(activeDownloads || {}).length > 0;
@@ -2598,8 +2651,16 @@ const startDownload = async (event, options) => {
             '-o', shouldDownloadPlaylist ? '%(playlist_title)s' : '%(title)s',
             shouldDownloadPlaylist ? '--yes-playlist' : '--no-playlist',
             '--js-runtimes', 'node',
-            url,
           ];
+
+          if (!isYouTubePlatform(detectPlatform(url))) {
+            titleArgs.push(
+              '--cookies', cookiesPath,
+              '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            );
+          }
+
+          titleArgs.push(url);
           
   const getYtdlpPath = () => {
     if (app.isPackaged) {
@@ -3189,6 +3250,13 @@ const startDownload = async (event, options) => {
             errorMessage.includes('No video formats found') ||
             errorMessage.includes('Failed to download m3u8')
           );
+
+          const isInstagramAuthError = errorMessage.includes('[Instagram]') && (
+            errorMessage.includes('empty media response') ||
+            errorMessage.includes('Check if this post is accessible') ||
+            errorMessage.includes('cookies') ||
+            errorMessage.includes('login')
+          );
           
           // Check for YouTube-specific errors
           const isYouTubeUnavailable = errorMessage.includes('[youtube]') && (
@@ -3207,17 +3275,25 @@ const startDownload = async (event, options) => {
           const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
           
           if (isTwitchError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
               downloadId,
               error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
               isAuthError: true,
               details: errorMessage
             });
           } else if (isDailymotionError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
               downloadId,
               error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
               isAuthError: true,
+              details: errorMessage
+            });
+          } else if (isInstagramAuthError) {
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+              downloadId,
+              error: 'Instagram requires a logged-in browser session for this post. Open Instagram in Explore, sign in, then retry the download.',
+              isAuthError: true,
+              loginUrl: 'https://www.instagram.com/accounts/login/',
               details: errorMessage
             });
           } else if (isYouTubeUnavailable) {
@@ -4100,8 +4176,16 @@ const getThumbnailInfo = async (url) => {
       '--no-playlist',
       '--extractor-retries', '3',
       '--js-runtimes', 'node',
-      url
     ];
+
+    if (!isYouTubeUrl(url)) {
+      args.push(
+        '--cookies', cookiesPath,
+        '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
+    }
+
+    args.push(url);
     
   const getYtdlpPath = () => {
     if (app.isPackaged) {
@@ -4245,15 +4329,7 @@ ipcMain.handle(IPC_CHANNELS.PROXY_IMAGE, async (event, imageUrl) => {
         headers['Origin'] = 'https://www.instagram.com';
         
         // Try to get Instagram cookies from the session first
-        let cookieString = null;
-        try {
-          const cookies = await session.defaultSession.cookies.get({ domain: '.instagram.com' });
-          if (cookies && cookies.length > 0) {
-            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-          }
-        } catch (cookieError) {
-          // Silently continue to try cookies.txt
-        }
+        let cookieString = await getCookieHeaderFromBrowserSessions('.instagram.com');
         
         // Fallback to cookies.txt if session cookies aren't available
         if (!cookieString) {
@@ -4270,15 +4346,7 @@ ipcMain.handle(IPC_CHANNELS.PROXY_IMAGE, async (event, imageUrl) => {
         headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
         
         // Try to get Twitter cookies from the session
-        let cookieString = null;
-        try {
-          const cookies = await session.defaultSession.cookies.get({ domain: '.twitter.com' });
-          if (cookies && cookies.length > 0) {
-            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-          }
-        } catch (cookieError) {
-          // Silently continue to try cookies.txt
-        }
+        let cookieString = await getCookieHeaderFromBrowserSessions('.twitter.com');
         
         // Fallback to cookies.txt if session cookies aren't available
         if (!cookieString) {
@@ -4301,15 +4369,7 @@ ipcMain.handle(IPC_CHANNELS.PROXY_IMAGE, async (event, imageUrl) => {
         headers['Sec-Fetch-Site'] = 'cross-site';
         
         // Try to get Bilibili cookies from the session
-        let cookieString = null;
-        try {
-          const cookies = await session.defaultSession.cookies.get({ domain: '.bilibili.com' });
-          if (cookies && cookies.length > 0) {
-            cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join('; ');
-          }
-        } catch (cookieError) {
-          // Silently continue to try cookies.txt
-        }
+        let cookieString = await getCookieHeaderFromBrowserSessions('.bilibili.com');
         
         // Fallback to cookies.txt if session cookies aren't available
         if (!cookieString) {

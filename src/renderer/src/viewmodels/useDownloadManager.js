@@ -484,10 +484,13 @@ const useDownloadManager = ({
         }
 
         if (
+          progressData?.isAuthError ||
           progressData?.error?.includes('Sign in to confirm') ||
-          progressData?.error?.includes('exporting YouTube cookies')
+          progressData?.error?.includes('exporting YouTube cookies') ||
+          progressData?.error?.includes('Instagram requires a logged-in browser session') ||
+          progressData?.details?.includes('Instagram sent an empty media response')
         ) {
-          onLoginRequired()
+          onLoginRequired(progressData?.loginUrl || item.url)
         }
 
         if (progressData?.error) {
