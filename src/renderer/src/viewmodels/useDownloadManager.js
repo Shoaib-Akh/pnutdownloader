@@ -9,6 +9,36 @@ import { appendTitleTimestamp } from '../../../shared/titleUtils'
 
 const DOWNLOAD_STORAGE_KEY = 'downloadList'
 const DOWNLOAD_COUNT_KEY = 'downloadCount'
+const DOWNLOAD_COMPLETE_STATUS = 'Download complete!'
+const NON_ACTIVE_STATUSES = new Set([
+  'Completed',
+  'Queued',
+  'Waiting',
+  'Failed',
+  'Fetching Info',
+  'Fetching Info...',
+])
+
+const isCompletedDownload = (item) => Boolean(item?.isCompleted || item?.status === 'Completed')
+
+const isDownloadCompletionEvent = (progressData) => {
+  const message = typeof progressData?.message === 'string' ? progressData.message : ''
+  return (
+    progressData?.status === DOWNLOAD_COMPLETE_STATUS ||
+    message.includes('has already been downloaded') ||
+    message.includes('Finished downloading playlist:')
+  )
+}
+
+const completeDownloadItem = (item, patch = {}) => ({
+  ...item,
+  ...patch,
+  status: 'Completed',
+  isCompleted: true,
+  isFailed: false,
+  metadataPending: false,
+  progress: 100,
+})
 
 const sanitizeTitle = (str) => {
   if (!str) return 'Unknown'
@@ -102,11 +132,8 @@ const useDownloadManager = ({
     const stored = getStoredDownloads()
     return stored.some(
       (item) =>
-        !item.isCompleted &&
-        item.status !== 'Queued' &&
-        item.status !== 'Waiting' &&
-        item.status !== 'Failed' &&
-        item.status !== 'Fetching Info...'
+        !isCompletedDownload(item) &&
+        !NON_ACTIVE_STATUSES.has(item.status)
     )
   }, [getStoredDownloads])
 
@@ -247,12 +274,44 @@ const useDownloadManager = ({
           return
         }
 
+        const message = typeof progressData.message === 'string' ? progressData.message : ''
+        const isCompletionEvent = isDownloadCompletionEvent(progressData)
+
+        if (!progressData.downloadId && (isCompletionEvent || progressData.error)) {
+          return
+        }
+
+        if (isCompletedDownload(stored[itemIdx]) && !isCompletionEvent) {
+          return
+        }
+
         if (progressData.file) {
           stored[itemIdx] = {
             ...stored[itemIdx],
             filePath: String(progressData.file),
           }
           setStoredDownloads(stored)
+        }
+
+        if (progressData.status === DOWNLOAD_COMPLETE_STATUS) {
+          stored[itemIdx] = completeDownloadItem(stored[itemIdx], {
+            ...(progressData.file && { filePath: String(progressData.file) }),
+            isPlaylistCompleted: stored[itemIdx].isPlaylist
+              ? true
+              : stored[itemIdx].isPlaylistCompleted,
+          })
+          setProgressMap((prev) => {
+            const next = new Map(prev)
+            next.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+            return next
+          })
+          setStoredDownloads(stored)
+          setActiveDownloads((prev) => {
+            const next = new Set(prev)
+            next.delete(currentId)
+            return next
+          })
+          return
         }
 
         if (progressData.title || progressData.sanitizedTitle || progressData.thumbnail || progressData.duration) {
@@ -273,8 +332,8 @@ const useDownloadManager = ({
           setStoredDownloads(stored)
         }
 
-        if (typeof progressData.message === 'string') {
-          const playlistTitleMatch = progressData.message.match(
+        if (message) {
+          const playlistTitleMatch = message.match(
             /\[download\]\s+Downloading playlist:\s*(.+)$/
           )
           if (playlistTitleMatch) {
@@ -291,7 +350,7 @@ const useDownloadManager = ({
             setStoredDownloads(stored)
           }
 
-          const playlistTotalMatch = progressData.message.match(
+          const playlistTotalMatch = message.match(
             /\[youtube:tab\]\s+Playlist\s+(.+?):\s+Downloading\s+(\d+)\s+items?\s+of\s+(\d+)/
           )
           if (playlistTotalMatch) {
@@ -316,7 +375,7 @@ const useDownloadManager = ({
             setStoredDownloads(stored)
           }
 
-          const youtubeMatch = progressData.message.match(
+          const youtubeMatch = message.match(
             /(https?:\/\/(?:www\.|music\.)?youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|https?:\/\/youtu\.be\/)([\w-]{11})/
           )
           const isPlaylistJob = Boolean(
@@ -377,18 +436,18 @@ const useDownloadManager = ({
             })
           }
 
-          if (progressData.message.includes('Destination:')) {
-            if (progressData.message.includes('.mp4')) {
+          if (message.includes('Destination:')) {
+            if (message.includes('.mp4')) {
               currentFileTypes.set(currentId, 'video')
-            } else if (progressData.message.includes('.m4a')) {
+            } else if (message.includes('.m4a')) {
               currentFileTypes.set(currentId, 'audio')
-            } else if (progressData.message.includes('.webm')) {
+            } else if (message.includes('.webm')) {
               currentFileTypes.set(currentId, 'justAudio')
             }
             return
           }
 
-          const progressMatch = progressData.message.match(
+          const progressMatch = message.match(
             /(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)\s+at\s+([\d.]+\w+\/\w+)\s+ETA\s+(\d+:\d+|Unknown)/
           )
 
@@ -413,7 +472,7 @@ const useDownloadManager = ({
             })
           }
 
-          const simpleProgressMatch = progressData.message.match(/(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)/)
+          const simpleProgressMatch = message.match(/(\d+\.\d+)%\s+of\s+~?\s*([\d.]+\w+)/)
           if (simpleProgressMatch) {
             const [, progress, fileSize] = simpleProgressMatch
             const rawProgress = parseFloat(progress)
@@ -432,7 +491,7 @@ const useDownloadManager = ({
             })
           }
 
-          const itemCountMatch = progressData.message.match(/\[download\] Downloading item (\d+) of (\d+)/)
+          const itemCountMatch = message.match(/\[download\] Downloading item (\d+) of (\d+)/)
           if (itemCountMatch) {
             const [, currentItem, totalItems] = itemCountMatch
             console.log('[PlaylistProgress] Playlist item count updated', {
@@ -459,21 +518,20 @@ const useDownloadManager = ({
             setStoredDownloads(stored)
           }
 
-          if (progressData.message.includes('has already been downloaded')) {
-            stored[itemIdx].status = 'Completed'
-            stored[itemIdx].isCompleted = true
+          if (message.includes('has already been downloaded')) {
+            stored[itemIdx] = completeDownloadItem(stored[itemIdx])
             setProgressMap((prev) => {
               const next = new Map(prev)
               next.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
               return next
             })
             setStoredDownloads(stored)
-            saveDownload(stored[itemIdx])
-            bumpDownloadCount()
           }
 
-          if (progressData.message.includes('Finished downloading playlist:')) {
-            stored[itemIdx].isPlaylistCompleted = true
+          if (message.includes('Finished downloading playlist:')) {
+            stored[itemIdx] = completeDownloadItem(stored[itemIdx], {
+              isPlaylistCompleted: true,
+            })
             console.log('[PlaylistProgress] Playlist download finished', {
               downloadId: currentId,
               playlistTitle: stored[itemIdx].playlistTitle,
@@ -532,9 +590,13 @@ const useDownloadManager = ({
       storedDownloads = getStoredDownloads()
       const completedIndex = storedDownloads.findIndex((i) => i.id === currentId)
       if (completedIndex !== -1) {
-        storedDownloads[completedIndex].status = 'Completed'
-        storedDownloads[completedIndex].isCompleted = true
+        storedDownloads[completedIndex] = completeDownloadItem(storedDownloads[completedIndex])
         setStoredDownloads(storedDownloads)
+        setProgressMap((prev) => {
+          const next = new Map(prev)
+          next.set(currentId, { progress: 100, fileSize: 'N/A', speed: 'N/A', eta: 'N/A' })
+          return next
+        })
         saveDownload(storedDownloads[completedIndex])
         bumpDownloadCount()
       }
@@ -565,7 +627,7 @@ const useDownloadManager = ({
       const storedDownloads = getStoredDownloads()
       const failedIndex = storedDownloads.findIndex((i) => i.id === currentId)
 
-      if (failedIndex !== -1) {
+      if (failedIndex !== -1 && !isCompletedDownload(storedDownloads[failedIndex])) {
         storedDownloads[failedIndex].status = 'Failed'
         storedDownloads[failedIndex].isFailed = true
         storedDownloads[failedIndex].lastError = storedDownloads[failedIndex].lastError || errorMessage
@@ -898,6 +960,7 @@ const useDownloadManager = ({
         item.status === 'Queued' ||
         item.status === 'Downloading' ||
         item.status === 'Fetching Info' ||
+        item.status === 'Fetching Info...' ||
         item.status === 'Waiting'
     )
 

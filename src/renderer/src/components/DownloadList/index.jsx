@@ -340,15 +340,30 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         <Dropdown
           show={openDropdown === dropdownKey}
           onToggle={(isOpen) => setOpenDropdown(isOpen ? dropdownKey : null)}
+          autoClose="outside"
         >
           <Dropdown.Toggle
             as="button"
+            type="button"
             className="download-row__menu-button"
+            aria-label="Download actions"
           >
             <FaEllipsisV />
           </Dropdown.Toggle>
-          <Dropdown.Menu align="end" className={`dropdown-menu ${menuClassName}`.trim()}>
-<Dropdown.Item
+          <Dropdown.Menu
+            align="end"
+            renderOnMount
+            popperConfig={{
+              strategy: 'fixed',
+              modifiers: [
+                { name: 'offset', options: { offset: [0, 8] } },
+                { name: 'preventOverflow', options: { boundary: 'viewport', padding: 12 } },
+                { name: 'flip', options: { boundary: 'viewport', fallbackPlacements: ['top-end', 'bottom-end'] } },
+              ],
+            }}
+            className={`download-row__dropdown-menu ${menuClassName}`.trim()}
+          >
+            <Dropdown.Item
               onClick={() => {
                 setOpenDropdown(null)
                 setConfirmMessage('Are you sure you want to stop this download?')

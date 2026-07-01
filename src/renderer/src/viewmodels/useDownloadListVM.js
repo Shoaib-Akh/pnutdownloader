@@ -2,6 +2,28 @@ import { useEffect, useState, useCallback } from 'react'
 import { detectPlatform, isYouTubePlatform } from '../components/platformUtils'
 
 const DOWNLOAD_STORAGE_KEY = 'downloadList'
+const DOWNLOAD_COMPLETE_STATUS = 'Download complete!'
+
+const isCompletedDownload = (item) => Boolean(item?.isCompleted || item?.status === 'Completed')
+
+const isDownloadCompletionEvent = (progressData) => {
+  const message = typeof progressData?.message === 'string' ? progressData.message : ''
+  return (
+    progressData?.status === DOWNLOAD_COMPLETE_STATUS ||
+    message.includes('has already been downloaded') ||
+    message.includes('Finished downloading playlist:')
+  )
+}
+
+const completeDownloadItem = (item, patch = {}) => ({
+  ...item,
+  ...patch,
+  status: 'Completed',
+  isCompleted: true,
+  isFailed: false,
+  metadataPending: false,
+  progress: 100,
+})
 
 const isProtectedCDN = (url) => {
   if (!url) return false
@@ -35,12 +57,17 @@ const findDownloadIndexForProgress = (downloads, progressData) => {
   if (progressData?.downloadId) {
     const exactIndex = downloads.findIndex((item) => item.id === progressData.downloadId)
     if (exactIndex !== -1) return exactIndex
+    return -1
+  }
+
+  if (isDownloadCompletionEvent(progressData) || progressData?.error) {
+    return -1
   }
 
   const activePlaylistIndex = downloads.findIndex(
     (item) =>
       isPlaylistLike(item) &&
-      (item.status === 'Downloading' || item.status === 'Fetching Info...' || item.status === 'Queued')
+      (item.status === 'Downloading' || item.status === 'Fetching Info...')
   )
   if (activePlaylistIndex !== -1) return activePlaylistIndex
 
@@ -284,6 +311,12 @@ const useDownloadListVM = () => {
       const current = list[itemIndex]
       const message = typeof progressData?.message === 'string' ? progressData.message : ''
       const playlistRecord = isPlaylistLike(current)
+      const isCompletionEvent = isDownloadCompletionEvent(progressData)
+
+      if (isCompletedDownload(current) && !isCompletionEvent) {
+        return
+      }
+
       let nextItem = { ...current }
       let changed = false
 
@@ -319,14 +352,11 @@ const useDownloadListVM = () => {
         })
       }
 
-      if (progressData?.status === 'Download complete!') {
-        apply({
-          status: 'Completed',
-          isCompleted: true,
+      if (progressData?.status === DOWNLOAD_COMPLETE_STATUS) {
+        apply(completeDownloadItem(nextItem, {
           isPlaylistCompleted: playlistRecord || nextItem.isPlaylistCompleted,
-          progress: 100,
           ...(progressData.file ? { filePath: String(progressData.file) } : {}),
-        })
+        }))
       }
 
       if (message) {
@@ -406,13 +436,16 @@ const useDownloadListVM = () => {
           })
         }
 
+        if (message.includes('has already been downloaded')) {
+          apply(completeDownloadItem(nextItem, {
+            isPlaylistCompleted: playlistRecord || nextItem.isPlaylistCompleted,
+          }))
+        }
+
         if (message.includes('Finished downloading playlist:')) {
-          apply({
+          apply(completeDownloadItem(nextItem, {
             isPlaylistCompleted: true,
-            status: 'Completed',
-            isCompleted: true,
-            progress: 100,
-          })
+          }))
         }
       }
 

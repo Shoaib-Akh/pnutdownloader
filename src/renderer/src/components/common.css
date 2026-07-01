@@ -1947,6 +1947,48 @@ h1 {
   font-size: 16px !important;
 }
 
+.download-row__dropdown-menu.dropdown-menu {
+  right: auto !important;
+  min-width: 188px !important;
+  max-width: min(240px, calc(100vw - 24px));
+  padding: 6px !important;
+  overflow: visible !important;
+  border: 1px solid var(--pnut-border) !important;
+  border-radius: var(--pnut-radius) !important;
+  background: var(--pnut-surface) !important;
+  box-shadow: var(--pnut-shadow-lg) !important;
+  z-index: 5000 !important;
+}
+
+.download-row__dropdown-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 38px;
+  padding: 9px 12px !important;
+  border-radius: 6px !important;
+  color: var(--pnut-text-soft) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.download-row__dropdown-menu .dropdown-item:hover,
+.download-row__dropdown-menu .dropdown-item:focus {
+  background: var(--pnut-brand-soft) !important;
+  color: var(--pnut-brand) !important;
+  transform: none !important;
+}
+
+.download-row__dropdown-menu .dropdown-item svg {
+  flex: 0 0 auto;
+  margin-right: 0 !important;
+  margin-left: 12px;
+  font-size: 14px;
+}
+
 .download-row__actions .pnut-button:hover,
 .download-row__menu-button:hover {
   color: var(--pnut-brand) !important;
