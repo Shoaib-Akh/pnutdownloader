@@ -1558,7 +1558,7 @@ function createWindow() {
   console.log('Creating new main window...');
   mainWindow = new BrowserWindow({
     width: 1250,
-    height: 760,
+    maxHeight: 800,
     minWidth: 1250,
     minHeight: 800,
     icon: iconPath,

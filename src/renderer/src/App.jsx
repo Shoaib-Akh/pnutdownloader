@@ -12,6 +12,7 @@ import { flushQueuedDonationClicks } from './utils/donationService'
 import DebugLogPanel from '../../../index.jsx'
 import './assets/theme.css'
 import './assets/redesign.css'
+import './assets/editorial-glass.css'
 
 function App() {
   const { theme, toggleTheme } = useTheme()

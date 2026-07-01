@@ -1061,6 +1061,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         show={showConfirmModal}
         onHide={() => setShowConfirmModal(false)}
         centered
+        className="pnut-modal download-confirm-modal"
       >
         <Modal.Header className="custom-modal-header">
           <Modal.Title className="custom-modal-title">

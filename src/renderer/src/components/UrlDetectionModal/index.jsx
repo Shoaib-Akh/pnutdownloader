@@ -75,7 +75,7 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
       show={isOpen}
       onHide={onClose}
       centered
-      className="url-detection-modal"
+      className="pnut-modal url-detection-modal"
       backdrop="static"
       keyboard={false}
       autoFocus={false}
@@ -103,7 +103,7 @@ function UrlDetectionModal({ isOpen, onClose, onDownload, url, isLoading = false
       <Modal.Body className="url-detection-modal-body">
         <div className="url-detection-content">
           <div className="url-detection-message">
-            <div className="platform-icon-container" style={{ textAlign: 'center' }}>
+            <div className="platform-icon-container">
               {getPlatformIcon(detectedPlatform)}
             </div>
             <h4>{platformName !== 'Unknown' ? `${platformName} Link Detected` : 'Video URL Detected'}</h4>

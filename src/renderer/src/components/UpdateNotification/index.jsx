@@ -77,7 +77,7 @@ function UpdateNotification({ updateInfo, onInstall, isDownloaded, setUpdateAvai
 
   return (
     <div 
-      className="modal fade show" 
+      className="modal fade show pnut-modal update-modal"
       style={{ display: 'block', backgroundColor: 'var(--theme-overlay)' }}
       data-bs-backdrop="static" 
       data-bs-keyboard="false"

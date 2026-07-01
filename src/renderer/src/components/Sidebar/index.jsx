@@ -275,7 +275,7 @@ function Sidebar({
         show={repairModalOpen}
         onHide={closeRepairModal}
         centered
-        className="repair-downloads-modal"
+        className="pnut-modal repair-downloads-modal"
         backdrop={repairStatus.phase === 'repairing' ? 'static' : true}
         keyboard={repairStatus.phase !== 'repairing'}
         aria-labelledby="repair-downloads-title"

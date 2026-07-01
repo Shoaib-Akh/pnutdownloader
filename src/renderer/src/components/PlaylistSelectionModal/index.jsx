@@ -52,6 +52,7 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
       aria-labelledby="playlist-selection-modal-title"
       role="dialog"
       size="lg"
+      className="pnut-modal playlist-selection-modal"
       animation={true}
     >
       <Modal.Header className="custom-modal-header">
@@ -69,28 +70,29 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
         </button>
       </Modal.Header>
 
-      <Modal.Body className="custom-modal-body">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-          <div style={{ fontWeight: 600 }}>{playlist?.playlistTitle || playlist?.title || 'Playlist'}</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 13, color: 'var(--pnut-muted)' }}>{`Select all (${selectedCount}/${totalCount})`}</div>
-            <input type="checkbox" checked={allSelected} onChange={toggleAll} disabled={isLoading || totalCount === 0} />
+      <Modal.Body className="custom-modal-body playlist-selection-modal__body">
+        <div className="playlist-selection-modal__top">
+          <div className="playlist-selection-modal__playlist-title">
+            {playlist?.playlistTitle || playlist?.title || 'Playlist'}
+          </div>
+          <div className="playlist-selection-modal__select-all">
+            <span>{`Select all (${selectedCount}/${totalCount})`}</span>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={toggleAll}
+              disabled={isLoading || totalCount === 0}
+            />
           </div>
         </div>
 
-        <div style={{ maxHeight: 420, overflowY: 'auto', border: '1px solid var(--pnut-border)', borderRadius: 8 }}>
+        <div className="playlist-selection-modal__list">
           {items.map((v) => {
             const checked = !!v.videoId && selectedIds.has(v.videoId)
             return (
               <div
                 key={v.videoId || v.position || v.title}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 12,
-                  padding: '10px 12px',
-                  borderBottom: '1px solid var(--pnut-border)',
-                }}
+                className="playlist-selection-modal__item"
               >
                 <input
                   type="checkbox"
@@ -99,29 +101,32 @@ function PlaylistSelectionModal({ isOpen, onClose, onConfirm, playlist, isLoadin
                   disabled={isLoading || !v.videoId}
                 />
 
-                <div style={{ width: 52, height: 38, flex: '0 0 auto', borderRadius: 6, overflow: 'hidden', background: 'var(--pnut-surface-raised)' }}>
+                <div className="playlist-selection-modal__thumb">
                   {v.thumbnail ? (
-                    <img src={v.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={v.thumbnail} alt="" />
                   ) : null}
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {v.title || 'Untitled'}
-                  </div>
+                <div className="playlist-selection-modal__item-title">
+                  {v.title || 'Untitled'}
                 </div>
               </div>
             )
           })}
 
           {items.length === 0 ? (
-            <div style={{ padding: 14, color: 'var(--pnut-muted)' }}>No videos found in this playlist.</div>
+            <div className="playlist-selection-modal__empty">No videos found in this playlist.</div>
           ) : null}
         </div>
       </Modal.Body>
 
       <Modal.Footer className="custom-modal-footer">
-        <Button variant="secondary" onClick={onClose} disabled={isLoading}>
+        <Button
+          variant="secondary"
+          onClick={onClose}
+          disabled={isLoading}
+          className="custom-cancel-button"
+        >
           Cancel
         </Button>
         <Button onClick={handleConfirm} disabled={isLoading || selectedIds.size === 0} className="custom-login-button">

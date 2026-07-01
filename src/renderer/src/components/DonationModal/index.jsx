@@ -6,23 +6,13 @@ import { trackDonationButton } from '../../utils/donationService'
 import '../common.css'
 
 const QUOTES = [
-  'The best things in life are free — but a coffee keeps the developer happy. ☕',
-  'Great software is built one donation at a time. 🚀',
-  "Every download you make, every byte you take — I'll be coding for you. 🎵",
-  "You didn't just download a file, you downloaded someone's weekend. 😄",
-  "Free to use, but pizza isn't free. Help a dev out! 🍕",
-  'Behind every great app is a developer surviving on caffeine. ☕',
-  "Your support today powers tomorrow's features. 💡",
-  'Small donations, big dreams. 🌟',
-  'Even superheroes need a sidekick. Be mine — donate! 🦸',
-  "You clicked download. Now click donate. You're on a roll! 🎯",
-  'A tiny thank-you can turn into the next big feature. ✨',
-  'If PNUT saved your time, send a little fuel back to the engine. ⚡',
-  'Good tools stay alive when good users speak up and support them. 💛',
-  'Your feedback shapes the app. Your support keeps it shipping. 🛠️',
-  'One click downloaded the file. One kind gesture helps build the next release. 🌱',
-  'No pressure, just appreciation. Every bit helps PNUT grow. 🥜',
-  'The app is free, but better updates need real-world fuel. ☕'
+  'Good tools stay reliable when good users support the work behind them.',
+  'Your support helps PNUT ship faster fixes and cleaner downloads.',
+  'A small thank-you can become the next platform, polish pass, or bug fix.',
+  'If PNUT saved your time, sending a little support helps keep it improving.',
+  'Free to use does not mean free to build. Your support keeps the roadmap moving.',
+  'Every contribution helps turn daily maintenance into better product work.',
+  'Your feedback shapes the app. Your support helps keep it shipping.'
 ]
 
 const IMPACT_POINTS = ['Faster fixes', 'New platforms', 'Cleaner downloads']
@@ -73,7 +63,7 @@ function DonationModal({ isOpen, onClose, onDonate, donationUrl }) {
       show={isOpen}
       onHide={onClose}
       centered
-      className="custom-login-modal"
+      className="pnut-modal custom-login-modal donation-modal"
       backdrop="static"
       keyboard={false}
       aria-labelledby="donation-modal-title"

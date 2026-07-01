@@ -8,7 +8,7 @@ function LoginModal({ isOpen, onClose, handleLogin, platformName = 'YouTube' }) 
       show={isOpen}
       onHide={onClose}
       centered
-      className="custom-login-modal"
+      className="pnut-modal custom-login-modal"
       backdrop="static"
       keyboard={false}
       aria-labelledby="login-modal-title"
@@ -33,7 +33,7 @@ function LoginModal({ isOpen, onClose, handleLogin, platformName = 'YouTube' }) 
         <p className="modal-message">
           {platformName} needs you to sign in before this download can continue.
         </p>
-        <p style={{ fontSize: '12px', color: 'var(--pnut-muted)', marginTop: '10px' }}>
+        <p className="custom-modal-note">
           Open {platformName}, sign in, then retry the download.
         </p>
       </Modal.Body>
