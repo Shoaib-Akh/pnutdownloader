@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { FaFolderOpen, FaMusic, FaVideo, FaList, FaBars, FaHome, FaCoffee, FaInfoCircle, FaGlobe, FaCommentDots, FaStar, FaSun, FaMoon, FaTools, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSyncAlt } from 'react-icons/fa';
-import { IoMdDownload } from 'react-icons/io';
-import { GiSquirrel } from 'react-icons/gi';
+import { useEffect, useState } from 'react';
+import { FaFolderOpen, FaMusic, FaVideo, FaList, FaHome, FaCoffee, FaInfoCircle, FaCommentDots, FaSun, FaMoon, FaTools, FaExclamationTriangle, FaCheckCircle, FaTimesCircle, FaSyncAlt } from 'react-icons/fa';
 import { Button, Modal } from 'react-bootstrap';
 import './Sidebar.css';
 import Logo from '../../assets/Images/logo.svg';
@@ -14,11 +12,8 @@ const sanitizeRepairError = (message) =>
     .replace(/ffmpeg/gi, 'media processor');
 
 function Sidebar({
-  isOpen,
-  setIsOpen,
   selectedItem,
   setSelectedItem,
-  download,
   setDownload,
   setShowWebView,
   setDownloadListOpen,
@@ -46,15 +41,6 @@ function Sidebar({
   ];
 
   const systemItems = [
-    {
-      icon: FaCommentDots,
-      label: 'Feedback',
-      badge: 'NEW',
-      color: '#4285F4',
-      isHighlighted: true,
-      description: 'Help us improve',
-      displayLabel: 'Feedback',
-    },
     { icon: FaInfoCircle, label: 'About us', displayLabel: 'About PNUT' },
   ];
 
@@ -76,6 +62,16 @@ function Sidebar({
       targetUrl: donationUrl,
     });
     window.api.openExternal(donationUrl);
+  };
+
+  const openFeedback = () => {
+    setSelectedItem('Feedback');
+    setDownload(false);
+    setShowWebView(false);
+    setDownloadListOpen(false);
+    setAboutUs(false);
+    window.api?.trackEvent?.('Feedback Clicked');
+    setFeedbackModalOpen(true);
   };
 
   const openRepairModal = () => {
@@ -194,48 +190,6 @@ function Sidebar({
             </div>
           </div>
 
-          {systemItems.map((item, index) => (
-            <div
-              key={index}
-              className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
-                } ${item.isHighlighted ? 'sidebar__menu-item--highlighted' : ''
-                }`}
-              title={item.displayLabel || item.label}
-              onClick={() => {
-                setSelectedItem(item.label);
-                setDownload(false);
-                setShowWebView(false);
-                setDownloadListOpen(false);
-                if (item.label === 'Feedback') {
-                  setAboutUs(false);
-                  window.api?.trackEvent?.('Feedback Clicked');
-                  setFeedbackModalOpen(true);
-                } else if (item.label === 'About us') {
-                  setAboutUs(true);
-                } else {
-                  setAboutUs(false);
-                }
-              }}
-            >
-              <div className={`sidebar__icon-container ${item.isHighlighted ? 'sidebar__icon-container--feedback' : ''
-                }`}>
-                <item.icon className="sidebar__icon" />
-                {item.badge && (
-                  <span className="sidebar__badge">{item.badge}</span>
-                )}
-              </div>
-              <div className="sidebar__text-container">
-                <span className="sidebar__label">{item.displayLabel || item.label}</span>
-                {item.description && (
-                  <span className="sidebar__description">{item.description}</span>
-                )}
-              </div>
-              {item.isHighlighted && (
-                <FaStar className="sidebar__star-icon" />
-              )}
-            </div>
-          ))}
-
           <button
             type="button"
             className="sidebar__menu-item sidebar__repair-button"
@@ -249,11 +203,35 @@ function Sidebar({
               <span className="sidebar__label">Repair Downloads</span>
             </div>
           </button>
+
+          {systemItems.map((item, index) => (
+            <div
+              key={index}
+              className={`sidebar__menu-item ${selectedItem === item.label ? 'sidebar__menu-item--selected' : ''
+                }`}
+              title={item.displayLabel || item.label}
+              onClick={() => {
+                setSelectedItem(item.label);
+                setDownload(false);
+                setShowWebView(false);
+                setDownloadListOpen(false);
+                setAboutUs(item.label === 'About us');
+              }}
+            >
+              <div className="sidebar__icon-container">
+                <item.icon className="sidebar__icon" />
+              </div>
+              <div className="sidebar__text-container">
+                <span className="sidebar__label">{item.displayLabel || item.label}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Buy Me a Coffee Button */}
       <div className="sidebar__footer mb-2">
+
         {/* <div className="sidebar__coffee-logo" aria-hidden="true">
           <FaCoffee />
         </div> */}
@@ -273,6 +251,22 @@ function Sidebar({
               <span className="sidebar__coffee-pill">Ko-fi</span>
             </span>
             <span className="sidebar__coffee-subtitle">Buy me a coffee</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`sidebar__feedback-footer-button ${selectedItem === 'Feedback' ? 'sidebar__feedback-footer-button--selected' : ''
+            }`}
+          onClick={openFeedback}
+          aria-label="Send feedback"
+          title="Send feedback"
+        >
+          <span className="sidebar__feedback-footer-icon" aria-hidden="true">
+            <FaCommentDots />
+          </span>
+          <span className="sidebar__feedback-footer-copy">
+            <span className="sidebar__feedback-footer-title">Feedback</span>
+            <span className="sidebar__feedback-footer-subtitle">Help us improve</span>
           </span>
         </button>
       </div>

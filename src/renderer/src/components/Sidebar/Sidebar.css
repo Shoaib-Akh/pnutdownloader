@@ -96,7 +96,7 @@
   .sidebar__menu-item {
     display: flex;
     align-items: center;
-    padding: 12px 16px;
+    padding: 12px 5px;
     border-radius: 8px;
     cursor: pointer;
     margin-bottom: 4px;
@@ -604,12 +604,12 @@
   width: 100% !important;
   min-height: 42px;
   margin: 0 !important;
-  padding: 10px 11px !important;
+  padding: 5px 11px !important;
   border-radius: var(--pnut-radius) !important;
   border: 1px solid transparent !important;
   background: transparent !important;
   color: var(--pnut-text-soft) !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   transform: none !important;
   box-shadow: none !important;
@@ -657,8 +657,8 @@
 .sidebar__label,
 .theme-toggle__label {
   color: inherit !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
+  font-size: 12px !important;
+  /* font-weight: 700 !important; */
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -721,6 +721,7 @@
   width: 100% !important;
   padding-top: 12px;
   border-top: 1px solid var(--pnut-border);
+  gap: 8px;
 }
 
 .sidebar__coffee-logo {
@@ -760,7 +761,7 @@
     var(--pnut-surface) !important;
   color: var(--pnut-text) !important;
   box-shadow: 0 8px 24px rgba(22, 78, 99, 0.12) !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   text-align: left;
   cursor: pointer;
 }
@@ -870,6 +871,81 @@
 
 .dark-theme .sidebar__coffee-subtitle {
   color: var(--pnut-text-soft);
+}
+
+.sidebar__feedback-footer-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 11px;
+  width: 100%;
+  min-height: 50px;
+  padding: 8px 10px;
+  border: 1px solid var(--pnut-brand-border);
+  border-radius: var(--pnut-radius);
+  background: var(--pnut-button-bg);
+  color: var(--pnut-button-text);
+  box-shadow: var(--pnut-shadow-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+}
+
+.sidebar__feedback-footer-button:hover {
+  border-color: var(--pnut-brand-border-strong);
+  background: var(--pnut-button-hover);
+  color: var(--pnut-button-text);
+  transform: translateY(-1px);
+  box-shadow: var(--pnut-shadow-md);
+}
+
+.sidebar__feedback-footer-button:active {
+  transform: translateY(0);
+}
+
+.sidebar__feedback-footer-button:focus-visible {
+  outline: 2px solid var(--pnut-brand);
+  outline-offset: 2px;
+}
+
+.sidebar__feedback-footer-button--selected {
+  border-color: var(--pnut-button-hover);
+  background: var(--pnut-button-hover);
+}
+
+.sidebar__feedback-footer-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--pnut-button-text) 16%, transparent);
+  color: var(--pnut-button-text);
+  font-size: 15px;
+}
+
+.sidebar__feedback-footer-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.sidebar__feedback-footer-title {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.sidebar__feedback-footer-subtitle {
+  margin-top: 3px;
+  color: color-mix(in srgb, var(--pnut-button-text) 72%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .sidebar__repair-button {
@@ -1065,7 +1141,8 @@
   .sidebar__label,
   .theme-toggle__label,
   .sidebar__description,
-  .sidebar__buy-nuts-button span {
+  .sidebar__buy-nuts-button span,
+  .sidebar__feedback-footer-copy {
     display: none !important;
   }
 
@@ -1084,6 +1161,19 @@
   .sidebar__coffee-logo,
   .sidebar__buy-nuts-button {
     display: none !important;
+  }
+
+  .sidebar__feedback-footer-button {
+    justify-content: center;
+    min-height: 42px;
+    padding: 9px !important;
+  }
+
+  .sidebar__feedback-footer-icon {
+    flex-basis: 28px;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 }
 
