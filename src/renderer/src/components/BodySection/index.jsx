@@ -311,39 +311,62 @@ function BodySection({
     const urlToDownload = normalizeYouTubeSingle(rawUrlToDownload)
     if (!urlToDownload) return
 
-    const result = await enqueueDownload(urlToDownload)
+    setDownloading(true)
+    try {
+      const result = await enqueueDownload(urlToDownload)
 
-    if (result?.duplicate) {
-      if (window.api?.showMessageBox) {
-        window.api.showMessageBox({
-          type: 'warning',
-          title: 'Duplicate Download',
-          message:
+      if (result?.duplicate) {
+        if (window.api?.showMessageBox) {
+          window.api.showMessageBox({
+            type: 'warning',
+            title: 'Duplicate Download',
+            message:
+              'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
+          })
+        } else {
+          alert(
             'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
-        })
-      } else {
-        alert(
-          'This URL with the same format, quality, save location, and download type is already in the list. Change format, quality, or save location to download again.'
-        )
+          )
+        }
+        return
       }
-      return
-    }
 
-    if (result?.playlist) {
-      setPlaylistModalLoading(true)
-      setPlaylistData(result.playlist)
-      setPlaylistModalOpen(true)
-      setPlaylistModalLoading(false)
-      return
-    }
+      if (result?.unsupported) {
+        if (window.api?.showMessageBox) {
+          window.api.showMessageBox({
+            type: 'warning',
+            title: 'Download Not Supported',
+            message: result.message || 'This URL is not supported for download.'
+          })
+        } else {
+          alert(result.message || 'This URL is not supported for download.')
+        }
+        return
+      }
 
-    setUrl(urlToDownload)
-    setDownloadListOpen(true)
-    setShowWebView(false)
-    setIsSidebarOpen(true)
-    setSelectedItem('All Files')
-    setDownload(true)
-    // enqueueDownload already queued when result.id present
+      if (result?.playlist) {
+        setPlaylistModalLoading(true)
+        setPlaylistData(result.playlist)
+        setPlaylistModalOpen(true)
+        setPlaylistModalLoading(false)
+        return
+      }
+
+      if (result?.id) {
+        setUrl(urlToDownload)
+        setDownloadListOpen(true)
+        setShowWebView(false)
+        setIsSidebarOpen(true)
+        setSelectedItem('All Files')
+        setDownload(true)
+      }
+      // enqueueDownload already queued when result.id present
+    } catch (error) {
+      console.error('[DEBUG] Error adding download:', error)
+      alert('Failed to add download: ' + error.message)
+    } finally {
+      setDownloading(false)
+    }
   }
 
   const handleDonate = () => {
@@ -547,7 +570,7 @@ function BodySection({
             )}
           </div>
           {isDownloadable && (
-            <button className="download-btn" onClick={handleDownloadClick}>
+            <button className="download-btn" onClick={handleDownloadClick} disabled={downloading}>
               {downloading ? (
                 'Adding...'
               ) : (

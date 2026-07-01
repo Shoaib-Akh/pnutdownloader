@@ -521,6 +521,12 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     return `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}`;
   };
 
+  const isInfoLoading = (item) => Boolean(item?.needsMetadata || item?.status === 'Fetching Info...')
+  const hasPlaceholderTitle = (item) => {
+    const title = asText(item?.title).trim()
+    return !title || title === 'Pending...'
+  }
+
   const playlistGroups = new Map()
   filteredList.forEach((item) => {
     const itemUrl = asText(item.url)
@@ -876,6 +882,8 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
             const remainingTime = calculateRemainingTime(item.duration, progress);
             const formattedRemainingTime = formatTime(remainingTime);
             const duration = formatTime(convertISODurationToSeconds(item.duration));
+            const infoLoading = isInfoLoading(item);
+            const placeholderTitle = hasPlaceholderTitle(item);
             return (
               <div
                 key={item.id}
@@ -910,11 +918,11 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
 
                 {/* Thumbnail with Duration Overlay */}
                 <div className="download-row__thumbnail">
-                  {!item.thumbnail && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
+                  {!item.thumbnail && (infoLoading || item.status === 'Queued' || item.status === 'Waiting') ? (
                     <div className="download-row__thumbnail-skeleton">
                       <Skeleton width={120} height={70} />
                       <div className="download-row__thumbnail-status">
-                        {item.status === 'Fetching Info...' ? 'Getting info' : 'In queue'}
+                        {infoLoading ? 'Getting info' : 'In queue'}
                       </div>
                     </div>
                   ) : (
@@ -967,7 +975,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                 <div className="download-row__content">
                   {/* Title */}
                   <h3 className="download-row__title">
-                    {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
+                    {placeholderTitle && (infoLoading || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={300} />
                     ) : (
                       cleanTitle(item.title || item.filename) || 'Untitled'
@@ -977,7 +985,7 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
                   {/* Status, Format, Date */}
                   <div className="download-row__meta">
                     {/* Status Badge */}
-                    {!item.title && (item.status === 'Fetching Info...' || item.status === 'Queued' || item.status === 'Waiting') ? (
+                    {placeholderTitle && (infoLoading || item.status === 'Queued' || item.status === 'Waiting') ? (
                       <Skeleton width={70} height={22} />
                     ) : item.isPlaylist ? (
                       <div className="download-row__playlist-status">

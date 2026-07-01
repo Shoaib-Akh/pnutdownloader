@@ -22,6 +22,11 @@ const sanitizeTitle = (str) => {
 const timestampNonYouTubeTitle = (title, platform, timestamp) =>
   isYouTubePlatform(platform) ? title : appendTitleTimestamp(title, timestamp)
 
+const isMetadataPlaceholderTitle = (title) => {
+  const normalizedTitle = String(title || '').trim()
+  return !normalizedTitle || normalizedTitle === 'Pending...'
+}
+
 const normalizeYouTubeUrlForSingleVideo = (inputUrl) => {
   if (!inputUrl || typeof inputUrl !== 'string') return inputUrl
   try {
@@ -177,7 +182,7 @@ const useDownloadManager = ({
 
     try {
       let storedDownloads = getStoredDownloads()
-      const itemIndex = storedDownloads.findIndex((item) => item.id === currentId)
+      let itemIndex = storedDownloads.findIndex((item) => item.id === currentId)
 
       if (itemIndex === -1) {
         downloadQueue.current.shift()
@@ -185,17 +190,12 @@ const useDownloadManager = ({
         return processQueue()
       }
 
-      const item = storedDownloads[itemIndex]
-      const itemPlatform = item.platform || detectPlatform(item.url)
-      const itemTitleTimestamp = isYouTubePlatform(itemPlatform)
+      let item = storedDownloads[itemIndex]
+      let itemPlatform = item.platform || detectPlatform(item.url)
+      let itemTitleTimestamp = isYouTubePlatform(itemPlatform)
         ? null
         : item.titleTimestamp || Date.now()
-      const itemTitle = timestampNonYouTubeTitle(
-        item.title || 'Unknown',
-        itemPlatform,
-        itemTitleTimestamp
-      )
-      const itemIsPlaylist = Boolean(
+      let itemIsPlaylist = Boolean(
         item.isPlaylist || item.playlistTitle || item.playlistBatchId || isPlaylistDownloadUrl(item.url)
       )
 
@@ -217,6 +217,66 @@ const useDownloadManager = ({
       storedDownloads[itemIndex].status = 'Fetching Info...'
       setStoredDownloads(storedDownloads)
 
+      if (item.needsMetadata) {
+        const videoInfo = await getVideoInfo(item.url)
+        if (videoInfo?.unsupportedDownload) {
+          throw new Error(videoInfo.unsupportedReason || 'This URL is not supported for download.')
+        }
+
+        storedDownloads = getStoredDownloads()
+        itemIndex = storedDownloads.findIndex((latestItem) => latestItem.id === currentId)
+        if (itemIndex === -1) {
+          setActiveDownloads((prev) => {
+            const next = new Set(prev)
+            next.delete(currentId)
+            return next
+          })
+          return
+        }
+        item = storedDownloads[itemIndex]
+
+        itemPlatform = videoInfo?.platform || itemPlatform
+        itemTitleTimestamp = isYouTubePlatform(itemPlatform)
+          ? null
+          : item.titleTimestamp || Date.now()
+        itemIsPlaylist = Boolean(videoInfo?.isPlaylist || itemIsPlaylist)
+
+        const metadataTitle = videoInfo?.isPlaylist
+          ? 'Playlist Item'
+          : videoInfo?.title || item.title || 'Unknown'
+
+        storedDownloads[itemIndex] = {
+          ...storedDownloads[itemIndex],
+          title: timestampNonYouTubeTitle(metadataTitle, itemPlatform, itemTitleTimestamp),
+          playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : item.playlistTitle || null,
+          thumbnail: videoInfo?.thumbnail || item.thumbnail || '',
+          duration: videoInfo?.duration || item.duration || 'Unknown',
+          isPlaylist: itemIsPlaylist,
+          playlistBatchId:
+            storedDownloads[itemIndex].playlistBatchId ||
+            (itemIsPlaylist ? `direct:${storedDownloads[itemIndex].id}` : null),
+          platform: itemPlatform,
+          titleTimestamp: itemTitleTimestamp,
+          needsMetadata: false,
+          status: 'Fetching Info...',
+        }
+        setStoredDownloads(storedDownloads)
+        item = storedDownloads[itemIndex]
+      }
+
+      itemPlatform = item.platform || detectPlatform(item.url)
+      itemTitleTimestamp = isYouTubePlatform(itemPlatform)
+        ? null
+        : item.titleTimestamp || Date.now()
+      const itemTitle = timestampNonYouTubeTitle(
+        item.title || 'Unknown',
+        itemPlatform,
+        itemTitleTimestamp
+      )
+      itemIsPlaylist = Boolean(
+        item.isPlaylist || item.playlistTitle || item.playlistBatchId || isPlaylistDownloadUrl(item.url)
+      )
+
       storedDownloads[itemIndex] = {
         ...storedDownloads[itemIndex],
         title: itemIsPlaylist && (!item.title || item.title === 'Pending...')
@@ -232,6 +292,7 @@ const useDownloadManager = ({
         isPlaylist: itemIsPlaylist,
         platform: itemPlatform,
         titleTimestamp: itemTitleTimestamp,
+        needsMetadata: false,
       }
       setStoredDownloads(storedDownloads)
 
@@ -600,6 +661,8 @@ const useDownloadManager = ({
   const enqueueDownload = useCallback(
     async (rawUrl, options = {}) => {
       const normalizedUrl = normalizeYouTubeUrlForSingleVideo(rawUrl)
+      const platform = detectPlatform(normalizedUrl)
+      const playlistUrlDetected = isPlaylistDownloadUrl(normalizedUrl)
 
       const stored = getStoredDownloads()
       const duplicate = isDuplicateDownload(stored, normalizedUrl, format, quality, saveTo, downloadType, bitrate)
@@ -607,8 +670,12 @@ const useDownloadManager = ({
         return { duplicate: true }
       }
 
-      const videoInfo = options.videoInfo ?? (await getVideoInfo(normalizedUrl))
-      const playlistUrlDetected = isPlaylistDownloadUrl(normalizedUrl)
+      const shouldFetchMetadataBeforeQueue = Boolean(
+        options.videoInfo || (playlistUrlDetected && !options.forceSingle)
+      )
+      const videoInfo = shouldFetchMetadataBeforeQueue
+        ? options.videoInfo ?? (await getVideoInfo(normalizedUrl))
+        : null
 
       console.log('[PlaylistProgress] URL classification', {
         url: normalizedUrl,
@@ -629,17 +696,20 @@ const useDownloadManager = ({
       }
 
       const newId = uuidv4()
-      const platform = videoInfo?.platform || detectPlatform(normalizedUrl)
-      const titleTimestamp = isYouTubePlatform(platform) ? null : Date.now()
+      const resolvedPlatform = videoInfo?.platform || platform
+      const titleTimestamp = isYouTubePlatform(resolvedPlatform) ? null : Date.now()
+      const queueBusy = isProcessing.current || isAnyDownloadInProgress()
       const extractedTitle = videoInfo?.isPlaylist
         ? 'Playlist Item'
         : playlistUrlDetected
           ? 'Preparing playlist…'
-          : videoInfo?.title || 'Pending...'
+          : videoInfo?.title || ''
       const newDownload = {
         id: newId,
         url: normalizedUrl,
-        title: timestampNonYouTubeTitle(extractedTitle, platform, titleTimestamp),
+        title: isMetadataPlaceholderTitle(extractedTitle)
+          ? ''
+          : timestampNonYouTubeTitle(extractedTitle, resolvedPlatform, titleTimestamp),
         playlistTitle: videoInfo?.isPlaylist
           ? videoInfo.playlistTitle
           : null,
@@ -655,7 +725,7 @@ const useDownloadManager = ({
         fileSize: 'Unknown',
         speed: 'Unknown',
         eta: 'Unknown',
-        status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
+        status: videoInfo ? (queueBusy ? 'Waiting' : 'Queued') : queueBusy ? 'Waiting' : 'Fetching Info...',
         isPlaylistCompleted: false,
         isCompleted: false,
         isFailed: false,
@@ -664,8 +734,9 @@ const useDownloadManager = ({
         errorExitCode: null,
         isPlaylist: Boolean(videoInfo?.isPlaylist || playlistUrlDetected),
         playlistBatchId: playlistUrlDetected ? `direct:${newId}` : null,
-        platform,
+        platform: resolvedPlatform,
         titleTimestamp,
+        needsMetadata: !videoInfo,
         currentItem: 0,
         forceSingle: Boolean(options.forceSingle),
       }
@@ -783,6 +854,7 @@ const useDownloadManager = ({
         item.status === 'Queued' ||
         item.status === 'Downloading' ||
         item.status === 'Fetching Info' ||
+        item.status === 'Fetching Info...' ||
         item.status === 'Waiting'
     )
 
