@@ -349,7 +349,12 @@ h6,
   width: 54px;
   background: var(--pnut-button-bg) !important;
   color: var(--pnut-button-text) !important;
-  border-left: 1px solid var(--pnut-brand-border) !important;
+  border-right: 1px solid var(--pnut-brand-border) !important;
+  position: fixed;
+  left: 24%;
+  border-top-right-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+
 }
 
 .navbar-download-btn:hover {
@@ -1387,14 +1392,14 @@ h6,
   --pnut-muted: #64748b;
   --pnut-border: rgba(24, 90, 130, 0.14);
   --pnut-border-strong: rgba(24, 90, 130, 0.28);
-  --pnut-brand: #0b6ff4;
-  --pnut-brand-hover: #075ed2;
+  --pnut-brand: #164E63;;
+  --pnut-brand-hover: #164E63;
   --pnut-brand-fill: #1f83ff;
   --pnut-brand-soft: rgba(31, 131, 255, 0.11);
   --pnut-brand-border: rgba(31, 131, 255, 0.24);
-  --pnut-brand-border-strong: rgba(31, 131, 255, 0.5);
-  --pnut-button-bg: #0b6ff4;
-  --pnut-button-hover: #075ed2;
+  --pnut-brand-border-strong:  #164E63;
+  --pnut-button-bg: #164E63;
+  --pnut-button-hover:  #28677d;
   --pnut-button-text: #ffffff;
   --pnut-sidebar-width: 238px;
   --pnut-shadow-sm: 0 10px 30px rgba(17, 78, 118, 0.08);

@@ -646,8 +646,8 @@
 }
 
 .sidebar__menu-item--selected .sidebar__icon-container {
-  background: color-mix(in srgb, var(--pnut-button-text) 16%, transparent) !important;
-  color: var(--pnut-button-text) !important;
+  background: color-mix(in srgb, var(--pnut-brand) 16%, transparent) !important;
+  color: var(--pnut-brand) !important;
 }
 
 .sidebar__icon {
