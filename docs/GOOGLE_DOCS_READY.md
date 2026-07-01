@@ -49,7 +49,7 @@ Or download a pre-built binary from **[Releases](https://github.com/Shoaib-Akh/p
 | Bundler | electron-vite + Vite 6 |
 | Download Engine | yt-dlp (nightly auto-updated) |
 | Media Processing | FFmpeg (bundled) |
-| Analytics | Aptabase |
+| Analytics | None |
 | Auto-update | electron-updater |
 | Database | Firebase (Firestore) |
 

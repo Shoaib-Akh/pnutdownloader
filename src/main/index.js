@@ -10,21 +10,9 @@ import { extractVideoId ,isDownloadableVideoUrl} from '../shared/platformUtils'
 import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
 import { appendTitleTimestamp } from '../shared/titleUtils'
 
-import { initialize, trackEvent } from "@aptabase/electron/main";
-
 // Set app user model ID for Windows notifications immediately
 if (process.platform === 'win32') {
   app.setAppUserModelId('com.shoaibakh.pnutdownloader');
-}
-
-try {
-  console.log('Initializing Aptabase...')
-  initialize('A-EU-7400909188')
-  console.log('Aptabase initialized successfully')
-  // Track event in main process
-  trackEvent('app_started')
-} catch (error) {
-  console.error('Aptabase initialization failed:', error)
 }
 
 const https = require('https');
@@ -442,15 +430,6 @@ ipcMain.handle(IPC_CHANNELS.SHOW_VIDEO_URL_NOTIFICATION, async (event, url) => {
     });
     
     notification.show();
-    
-    // Track notification event
-    try {
-      if (typeof trackEvent === 'function') {
-        trackEvent('video_url_notification_shown', { platform: platformName });
-      }
-    } catch (trackError) {
-      console.warn('Failed to track notification event:', trackError);
-    }
     
     return { success: true, platform: platformName };
   } catch (error) {
@@ -1796,15 +1775,6 @@ function createWindow() {
                 });
                 
                 notification.show();
-                
-                // Track notification event
-                try {
-                  if (typeof trackEvent === 'function') {
-                    trackEvent('clipboard_video_detected', { platform: platformName });
-                  }
-                } catch (trackError) {
-                  console.warn('Failed to track clipboard notification event:', trackError);
-                }
               }
               
               // Send IPC event to renderer to open modal

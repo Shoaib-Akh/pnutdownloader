@@ -1,6 +1,5 @@
 import { contextBridge, ipcRenderer, shell } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { trackEvent } from "@aptabase/electron/renderer";
 import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
 
 const api = {
@@ -11,7 +10,7 @@ const api = {
   getYoutubeInfo: (url) => ipcRenderer.invoke(IPC_CHANNELS.GET_YOUTUBE_INFO, url),
   saveWebViewCookies: () => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WEBVIEW_COOKIES),
   showMessageBox: (options) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_MESSAGE_BOX, options),
-trackEvent: (eventName, props) => trackEvent(eventName, props),
+  trackEvent: () => undefined,
   downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, titleTimestamp, playlistTitle, forceSingle }) =>
     ipcRenderer.invoke(IPC_CHANNELS.DOWNLOAD_VIDEO, {
       url,

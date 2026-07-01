@@ -73,8 +73,8 @@ PNUTDownloader is built using modern web technologies packaged as a desktop appl
 | **Download Engine** | yt-dlp | Latest nightly | Core video downloading capability (1700+ sites) |
 | **Media Processing** | FFmpeg | N/A | Video/audio transcoding and merging |
 | **Authentication** | Firebase Auth / Cookies | N/A | User identity (optional), YouTube cookie auth |
-| **Database** | Firebase Firestore + Realtime Database | N/A | Analytics, error tracking, download history |
-| **Analytics** | Aptabase | 0.3.x | Usage analytics and event tracking |
+| **Database** | Firebase Firestore + Realtime Database | N/A | Error tracking and download history |
+| **Analytics** | None | N/A | External analytics disabled |
 | **Auto-Update** | electron-updater | 6.x | App automatic updates |
 | **Build & Package** | electron-builder | 25.x | Cross-platform executable generation |
 | **Testing** | Jest | 29.x | Unit and integration testing |
@@ -115,7 +115,6 @@ graph TB
         YTDL[yt-dlp]
         FF[FFmpeg]
         FB[Firebase]
-        AB[Aptabase]
     end
     
     UI --> VM
@@ -126,7 +125,6 @@ graph TB
     SVCS --> YTDL
     SVCS --> FF
     SVCS --> FB
-    SVCS --> AB
     IPC --> YT
 ```
 
@@ -134,7 +132,7 @@ The architecture shows a clear separation of concerns:
 - **Renderer Process**: React 18 single-page application with viewmodels/hooks for business logic
 - **Preload Script**: Secure contextBridge that exposes whitelisted IPC methods
 - **Main Process**: Node.js process with service modules handling yt-dlp, FFmpeg, clipboard, updates
-- **External Services**: YouTube Data API, yt-dlp binary, FFmpeg binary, Firebase, Aptabase
+- **External Services**: YouTube Data API, yt-dlp binary, FFmpeg binary, Firebase
 
 
 
@@ -152,8 +150,8 @@ PNUTDownloader consists of several key components that work together to provide 
 | **Cookie Management** | Service | Custom (cookies.txt) | YouTube authentication for age-restricted content |
 | **Clipboard Monitor** | Service | Electron Clipboard API | Auto-detect copied video URLs |
 | **Auto-Update** | Service | electron-updater | App and yt-dlp binary updates |
-| **Analytics** | Service | Aptabase | Usage event tracking |
-| **Data Persistence** | Storage | Firebase Firestore | Download history, analytics, error logs |
+| **Analytics** | Service | None | External analytics disabled |
+| **Data Persistence** | Storage | Firebase Firestore | Download history and error logs |
 | **Local Storage** | Storage | localStorage | Download queue, settings, download count |
 
 
@@ -1880,7 +1878,7 @@ Verify cookies work for the new platform
 
 
 
-3.6 Analytics & Error Tracking — Firebase and Aptabase
+3.6 Error Tracking — Firebase
 
 
 
@@ -1993,13 +1991,13 @@ src/renderer/src/utils/userTracking.js
 
 Device ID and tracking utilities
 
-Aptabase integration
+Analytics compatibility shim
 
-Main Process
+Preload Script
 
-src/main/index.js
+src/preload/index.js
 
-Event tracking initialization
+No-op event tracking bridge for legacy renderer calls
 
 
 
@@ -2081,15 +2079,15 @@ Creates document on failure
 
 trackEvent
 
-Aptabase
+No-op compatibility method
 
-src/main/index.js
+src/preload/index.js
 
 Event name + properties
 
 void
 
-Sends to Aptabase
+Returns without sending external analytics
 
 
 
@@ -2098,7 +2096,7 @@ Sends to Aptabase
 
 Why was this approach chosen over alternatives?
 
-Firebase chosen for its free tier and easy integration. Firestore for structured data, Realtime DB for existing data. Aptabase for lightweight event tracking.
+Firebase chosen for its free tier and easy integration. Firestore is used for structured data and Realtime Database for existing data. External analytics are disabled.
 
 Are there any known gotchas, edge cases, or quirks?
 
@@ -2137,14 +2135,6 @@ Firestore database
 
 https://firebase.google.com/docs/firestore
 
-Aptabase
-
-0.3.x
-
-Analytics tracking
-
-https://aptabase.com/docs
-
 uuid
 
 11.x
@@ -2164,13 +2154,7 @@ Specific Behavior / Config
 
 All platforms
 
-Same tracking behavior
-
-Electron
-
-Aptabase electron SDK
-
-Tracks app_started event
+No external analytics events are sent
 
 
 
@@ -2192,17 +2176,6 @@ Network error
 Queue locally, retry on reconnect
 
 N/A - silent
-
-Aptabase fails
-
-Network error
-
-Log to console, continue
-
-N/A - silent
-
-
-
 
 3.6.11 Testing
 
@@ -2228,7 +2201,7 @@ Manual
 
 N/A
 
-Events appear in dashboard
+Firestore writes persist locally/remotely
 
 
 
@@ -2239,11 +2212,11 @@ Step-by-step guide for a developer adding new tracking:
 
 
 
-Add trackEvent call in appropriate location
+Add Firestore error or history write in the appropriate service
 
-Define event name and properties
+Define the stored fields
 
-Verify in Aptabase dashboard
+Verify queued writes sync when online
 
 Ensure no PII is included
 
@@ -2985,18 +2958,6 @@ Firestore database
 
 src/renderer/src/firebase.js
 
-@aptabase/electron
-
-Analytics
-
-0.x
-
-Desktop
-
-Usage tracking
-
-src/main/index.js
-
 uuid
 
 Utilities
@@ -3524,7 +3485,6 @@ Rollback procedure: Revert the commit and create a new release with higher versi
 | **electron-updater** | Module for automatic updates in Electron apps |
 | **electron-builder** | Tool for packaging Electron apps for distribution |
 | **Firestore** | NoSQL document database by Firebase |
-| **Aptabase** | Privacy-focused analytics for desktop apps |
 | **Vite** | Next-generation frontend build tool |
 | **React** | JavaScript library for building user interfaces |
 | **Chromium** | Open-source browser project that Electron is based on |
@@ -3546,7 +3506,7 @@ Rollback procedure: Revert the commit and create a new release with higher versi
 | **CI/CD Dashboard** | N/A - GitHub Actions |
 | **Staging Environment** | N/A |
 | **Error Monitoring** | N/A - using Firestore for errors |
-| **Analytics Dashboard** | https://aptabase.com |
+| **Analytics Dashboard** | N/A |
 
 ### B. Team & Contacts
 

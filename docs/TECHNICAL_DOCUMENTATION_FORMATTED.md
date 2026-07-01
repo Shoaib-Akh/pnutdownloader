@@ -70,8 +70,8 @@
 | **Download Engine** | yt-dlp | Latest nightly | Core video downloading capability (1700+ sites) |
 | **Media Processing** | FFmpeg | N/A | Video/audio transcoding and merging |
 | **Authentication** | Firebase Auth / Cookies | N/A | User identity (optional), YouTube cookie auth |
-| **Database** | Firebase Firestore + Realtime Database | N/A | Analytics, error tracking, download history |
-| **Analytics** | Aptabase | 0.3.x | Usage analytics and event tracking |
+| **Database** | Firebase Firestore + Realtime Database | N/A | Error tracking and download history |
+| **Analytics** | None | N/A | External analytics disabled |
 | **Auto-Update** | electron-updater | 6.x | App automatic updates |
 | **Build & Package** | electron-builder | 25.x | Cross-platform executable generation |
 | **Testing** | Jest | 29.x | Unit and integration testing |
@@ -106,7 +106,6 @@ graph TB
         YTDL[yt-dlp]
         FF[FFmpeg]
         FB[Firebase]
-        AB[Aptabase]
     end
     
     UI --> VM
@@ -117,7 +116,6 @@ graph TB
     SVCS --> YTDL
     SVCS --> FF
     SVCS --> FB
-    SVCS --> AB
     IPC --> YT
 ```
 
@@ -125,7 +123,7 @@ graph TB
 - **Renderer Process**: React 18 single-page application with viewmodels/hooks for business logic
 - **Preload Script**: Secure contextBridge that exposes whitelisted IPC methods
 - **Main Process**: Node.js process with service modules handling yt-dlp, FFmpeg, clipboard, updates
-- **External Services**: YouTube Data API, yt-dlp binary, FFmpeg binary, Firebase, Aptabase
+- **External Services**: YouTube Data API, yt-dlp binary, FFmpeg binary, Firebase
 
 ### 2.2 System Components
 
@@ -138,8 +136,8 @@ graph TB
 | **Cookie Management** | Service | Custom (cookies.txt) | YouTube authentication for age-restricted content |
 | **Clipboard Monitor** | Service | Electron Clipboard API | Auto-detect copied video URLs |
 | **Auto-Update** | Service | electron-updater | App and yt-dlp binary updates |
-| **Analytics** | Service | Aptabase | Usage event tracking |
-| **Data Persistence** | Storage | Firebase Firestore | Download history, analytics, error logs |
+| **Analytics** | Service | None | External analytics disabled |
+| **Data Persistence** | Storage | Firebase Firestore | Download history and error logs |
 | **Local Storage** | Storage | localStorage | Download queue, settings, download count |
 
 ### 2.3 Project Folder Structure
@@ -637,7 +635,6 @@ For additional IPC channels and lower-level details (arguments, error codes, eve
 | Variable | Description | Required | Default |
 |----------|-------------|----------|---------|
 | **FIREBASE_CONFIG** | Firebase configuration | Yes | N/A |
-| **APTABASE_KEY** | Analytics key | Yes | N/A |
 | **NODE_ENV** | Environment | No | development |
 
 ### 7.2 Configuration Files

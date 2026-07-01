@@ -233,7 +233,7 @@ window.api.onVideoUrlDetected((data) => {
   console.log(data.url)
 })
 
-// Track an analytics event
+// Compatibility hook; does not send external analytics
 window.api.trackEvent('download_started', { platform: 'youtube' })
 
 // Force-update yt-dlp

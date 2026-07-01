@@ -329,8 +329,7 @@ function Navbar({ setPastLinkUrl, setFormat, format, setQuality, setBitrate, set
             </>
           ) : (
             <>
-              <FaDownload className="me-2" />
-              <span className="btn-text">Download</span>
+              <FaDownload className="m1-2" />
             </>
           )}
         </Button>
