@@ -247,7 +247,6 @@ function Sidebar({
             </div>
             <div className="sidebar__text-container">
               <span className="sidebar__label">Repair Downloads</span>
-              <span className="sidebar__description">Use after download errors</span>
             </div>
           </button>
         </div>
@@ -262,15 +261,18 @@ function Sidebar({
           type="button"
           className="sidebar__buy-nuts-button"
           onClick={handleClick}
-          aria-label="Buy me a coffee to support PNUT"
-          title="Buy me a coffee to support PNUT"
+          aria-label="Support PNUT by buying me a coffee on Ko-fi"
+          title="Support PNUT by buying me a coffee on Ko-fi"
         >
           <span className="sidebar__coffee-icon" aria-hidden="true">
             <FaCoffee />
           </span>
           <span className="sidebar__coffee-copy">
-            <span className="sidebar__coffee-title">Buy me a coffee</span>
-            <span className="sidebar__coffee-subtitle">Support PNUT</span>
+            <span className="sidebar__coffee-title">
+              Support PNUT
+              <span className="sidebar__coffee-pill">Ko-fi</span>
+            </span>
+            <span className="sidebar__coffee-subtitle">Buy me a coffee</span>
           </span>
         </button>
       </div>

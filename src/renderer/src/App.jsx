@@ -5,7 +5,6 @@ import Sidebar from './components/Sidebar'
 import UpdateNotification from './components/UpdateNotification'
 import UrlDetectionModal from './components/UrlDetectionModal'
 import FeedbackModal from './components/FeedbackModal'
-import ErrorBoundary from './components/ErrorBoundary'
 import DependencyLoader from './components/DependencyLoader'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
@@ -66,95 +65,93 @@ function App() {
   }
 
   return (
-    <ErrorBoundary fallbackTitle="App Error" fallbackMessage="An unexpected error occurred in the application.">
-      <div className="pnut-app vh-100">
-        <DebugLogPanel />
-        {updateAvailable && (
-          <UpdateNotification
-            updateInfo={updateInfo}
-            onInstall={handleInstallUpdate}
-            isDownloaded={updateDownloaded}
-            downloadProgress={downloadProgress}
+    <div className="pnut-app vh-100">
+      <DebugLogPanel />
+      {updateAvailable && (
+        <UpdateNotification
+          updateInfo={updateInfo}
+          onInstall={handleInstallUpdate}
+          isDownloaded={updateDownloaded}
+          downloadProgress={downloadProgress}
+        />
+      )}
+
+      <UrlDetectionModal
+        isOpen={urlDetectionModalOpen}
+        onClose={handleUrlDetectionClose}
+        onDownload={handleUrlDetectionDownload}
+        url={detectedUrl}
+        isLoading={isUrlDownloading}
+      />
+
+      <FeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+      />
+
+      <div className={`app-shell ${showWebView ? 'app-shell--browser' : ''}`}>
+        <aside className="app-sidebar-panel">
+          <Sidebar
+            setSelectedItem={setSelectedItem}
+            selectedItem={selectedItem}
+            setDownload={setDownload}
+            download={download}
+            setShowWebView={setShowWebView}
+            showWebView={showWebView}
+            setDownloadListOpen={setDownloadListOpen}
+            setAboutUs={setAboutUs}
+            setFeedbackModalOpen={setFeedbackModalOpen}
+            theme={theme}
+            onThemeToggle={toggleTheme}
           />
-        )}
+        </aside>
 
-        <UrlDetectionModal
-          isOpen={urlDetectionModalOpen}
-          onClose={handleUrlDetectionClose}
-          onDownload={handleUrlDetectionDownload}
-          url={detectedUrl}
-          isLoading={isUrlDownloading}
-        />
-
-        <FeedbackModal
-          isOpen={feedbackModalOpen}
-          onClose={() => setFeedbackModalOpen(false)}
-        />
-
-        <div className={`app-shell ${showWebView ? 'app-shell--browser' : ''}`}>
-          <aside className="app-sidebar-panel">
-            <Sidebar
-              setSelectedItem={setSelectedItem}
-              selectedItem={selectedItem}
-              setDownload={setDownload}
-              download={download}
-              setShowWebView={setShowWebView}
-              showWebView={showWebView}
-              setDownloadListOpen={setDownloadListOpen}
-              setAboutUs={setAboutUs}
-              setFeedbackModalOpen={setFeedbackModalOpen}
-              theme={theme}
-              onThemeToggle={toggleTheme}
-            />
-          </aside>
-
-          <div style={{ display: 'none' }}>
-            <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
-          </div>
-          <main className="app-main-panel">
-            {!showWebView && <Navbar
-              bitrate={bitrate}
-              setBitrate={setBitrate}
-              downloadType={downloadType}
-              setDownloadType={setDownloadType}
-              quality={quality}
-              setQuality={setQuality}
-              format={format}
-              setFormat={setFormat}
-              saveTo={saveTo}
-              setSaveTo={setSaveTo}
-              isSidebarOpen={isSidebarOpen}
-              setPastLinkUrl={setPastLinkUrl}
-              isLoading={Boolean(pastLinkUrl)}
-            />}
-            <BodySection
-              setPastLinkUrl={setPastLinkUrl}
-              bitrate={bitrate}
-              setBitrate={setBitrate}
-              downloadType={downloadType}
-              quality={quality}
-              format={format}
-              saveTo={saveTo}
-              selectedItem={selectedItem}
-              setIsSidebarOpen={setIsSidebarOpen}
-              isSidebarOpen={isSidebarOpen}
-              setSelectedItem={setSelectedItem}
-              setDownload={setDownload}
-              download={download}
-              setShowWebView={setShowWebView}
-              showWebView={showWebView}
-              downloadListOpen={downloadListOpen}
-              setDownloadListOpen={setDownloadListOpen}
-              pastLinkUrl={pastLinkUrl}
-              aboutUs={aboutUs}
-              updateInfo={updateInfo}
-              setAboutUs={setAboutUs}
-              onOpenFeedback={() => setFeedbackModalOpen(true)}
-            />
-          </main>
+        <div style={{ display: 'none' }}>
+          <webview src="https://pnutdownloader.com/app/index.html" title="Bottom Banner" />
         </div>
+        <main className="app-main-panel">
+          {!showWebView && <Navbar
+            bitrate={bitrate}
+            setBitrate={setBitrate}
+            downloadType={downloadType}
+            setDownloadType={setDownloadType}
+            quality={quality}
+            setQuality={setQuality}
+            format={format}
+            setFormat={setFormat}
+            saveTo={saveTo}
+            setSaveTo={setSaveTo}
+            isSidebarOpen={isSidebarOpen}
+            setPastLinkUrl={setPastLinkUrl}
+            isLoading={Boolean(pastLinkUrl)}
+          />}
+          <BodySection
+            setPastLinkUrl={setPastLinkUrl}
+            bitrate={bitrate}
+            setBitrate={setBitrate}
+            downloadType={downloadType}
+            quality={quality}
+            format={format}
+            saveTo={saveTo}
+            selectedItem={selectedItem}
+            setIsSidebarOpen={setIsSidebarOpen}
+            isSidebarOpen={isSidebarOpen}
+            setSelectedItem={setSelectedItem}
+            setDownload={setDownload}
+            download={download}
+            setShowWebView={setShowWebView}
+            showWebView={showWebView}
+            downloadListOpen={downloadListOpen}
+            setDownloadListOpen={setDownloadListOpen}
+            pastLinkUrl={pastLinkUrl}
+            aboutUs={aboutUs}
+            updateInfo={updateInfo}
+            setAboutUs={setAboutUs}
+            onOpenFeedback={() => setFeedbackModalOpen(true)}
+          />
+        </main>
       </div>
-    </ErrorBoundary>
+    </div>
   )
 }
 

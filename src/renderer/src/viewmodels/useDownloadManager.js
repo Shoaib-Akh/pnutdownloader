@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import { extractVideoId, isDuplicateDownload } from '../components/commonFunction'
-import { detectPlatform, isYouTubePlatform, PLATFORMS } from '../components/platformUtils'
+import { detectPlatform, getPlatformName, isYouTubePlatform, PLATFORMS } from '../components/platformUtils'
 import { youtubeAPI } from '../components/YouTubeAPIManager'
 import { nonYouTubeExtractor } from '../components/NonYouTubeMetadataExtractor'
 import { saveDownload, saveDownloadError } from '../utils/firestoreService'
@@ -610,8 +610,120 @@ const useDownloadManager = ({
         return { duplicate: true }
       }
 
-      const videoInfo = options.videoInfo ?? (await getVideoInfo(normalizedUrl))
+      const platformFromUrl = detectPlatform(normalizedUrl)
       const playlistUrlDetected = isPlaylistDownloadUrl(normalizedUrl)
+      const shouldCreatePendingMetadataRow =
+        !options.videoInfo && !isYouTubePlatform(platformFromUrl) && !options.forceSingle
+
+      if (shouldCreatePendingMetadataRow) {
+        const newId = uuidv4()
+        const titleTimestamp = Date.now()
+        const pendingDownload = {
+          id: newId,
+          url: normalizedUrl,
+          title: '',
+          playlistTitle: null,
+          thumbnail: '',
+          filename: '',
+          quality: quality.toLowerCase(),
+          saveTo: saveTo.toLowerCase(),
+          downloadType: downloadType.toLowerCase(),
+          format: format.toLowerCase(),
+          duration: 'Unknown',
+          bitrate: bitrate,
+          progress: 0,
+          fileSize: 'Unknown',
+          speed: 'Unknown',
+          eta: 'Unknown',
+          status: 'Fetching Info...',
+          isPlaylistCompleted: false,
+          isCompleted: false,
+          isFailed: false,
+          lastError: '',
+          errorDetails: '',
+          errorExitCode: null,
+          isPlaylist: false,
+          playlistBatchId: null,
+          platform: platformFromUrl,
+          titleTimestamp,
+          currentItem: 0,
+          forceSingle: false,
+          metadataPending: true,
+          downloadDate: new Date().toISOString(),
+        }
+
+        setStoredDownloads([pendingDownload, ...stored])
+
+        ;(async () => {
+          try {
+            const videoInfo = await getVideoInfo(normalizedUrl)
+            const latestDownloads = getStoredDownloads()
+            const pendingIndex = latestDownloads.findIndex((item) => item.id === newId)
+            if (pendingIndex === -1) return
+
+            if (videoInfo?.unsupportedDownload) {
+              const errorMessage =
+                videoInfo.unsupportedReason || 'This URL is not supported for download.'
+              latestDownloads[pendingIndex] = {
+                ...latestDownloads[pendingIndex],
+                status: 'Failed',
+                isFailed: true,
+                lastError: errorMessage,
+                errorDetails: errorMessage,
+                metadataPending: false,
+              }
+              setStoredDownloads(latestDownloads)
+              saveDownloadError(latestDownloads[pendingIndex], errorMessage)
+              return
+            }
+
+            const metadataPlatform = videoInfo?.platform || platformFromUrl
+            const metadataTitle = videoInfo?.isPlaylist
+              ? 'Playlist Item'
+              : videoInfo?.title || `${getPlatformName(metadataPlatform)} Video`
+            latestDownloads[pendingIndex] = {
+              ...latestDownloads[pendingIndex],
+              title: timestampNonYouTubeTitle(metadataTitle, metadataPlatform, titleTimestamp),
+              playlistTitle: videoInfo?.isPlaylist ? videoInfo.playlistTitle : null,
+              thumbnail: videoInfo?.thumbnail || '',
+              duration: videoInfo?.duration || 'Unknown',
+              status: isAnyDownloadInProgress() ? 'Waiting' : 'Queued',
+              isPlaylist: Boolean(videoInfo?.isPlaylist || playlistUrlDetected),
+              playlistBatchId: videoInfo?.isPlaylist || playlistUrlDetected ? `direct:${newId}` : null,
+              platform: metadataPlatform,
+              metadataPending: false,
+            }
+            setStoredDownloads(latestDownloads)
+
+            if (!downloadQueue.current.includes(newId)) {
+              downloadQueue.current.push(newId)
+            }
+            if (!isProcessing.current) {
+              processQueue()
+            }
+          } catch (error) {
+            const errorMessage = error.message || error.toString()
+            const latestDownloads = getStoredDownloads()
+            const pendingIndex = latestDownloads.findIndex((item) => item.id === newId)
+            if (pendingIndex === -1) return
+
+            latestDownloads[pendingIndex] = {
+              ...latestDownloads[pendingIndex],
+              status: 'Failed',
+              isFailed: true,
+              lastError: errorMessage,
+              errorDetails: errorMessage,
+              metadataPending: false,
+            }
+            setStoredDownloads(latestDownloads)
+            saveDownloadError(latestDownloads[pendingIndex], errorMessage)
+          }
+        })()
+
+        return { id: newId, pendingMetadata: true }
+      }
+
+      const videoInfo = options.videoInfo ?? (await getVideoInfo(normalizedUrl))
 
       console.log('[PlaylistProgress] URL classification', {
         url: normalizedUrl,
@@ -632,7 +744,7 @@ const useDownloadManager = ({
       }
 
       const newId = uuidv4()
-      const platform = videoInfo?.platform || detectPlatform(normalizedUrl)
+      const platform = videoInfo?.platform || platformFromUrl
       const titleTimestamp = isYouTubePlatform(platform) ? null : Date.now()
       const extractedTitle = videoInfo?.isPlaylist
         ? 'Playlist Item'
