@@ -5,6 +5,7 @@ import { detectPlatform, getPlatformName, isYouTubePlatform, PLATFORMS } from '.
 import { youtubeAPI } from '../components/YouTubeAPIManager'
 import { nonYouTubeExtractor } from '../components/NonYouTubeMetadataExtractor'
 import { saveDownload, saveDownloadError } from '../utils/firestoreService'
+import { recordDownloadError } from '../utils/downloadErrorService'
 import { appendTitleTimestamp } from '../../../shared/titleUtils'
 
 const DOWNLOAD_STORAGE_KEY = 'downloadList'
@@ -51,6 +52,13 @@ const sanitizeTitle = (str) => {
 
 const timestampNonYouTubeTitle = (title, platform, timestamp) =>
   isYouTubePlatform(platform) ? title : appendTitleTimestamp(title, timestamp)
+
+const trackDownloadFailure = (downloadData, errorMessage) => {
+  saveDownloadError(downloadData, errorMessage)
+  recordDownloadError(downloadData, errorMessage).catch((error) => {
+    console.error('Failed to record download error in Supabase:', error)
+  })
+}
 
 const normalizeYouTubeUrlForSingleVideo = (inputUrl) => {
   if (!inputUrl || typeof inputUrl !== 'string') return inputUrl
@@ -631,8 +639,10 @@ const useDownloadManager = ({
         storedDownloads[failedIndex].status = 'Failed'
         storedDownloads[failedIndex].isFailed = true
         storedDownloads[failedIndex].lastError = storedDownloads[failedIndex].lastError || errorMessage
+        storedDownloads[failedIndex].errorDetails =
+          storedDownloads[failedIndex].errorDetails || errorMessage
         setStoredDownloads(storedDownloads)
-        saveDownloadError(storedDownloads[failedIndex], storedDownloads[failedIndex].lastError)
+        trackDownloadFailure(storedDownloads[failedIndex], storedDownloads[failedIndex].lastError)
       }
 
       setActiveDownloads((prev) => {
@@ -735,7 +745,7 @@ const useDownloadManager = ({
                 metadataPending: false,
               }
               setStoredDownloads(latestDownloads)
-              saveDownloadError(latestDownloads[pendingIndex], errorMessage)
+              trackDownloadFailure(latestDownloads[pendingIndex], errorMessage)
               return
             }
 
@@ -778,7 +788,7 @@ const useDownloadManager = ({
               metadataPending: false,
             }
             setStoredDownloads(latestDownloads)
-            saveDownloadError(latestDownloads[pendingIndex], errorMessage)
+            trackDownloadFailure(latestDownloads[pendingIndex], errorMessage)
           }
         })()
 

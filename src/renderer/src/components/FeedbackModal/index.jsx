@@ -7,6 +7,7 @@ import {
   FaEnvelopeOpenText,
   FaLightbulb,
   FaPaperPlane,
+  FaRegStar,
   FaSmile,
   FaSpinner,
   FaStar,
@@ -191,21 +192,26 @@ const FeedbackModal = ({ isOpen, onClose }) => {
             <strong>{getRatingLabel(visibleRating)}</strong>
           </div>
           <div className="feedback-modal__stars" role="radiogroup" aria-label="Rating">
-            {[1, 2, 3, 4, 5].map((ratingValue) => (
-              <button
-                key={ratingValue}
-                type="button"
-                className={`feedback-modal__star ${ratingValue <= visibleRating ? 'is-active' : ''}`}
-                onClick={() => setRating(ratingValue)}
-                onMouseEnter={() => setHoverRating(ratingValue)}
-                onMouseLeave={() => setHoverRating(0)}
-                aria-label={`${ratingValue} star${ratingValue > 1 ? 's' : ''}`}
-                aria-checked={rating === ratingValue}
-                role="radio"
-              >
-                <FaStar />
-              </button>
-            ))}
+            {[1, 2, 3, 4, 5].map((ratingValue) => {
+              const isActive = ratingValue <= visibleRating
+              const StarIcon = isActive ? FaStar : FaRegStar
+
+              return (
+                <button
+                  key={ratingValue}
+                  type="button"
+                  className={`feedback-modal__star ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setRating(ratingValue)}
+                  onMouseEnter={() => setHoverRating(ratingValue)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  aria-label={`${ratingValue} star${ratingValue > 1 ? 's' : ''} - ${getRatingLabel(ratingValue)}`}
+                  aria-checked={rating === ratingValue}
+                  role="radio"
+                >
+                  <StarIcon aria-hidden="true" />
+                </button>
+              )
+            })}
           </div>
         </div>
 

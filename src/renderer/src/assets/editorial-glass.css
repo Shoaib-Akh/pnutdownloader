@@ -370,7 +370,7 @@ h6,
 
 .navbar-input::placeholder {
   color: var(--pnut-muted) !important;
-  font-size: 13px !important;
+  font-size: 11px !important;
   opacity: 1 !important;
 }
 
@@ -873,8 +873,17 @@ h6,
   background: var(--pnut-surface-raised) !important;
 }
 
+.feedback-modal__star {
+  color: var(--pnut-muted) !important;
+}
+
 .feedback-modal__star:hover,
-.feedback-modal__star.is-active,
+.feedback-modal__star.is-active {
+  border-color: rgba(245, 166, 35, 0.72) !important;
+  background: var(--pnut-warning-soft) !important;
+  color: var(--pnut-brand-fill) !important;
+}
+
 .feedback-modal__category:hover,
 .feedback-modal__category.is-selected {
   border-color: var(--pnut-brand-border-strong) !important;

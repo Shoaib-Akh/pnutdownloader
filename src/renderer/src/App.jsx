@@ -9,6 +9,7 @@ import DependencyLoader from './components/DependencyLoader'
 import useAppLifecycle from './viewmodels/useAppLifecycle'
 import useTheme from './hooks/useTheme'
 import { flushQueuedDonationClicks } from './utils/donationService'
+import { flushQueuedDownloadErrors } from './utils/downloadErrorService'
 import DebugLogPanel from '../../../index.jsx'
 import './assets/theme.css'
 import './assets/redesign.css'
@@ -32,6 +33,7 @@ function App() {
 
   useEffect(() => {
     flushQueuedDonationClicks().catch(console.error)
+    flushQueuedDownloadErrors().catch(console.error)
   }, [])
 
   const {

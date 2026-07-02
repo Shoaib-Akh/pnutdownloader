@@ -126,6 +126,9 @@
 }
 
 .feedback-modal__star {
+  --feedback-star-active: var(--pnut-brand-fill);
+  --feedback-star-idle: var(--pnut-muted);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -133,16 +136,44 @@
   border: 1px solid var(--pnut-border);
   border-radius: 8px;
   background: var(--pnut-surface-raised);
-  color: var(--pnut-border-strong);
+  color: var(--feedback-star-idle);
   cursor: pointer;
   font-size: 22px;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.feedback-modal__star svg {
+  width: 1.08em;
+  height: 1.08em;
+  transition: transform 0.16s ease;
 }
 
 .feedback-modal__star:hover,
 .feedback-modal__star.is-active {
-  border-color: var(--pnut-brand-border-strong);
+  border-color: rgba(245, 166, 35, 0.72);
   background: var(--pnut-warning-soft);
-  color: var(--pnut-brand-fill);
+  color: var(--feedback-star-active);
+  box-shadow: 0 8px 18px rgba(245, 166, 35, 0.16);
+}
+
+.feedback-modal__star:hover {
+  transform: translateY(-1px);
+}
+
+.feedback-modal__star:hover svg,
+.feedback-modal__star.is-active svg {
+  transform: scale(1.08);
+}
+
+.feedback-modal__star:focus-visible {
+  outline: 2px solid var(--pnut-brand);
+  outline-offset: 2px;
+  box-shadow: var(--pnut-ring);
 }
 
 .feedback-modal__categories {

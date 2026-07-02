@@ -942,7 +942,7 @@
 
 .sidebar__feedback-footer-subtitle {
   margin-top: 3px;
-  color: color-mix(in srgb, var(--pnut-button-text) 72%, transparent);
+  color: color-mix(in srgb, var(--pnut-text) 72%, transparent);
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
