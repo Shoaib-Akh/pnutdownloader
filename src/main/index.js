@@ -22,6 +22,7 @@ const YTDLP_INFO_TIMEOUT_MS = 45 * 1000;
 const YTDLP_DOWNLOAD_STALL_TIMEOUT_MS = 120 * 1000;
 const YTDLP_AUTO_UPDATE_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
 const YTDLP_AUTO_UPDATE_POLL_MS = 24 * 60 * 60 * 1000;
+const YTDLP_DEBUG_TAIL_LIMIT = 3500;
 const WEBVIEW_SESSION_PARTITION = 'persist:main';
 
 const getBrowserCookieSessions = () => {
@@ -96,6 +97,11 @@ const getLogSafeYtdlpArgs = (args) => {
 const logYtdlpCommand = (label, executable, args) => {
   console.log(`[${label}] yt-dlp executable: ${executable}`);
   console.log(`[${label}] yt-dlp args: ${getLogSafeYtdlpArgs(args).join(' ')}`);
+};
+
+const appendLogTail = (current, chunk, limit = YTDLP_DEBUG_TAIL_LIMIT) => {
+  const next = `${current || ''}${chunk || ''}`;
+  return next.length > limit ? next.slice(-limit) : next;
 };
 
 const killProcessTree = (proc, label, signal = 'SIGKILL') => {
@@ -2540,14 +2546,15 @@ const startDownload = async (event, options) => {
         return reject(new Error('A download is already in progress.'));
       }
 
-      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, titleTimestamp, playlistTitle: playlistTitleFromOptions, forceSingle } = options;
+      const { id: downloadId, url, isAudioOnly, selectedFormat, selectedQuality, saveTo, selectBitrate, title: titleFromOptions, titleTimestamp, playlistTitle: playlistTitleFromOptions, forceSingle, debugMode = false } = options;
+      const isDebugMode = Boolean(debugMode);
       const downloadLogId = downloadId || `download:${Date.now()}`;
       const downloadStartedAt = Date.now();
       console.log(`[${downloadLogId}] ⏱ Download request received at ${new Date().toISOString()}`);
       emitDebugLog({
         source: 'download',
         message: 'Download request received',
-        details: `URL: ${url || '(missing)'}\nFormat: ${selectedFormat || '(default)'}\nQuality: ${selectedQuality || '(default)'}\nAudio only: ${Boolean(isAudioOnly)}\nSave to: ${saveTo || '(default)'}`,
+        details: `URL: ${url || '(missing)'}\nFormat: ${selectedFormat || '(default)'}\nQuality: ${selectedQuality || '(default)'}\nAudio only: ${Boolean(isAudioOnly)}\nSave to: ${saveTo || '(default)'}\nDebug mode: ${isDebugMode ? 'on' : 'off'}`,
         downloadId: downloadLogId
       }, event.sender);
 
@@ -2570,7 +2577,8 @@ const startDownload = async (event, options) => {
         selectBitrate,
         titleFromOptions,
         playlistTitleFromOptions,
-        forceSingle
+        forceSingle,
+        debugMode: isDebugMode
       });
 
       if (!url || typeof url !== 'string') {
@@ -3137,6 +3145,10 @@ const startDownload = async (event, options) => {
           '--fixup', 'never', // Without ffprobe, fixing up M3U8 takes 80 seconds byte-by-byte. This skips it.
         ];
 
+        if (isDebugMode) {
+          args.push('--verbose');
+        }
+
         // Pass cookies for non-YouTube platforms (like Facebook/Instagram/Dailymotion)
         // Passing cookies for public YouTube videos often triggers 80-second Bot/JS challenges.
         if (!isYouTube) {
@@ -3170,7 +3182,18 @@ const startDownload = async (event, options) => {
           message: launch.mode === 'python'
             ? 'Starting download process (fast Python mode)'
             : 'Starting download process',
-          details: `Executable: ${launch.executable}${launch.mode === 'python' ? `\nyt-dlp: ${currentYtdlpPath}` : ''}`,
+          details: [
+            `Executable: ${launch.executable}`,
+            `Mode: ${launch.mode}`,
+            `yt-dlp path: ${currentYtdlpPath}`,
+            `ffmpeg path: ${ffmpegPath}`,
+            `Platform: ${process.platform} ${process.arch}`,
+            `App version: ${app.getVersion()}`,
+            `Cookies file: ${existsSync(cookiesPath) ? cookiesPath : 'missing'}`,
+            `YouTube URL: ${isYouTube ? 'yes' : 'no'}`,
+            `Debug mode: ${isDebugMode ? 'on' : 'off'}`,
+            `Args: ${getLogSafeYtdlpArgs(launch.args).join(' ')}`
+          ].join('\n'),
           downloadId: downloadLogId
         }, event.sender);
 
@@ -3181,6 +3204,8 @@ const startDownload = async (event, options) => {
         activeDownloads[downloadId] = true;
 
         let resolvedDownloadPath = downloadPath;
+        let downloadStdoutTail = '';
+        let downloadStderrTail = '';
         const stallTimeout = createYtdlpTimeout({
           proc: downloadProcess,
           label: downloadLabel,
@@ -3196,7 +3221,9 @@ const startDownload = async (event, options) => {
 
         downloadProcess.stdout.on('data', (data) => {
           stallTimeout.reset();
-          const line = data.toString().trim();
+          const text = data.toString();
+          downloadStdoutTail = appendLogTail(downloadStdoutTail, text);
+          const line = text.trim();
           console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
           emitDebugLog({
             source: 'yt-dlp',
@@ -3230,7 +3257,9 @@ const startDownload = async (event, options) => {
 
         downloadProcess.stderr.on('data', (data) => {
           stallTimeout.reset();
-          const errorMessage = data.toString().trim();
+          const text = data.toString();
+          downloadStderrTail = appendLogTail(downloadStderrTail, text);
+          const errorMessage = text.trim();
           const stderrIsError = /ERROR:|failed|unable to|not found|forbidden|unsupported/i.test(errorMessage);
           console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
           emitDebugLog({
@@ -3419,21 +3448,42 @@ const startDownload = async (event, options) => {
                   errorDetails = `Exit code ${code} indicates an error occurred during download.`;
               }
             }
+
+            const failureDiagnostics = [
+              errorDetails,
+              `Exit code: ${code}`,
+              `Elapsed: ${Date.now() - startedAt}ms`,
+              `Platform: ${process.platform} ${process.arch}`,
+              `App version: ${app.getVersion()}`,
+              `Debug mode: ${isDebugMode ? 'on' : 'off'}`,
+              `Executable: ${launch.executable}`,
+              `yt-dlp path: ${currentYtdlpPath}`,
+              `ffmpeg path: ${ffmpegPath}`,
+              `Cookies file: ${existsSync(cookiesPath) ? cookiesPath : 'missing'}`,
+              `Cookies passed to yt-dlp: ${launch.args.includes('--cookies') ? 'yes' : 'no'}`,
+              `Args: ${getLogSafeYtdlpArgs(launch.args).join(' ')}`,
+              downloadStderrTail.trim()
+                ? `yt-dlp stderr tail:\n${downloadStderrTail.trim()}`
+                : 'yt-dlp stderr tail: (empty)',
+              downloadStdoutTail.trim()
+                ? `yt-dlp stdout tail:\n${downloadStdoutTail.trim()}`
+                : 'yt-dlp stdout tail: (empty)'
+            ].filter(Boolean).join('\n\n');
             
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId, 
               error: errorMessage,
-              details: errorDetails,
+              details: failureDiagnostics,
               exitCode: code
             });
             emitDebugLog({
               level: 'error',
               source: 'download',
               message: errorMessage,
-              details: errorDetails,
+              details: failureDiagnostics,
               downloadId: downloadLogId
             }, event.sender);
-            reject(new Error(`${errorMessage}: ${errorDetails}`));
+            reject(new Error(`${errorMessage}: ${failureDiagnostics}`));
           }
         });
       }).catch((err) => {

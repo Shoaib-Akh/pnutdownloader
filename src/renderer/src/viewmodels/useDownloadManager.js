@@ -10,6 +10,7 @@ import { appendTitleTimestamp } from '../../../shared/titleUtils'
 
 const DOWNLOAD_STORAGE_KEY = 'downloadList'
 const DOWNLOAD_COUNT_KEY = 'downloadCount'
+const DEBUG_MODE_STORAGE_KEY = 'pnut_debug_mode'
 const DOWNLOAD_COMPLETE_STATUS = 'Download complete!'
 const NON_ACTIVE_STATUSES = new Set([
   'Completed',
@@ -58,6 +59,14 @@ const trackDownloadFailure = (downloadData, errorMessage) => {
   recordDownloadError(downloadData, errorMessage).catch((error) => {
     console.error('Failed to record download error in Supabase:', error)
   })
+}
+
+const isDebugModeEnabled = () => {
+  try {
+    return localStorage.getItem(DEBUG_MODE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
 }
 
 const normalizeYouTubeUrlForSingleVideo = (inputUrl) => {
@@ -592,6 +601,7 @@ const useDownloadManager = ({
         titleTimestamp: itemTitleTimestamp,
         playlistTitle: item.playlistTitle ? sanitizeTitle(item.playlistTitle) : null,
         forceSingle: Boolean(item.forceSingle),
+        debugMode: isDebugModeEnabled(),
         saveTo,
       })
 

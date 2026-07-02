@@ -11,7 +11,7 @@ const api = {
   saveWebViewCookies: () => ipcRenderer.invoke(IPC_CHANNELS.SAVE_WEBVIEW_COOKIES),
   showMessageBox: (options) => ipcRenderer.invoke(IPC_CHANNELS.SHOW_MESSAGE_BOX, options),
   trackEvent: () => undefined,
-  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, titleTimestamp, playlistTitle, forceSingle }) =>
+  downloadVideo: ({ url, isAudioOnly, selectedFormat, selectedQuality, saveTo, id, selectBitrate, title, titleTimestamp, playlistTitle, forceSingle, debugMode }) =>
     ipcRenderer.invoke(IPC_CHANNELS.DOWNLOAD_VIDEO, {
       url,
       isAudioOnly,
@@ -23,7 +23,8 @@ const api = {
       title,
       titleTimestamp,
       playlistTitle,
-      forceSingle
+      forceSingle,
+      debugMode
     }),
   getAppVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_APP_VERSION),
   getYtVersion: () => ipcRenderer.invoke(IPC_CHANNELS.GET_YT_VERSION),
