@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { FaCheckCircle, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt, FaStopCircle } from 'react-icons/fa'
-import { ProgressBar, Dropdown, Modal } from 'react-bootstrap'
+import { ProgressBar, Modal } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
 import '../common.css'
@@ -8,6 +9,136 @@ import { convertISODurationToSeconds, formatTime } from '../convertISODurationTo
 import MediaThumbnail from './MediaThumbnail'
 import useDownloadListVM from '../../viewmodels/useDownloadListVM'
 import './ActiveDownloadAnimations.css'
+
+function DownloadActionsMenu({
+  item,
+  dropdownKey,
+  isOpen,
+  setOpenDropdown,
+  menuClassName,
+  onStop,
+  onMove,
+  onRetry,
+  onCopy,
+  onShowInFolder,
+  onDelete,
+}) {
+  const buttonRef = useRef(null)
+  const menuRef = useRef(null)
+  const [position, setPosition] = useState({ top: 0, left: 0, visibility: 'hidden' })
+
+  const updatePosition = () => {
+    const button = buttonRef.current
+    if (!button) return
+
+    const buttonRect = button.getBoundingClientRect()
+    const menuWidth = menuRef.current?.offsetWidth || 220
+    const menuHeight = menuRef.current?.offsetHeight || 244
+    const padding = 12
+    const gap = 8
+    const openUp = buttonRect.bottom + gap + menuHeight > window.innerHeight - padding
+    const top = openUp
+      ? Math.max(padding, buttonRect.top - menuHeight - gap)
+      : Math.min(buttonRect.bottom + gap, window.innerHeight - menuHeight - padding)
+    const left = Math.min(
+      Math.max(padding, buttonRect.right - menuWidth),
+      window.innerWidth - menuWidth - padding
+    )
+
+    setPosition({ top, left, visibility: 'visible' })
+  }
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+
+    setPosition((current) => ({ ...current, visibility: 'hidden' }))
+    updatePosition()
+    const frame = window.requestAnimationFrame(updatePosition)
+    return () => window.cancelAnimationFrame(frame)
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const close = () => setOpenDropdown(null)
+    const handlePointerDown = (event) => {
+      if (buttonRef.current?.contains(event.target) || menuRef.current?.contains(event.target)) return
+      close()
+    }
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') close()
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('resize', close)
+    window.addEventListener('scroll', close, true)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', close)
+      window.removeEventListener('scroll', close, true)
+    }
+  }, [isOpen, setOpenDropdown])
+
+  const toggleMenu = () => {
+    setOpenDropdown(isOpen ? null : dropdownKey)
+  }
+
+  const menu = isOpen && typeof document !== 'undefined'
+    ? createPortal(
+        <div
+          ref={menuRef}
+          className={`dropdown-menu show download-row__dropdown-menu ${menuClassName || ''}`.trim()}
+          role="menu"
+          style={{
+            position: 'fixed',
+            top: position.top,
+            left: position.left,
+            visibility: position.visibility,
+          }}
+        >
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onStop}>
+            Stop <FaStopCircle className="me-2" />
+          </button>
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onMove}>
+            Move to folder <FaFolderOpen className="me-2" />
+          </button>
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onRetry}>
+            Retry <FaRedoAlt className="me-2" />
+          </button>
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onCopy}>
+            Copy link <FaCopy className="me-2" />
+          </button>
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onShowInFolder}>
+            Show in folder <FaExternalLinkAlt className="me-2" />
+          </button>
+          <button type="button" className="dropdown-item" role="menuitem" onClick={onDelete}>
+            Delete <FaTrash className="me-2" />
+          </button>
+        </div>,
+        document.body
+      )
+    : null
+
+  return (
+    <div className="dropdown">
+      <button
+        ref={buttonRef}
+        type="button"
+        className="download-row__menu-button"
+        aria-label={`Actions for ${item?.title || 'download'}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={toggleMenu}
+      >
+        <FaEllipsisV />
+      </button>
+      {menu}
+    </div>
+  )
+}
 
 function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetry, activeDownloads }) {
   const [openDropdown, setOpenDropdown] = useState(null)
@@ -337,87 +468,43 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
         >
           <FaFolderOpen />
         </button>
-        <Dropdown
-          show={openDropdown === dropdownKey}
-          onToggle={(isOpen) => setOpenDropdown(isOpen ? dropdownKey : null)}
-          autoClose="outside"
-        >
-          <Dropdown.Toggle
-            as="button"
-            type="button"
-            className="download-row__menu-button"
-            aria-label="Download actions"
-          >
-            <FaEllipsisV />
-          </Dropdown.Toggle>
-          <Dropdown.Menu
-            align="end"
-            renderOnMount
-            popperConfig={{
-              strategy: 'fixed',
-              modifiers: [
-                { name: 'offset', options: { offset: [0, 8] } },
-                { name: 'preventOverflow', options: { boundary: 'viewport', padding: 12 } },
-                { name: 'flip', options: { boundary: 'viewport', fallbackPlacements: ['top-end', 'bottom-end'] } },
-              ],
-            }}
-            className={`download-row__dropdown-menu ${menuClassName}`.trim()}
-          >
-            <Dropdown.Item
-              onClick={() => {
-                setOpenDropdown(null)
-                setConfirmMessage('Are you sure you want to stop this download?')
-                setPendingCallback(() => typeof onStopClick === 'function' ? onStopClick : () => handleStop(item))
-                setShowConfirmModal(true)
-              }}
-            >
-              Stop <FaStopCircle className="me-2" />
-            </Dropdown.Item>
-            <Dropdown.Item
-              onClick={() => {
-                handleAddToFolder(item)
-              }}
-            >
-              Move to folder <FaFolderOpen className="me-2" />
-            </Dropdown.Item>
-            <Dropdown.Item
-              onClick={() => {
-                setOpenDropdown(null)
-                setConfirmMessage('Are you sure you want to retry this download?')
-                setPendingCallback(() => typeof onRetryClick === 'function' ? onRetryClick : () => typeof onRetry === 'function' ? () => onRetry(item.id) : null)
-                setShowConfirmModal(true)
-              }}
-            >
-              Retry <FaRedoAlt className="me-2" />
-            </Dropdown.Item>
-           
-            <Dropdown.Item
-              onClick={() => {
-                handleCopy(item)
-              }}
-            >
-              Copy link <FaCopy className="me-2" />
-            </Dropdown.Item>
-            <Dropdown.Item
-              onClick={() => {
-                handleShowInFinder(item)
-              }}
-            >
-              Show in folder <FaExternalLinkAlt className="me-2" />
-            </Dropdown.Item>
-            
-            <Dropdown.Item
-              onClick={() => {
-                setOpenDropdown(null)
-                setConfirmMessage('Are you sure you want to delete this download?')
-                setPendingCallback(() => typeof onDeleteClick === 'function' ? onDeleteClick : () => handleDelete(item))
-                setShowConfirmModal(true)
-              }}
-            >
-              Delete <FaTrash className="me-2" />
-            </Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
+        <DownloadActionsMenu
+          item={item}
+          dropdownKey={dropdownKey}
+          isOpen={openDropdown === dropdownKey}
+          setOpenDropdown={setOpenDropdown}
+          menuClassName={menuClassName}
+          onStop={() => {
+            setOpenDropdown(null)
+            setConfirmMessage('Are you sure you want to stop this download?')
+            setPendingCallback(() => typeof onStopClick === 'function' ? onStopClick : () => handleStop(item))
+            setShowConfirmModal(true)
+          }}
+          onMove={() => {
+            setOpenDropdown(null)
+            handleAddToFolder(item)
+          }}
+          onRetry={() => {
+            setOpenDropdown(null)
+            setConfirmMessage('Are you sure you want to retry this download?')
+            setPendingCallback(() => typeof onRetryClick === 'function' ? onRetryClick : () => typeof onRetry === 'function' ? () => onRetry(item.id) : null)
+            setShowConfirmModal(true)
+          }}
+          onCopy={() => {
+            setOpenDropdown(null)
+            handleCopy(item)
+          }}
+          onShowInFolder={() => {
+            setOpenDropdown(null)
+            handleShowInFinder(item)
+          }}
+          onDelete={() => {
+            setOpenDropdown(null)
+            setConfirmMessage('Are you sure you want to delete this download?')
+            setPendingCallback(() => typeof onDeleteClick === 'function' ? onDeleteClick : () => handleDelete(item))
+            setShowConfirmModal(true)
+          }}
+        />
       </div>
     )
   }
