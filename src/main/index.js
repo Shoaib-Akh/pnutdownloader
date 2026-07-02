@@ -2,13 +2,18 @@ import { app, shell, BrowserWindow, ipcMain, session, dialog, globalShortcut, No
 import { basename, isAbsolute, join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { existsSync, mkdirSync, writeFileSync, createWriteStream } from 'fs'
+import { existsSync, mkdirSync, writeFileSync, createWriteStream, readFileSync } from 'fs'
 import { spawn, spawnSync } from 'child_process'
 import fs from 'fs/promises'
 import { autoUpdater } from 'electron-updater';
 import { extractVideoId ,isDownloadableVideoUrl} from '../shared/platformUtils'
 import { IPC_CHANNELS, IPC_EVENTS } from '../shared/ipcChannels'
 import { appendTitleTimestamp } from '../shared/titleUtils'
+import {
+  classifyYtdlpDownloadFailure,
+  hasCookieLinesForDomain,
+  isYouTubeAuthOrRateLimitError
+} from '../shared/ytDlpErrorUtils'
 
 // Set app user model ID for Windows notifications immediately
 if (process.platform === 'win32') {
@@ -228,6 +233,31 @@ const ffmpegPath = app.isPackaged
 const cookiesPath = app.isPackaged
   ? join(process.resourcesPath, 'cookies.txt')
   : join(__dirname, '../../public/cookies.txt')
+
+const hasValidCookiesForDomain = (domain) => {
+  if (!existsSync(cookiesPath)) {
+    return false;
+  }
+
+  try {
+    return hasCookieLinesForDomain(readFileSync(cookiesPath, 'utf8'), domain);
+  } catch (error) {
+    console.warn(`Failed to inspect cookies file for ${domain}:`, error.message);
+    return false;
+  }
+};
+
+const addCookiesToYtdlpArgs = (args) => {
+  if (args.includes('--cookies')) {
+    return args;
+  }
+
+  const nextArgs = [...args];
+  const urlIndex = nextArgs.findIndex((arg) => /^https?:\/\//i.test(String(arg)));
+  nextArgs.splice(urlIndex >= 0 ? urlIndex : nextArgs.length, 0, '--cookies', cookiesPath);
+  return nextArgs;
+};
+
 let mainWindow
 let clipboardMonitorInterval = null
 let lastClipboardText = ''
@@ -2589,10 +2619,20 @@ const startDownload = async (event, options) => {
         return reject(new Error('Download already in progress.'));
       }
 
-      // Update cookies in background — do NOT await this, it must not block yt-dlp start
-      updateCookiesFile().catch((cookieError) => {
-        console.warn('Failed to update cookies before download:', cookieError.message);
-      });
+      // Refresh YouTube cookies before launch so a just-completed login is available
+      // if YouTube asks for bot/sign-in verification. Other platforms keep the
+      // previous non-blocking behavior to avoid slowing normal startup.
+      if (isYouTubeUrl(url)) {
+        try {
+          await updateCookiesFile();
+        } catch (cookieError) {
+          console.warn('Failed to update YouTube cookies before download:', cookieError.message);
+        }
+      } else {
+        updateCookiesFile().catch((cookieError) => {
+          console.warn('Failed to update cookies before download:', cookieError.message);
+        });
+      }
       
       let baseDir;
       if (saveTo === 'Desktop') {
@@ -3174,280 +3214,310 @@ const startDownload = async (event, options) => {
   };
 
         const currentYtdlpPath = getYtdlpPath();
-        const downloadLabel = `${downloadLogId}:download`;
-        const launch = getYtdlpLaunch(args, currentYtdlpPath);
-        logYtdlpCommand(downloadLabel, launch.executable, launch.args);
-        emitDebugLog({
-          source: 'yt-dlp',
-          message: launch.mode === 'python'
-            ? 'Starting download process (fast Python mode)'
-            : 'Starting download process',
-          details: [
-            `Executable: ${launch.executable}`,
-            `Mode: ${launch.mode}`,
-            `yt-dlp path: ${currentYtdlpPath}`,
-            `ffmpeg path: ${ffmpegPath}`,
-            `Platform: ${process.platform} ${process.arch}`,
-            `App version: ${app.getVersion()}`,
-            `Cookies file: ${existsSync(cookiesPath) ? cookiesPath : 'missing'}`,
-            `YouTube URL: ${isYouTube ? 'yes' : 'no'}`,
-            `Debug mode: ${isDebugMode ? 'on' : 'off'}`,
-            `Args: ${getLogSafeYtdlpArgs(launch.args).join(' ')}`
-          ].join('\n'),
-          downloadId: downloadLogId
-        }, event.sender);
-
         const spawnOptions = process.platform === 'win32' ? { windowsHide: true } : {};
-        const startedAt = Date.now();
-        console.log(`[${downloadId}] ⏱ yt-dlp spawning after ${startedAt - downloadStartedAt}ms from button click`);
-        downloadProcess = spawn(launch.executable, launch.args, spawnOptions);
-        activeDownloads[downloadId] = true;
-
         let resolvedDownloadPath = downloadPath;
-        let downloadStdoutTail = '';
-        let downloadStderrTail = '';
-        const stallTimeout = createYtdlpTimeout({
-          proc: downloadProcess,
-          label: downloadLabel,
-          timeoutMs: YTDLP_DOWNLOAD_STALL_TIMEOUT_MS,
-          onTimeout: (message) => {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              error: 'Download stalled with no output from yt-dlp.',
-              details: message
-            });
-          }
-        });
+        let attemptedCookieRetry = false;
 
-        downloadProcess.stdout.on('data', (data) => {
-          stallTimeout.reset();
-          const text = data.toString();
-          downloadStdoutTail = appendLogTail(downloadStdoutTail, text);
-          const line = text.trim();
-          console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
+        const startDownloadAttempt = (attemptArgs, attemptName = 'download') => {
+          const downloadLabel = attemptName === 'download'
+            ? `${downloadLogId}:download`
+            : `${downloadLogId}:${attemptName}`;
+          const launch = getYtdlpLaunch(attemptArgs, currentYtdlpPath);
+          logYtdlpCommand(downloadLabel, launch.executable, launch.args);
           emitDebugLog({
             source: 'yt-dlp',
-            message: line,
+            message: launch.mode === 'python'
+              ? 'Starting download process (fast Python mode)'
+              : 'Starting download process',
+            details: [
+              `Executable: ${launch.executable}`,
+              `Mode: ${launch.mode}`,
+              `yt-dlp path: ${currentYtdlpPath}`,
+              `ffmpeg path: ${ffmpegPath}`,
+              `Platform: ${process.platform} ${process.arch}`,
+              `App version: ${app.getVersion()}`,
+              `Cookies file: ${existsSync(cookiesPath) ? cookiesPath : 'missing'}`,
+              `Cookies passed to yt-dlp: ${launch.args.includes('--cookies') ? 'yes' : 'no'}`,
+              `YouTube URL: ${isYouTube ? 'yes' : 'no'}`,
+              `Debug mode: ${isDebugMode ? 'on' : 'off'}`,
+              `Args: ${getLogSafeYtdlpArgs(launch.args).join(' ')}`
+            ].join('\n'),
             downloadId: downloadLogId
           }, event.sender);
-          
-          // Capture actual filename from yt-dlp output if we used a template
-          // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
-          const destinationMatch = line.match(/Destination:\s+(.*)$/) || line.match(/\[download\]\s+(.*?)\s+has already been downloaded/);
-          if (destinationMatch && destinationMatch[1]) {
-            resolvedDownloadPath = destinationMatch[1].trim();
-            console.log(`[${downloadId}] Captured actual file path: ${resolvedDownloadPath}`);
-            // Also update the title in the frontend if we can extract it from the filename
-            try {
-              const basename = require('path').basename(resolvedDownloadPath);
-              // Send an update with the likely title (stripping extension)
-              const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
-              if (likelyTitle) {
-                 event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-                   downloadId, 
-                   title: likelyTitle,
-                   message: `Title resolved: ${likelyTitle}`
-                 });
-              }
-            } catch (e) { /* ignore path parsing errors */ }
-          }
-          
-          event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, message: line });
-        });
 
-        downloadProcess.stderr.on('data', (data) => {
-          stallTimeout.reset();
-          const text = data.toString();
-          downloadStderrTail = appendLogTail(downloadStderrTail, text);
-          const errorMessage = text.trim();
-          const stderrIsError = /ERROR:|failed|unable to|not found|forbidden|unsupported/i.test(errorMessage);
-          console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
-          emitDebugLog({
-            level: stderrIsError ? 'error' : 'warn',
-            source: 'yt-dlp stderr',
-            message: errorMessage,
-            downloadId: downloadLogId
-          }, event.sender);
-          
-          // Check if this is a Twitch authentication error
-          const isTwitchError = errorMessage.includes('[twitch]') && (
-            errorMessage.includes('logged-in') || 
-            errorMessage.includes('cookies') ||
-            errorMessage.includes('OAuth token')
-          );
-          
-          // Check if this is a Dailymotion error
-          const isDailymotionError = errorMessage.includes('[dailymotion]') && (
-            errorMessage.includes('403') || 
-            errorMessage.includes('Forbidden') ||
-            errorMessage.includes('No video formats found') ||
-            errorMessage.includes('Failed to download m3u8')
-          );
+          const startedAt = Date.now();
+          console.log(`[${downloadId}] ⏱ yt-dlp spawning after ${startedAt - downloadStartedAt}ms from button click`);
+          downloadProcess = spawn(launch.executable, launch.args, spawnOptions);
+          activeDownloads[downloadId] = true;
 
-          const isInstagramAuthError = errorMessage.includes('[Instagram]') && (
-            errorMessage.includes('empty media response') ||
-            errorMessage.includes('Check if this post is accessible') ||
-            errorMessage.includes('cookies') ||
-            errorMessage.includes('login')
-          );
-          
-          // Check for YouTube-specific errors
-          const isYouTubeUnavailable = errorMessage.includes('[youtube]') && (
-            errorMessage.includes('Video unavailable') ||
-            errorMessage.includes('This video is not available') ||
-            errorMessage.includes('private video') ||
-            errorMessage.includes('members-only') ||
-            errorMessage.includes('age-restricted') ||
-            errorMessage.includes('sign in to view')
-          );
-          
-          // Check for other common errors
-          const isGeoBlocked = errorMessage.includes('geo') || errorMessage.includes('region') || errorMessage.includes('country') || errorMessage.includes('not available in your country');
-          const isPrivateVideo = errorMessage.includes('private') || errorMessage.includes('members-only');
-          const isNotFoundError = errorMessage.includes('not found') || errorMessage.includes('404');
-          const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
-          
-          if (isTwitchError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
-              isAuthError: true,
-              details: errorMessage
-            });
-          } else if (isDailymotionError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
-              isAuthError: true,
-              details: errorMessage
-            });
-          } else if (isInstagramAuthError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              error: 'Instagram requires a logged-in browser session for this post. Open Instagram in Explore, sign in, then retry the download.',
-              isAuthError: true,
-              loginUrl: 'https://www.instagram.com/accounts/login/',
-              details: errorMessage
-            });
-          } else if (isYouTubeUnavailable) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId,
-              error: 'This YouTube video is unavailable. It may be private, deleted, age-restricted, or geo-blocked.',
-              isAuthError: true,
-              details: errorMessage
-            });
-          } else if (isGeoBlocked) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId,
-              error: 'This video is geo-blocked and not available in your region.',
-              details: errorMessage
-            });
-          } else if (isPrivateVideo) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId,
-              error: 'This video is private or requires membership to access.',
-              details: errorMessage
-            });
-          } else if (isNotFoundError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId,
-              error: 'Video not found. The URL may be incorrect or the video may have been removed.',
-              details: errorMessage
-            });
-          } else if (isNetworkError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId,
-              error: 'Network error occurred. Please check your internet connection and try again.',
-              details: errorMessage
-            });
-          } else if (stderrIsError) {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
-              downloadId, 
-              error: errorMessage,
-              details: errorMessage
-            });
-          } else {
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
-              downloadId,
-              message: errorMessage,
-              details: errorMessage
-            });
-          }
-        });
+          let attemptStdoutTail = '';
+          let attemptStderrTail = '';
+          const stallTimeout = createYtdlpTimeout({
+            proc: downloadProcess,
+            label: downloadLabel,
+            timeoutMs: YTDLP_DOWNLOAD_STALL_TIMEOUT_MS,
+            onTimeout: (message) => {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                error: 'Download stalled with no output from yt-dlp.',
+                details: message
+              });
+            }
+          });
 
-        downloadProcess.on('error', async (err) => {
-          stallTimeout.clear();
-          delete activeDownloads[downloadId];
-          downloadProcess = null;
-          
-          // Clean up partial file on process error
-          if (resolvedDownloadPath) {
-            await cleanupPartialFile(resolvedDownloadPath);
-          }
-          emitDebugLog({
-            level: 'error',
-            source: 'download',
-            message: 'Could not start yt-dlp',
-            details: err.message,
-            downloadId: downloadLogId
-          }, event.sender);
-          
-          reject(err);
-        });
-
-        downloadProcess.on('close', async (code) => {
-          stallTimeout.clear();
-          delete activeDownloads[downloadId];
-          downloadProcess = null;
-          console.log(`[${downloadLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms`);
-
-          if (code === 0) {
+          downloadProcess.stdout.on('data', (data) => {
+            stallTimeout.reset();
+            const text = data.toString();
+            attemptStdoutTail = appendLogTail(attemptStdoutTail, text);
+            const line = text.trim();
+            console.log(`[${downloadLabel}] yt-dlp stdout:`, line);
             emitDebugLog({
-              source: 'download',
-              message: 'Download completed successfully',
-              details: resolvedDownloadPath,
+              source: 'yt-dlp',
+              message: line,
               downloadId: downloadLogId
             }, event.sender);
-            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
-            resolve();
-          } else {
-            console.error(`[${downloadLogId}] Download process exited with code ${code}`);
             
-            // Clean up partial file on download failure
+            // Capture actual filename from yt-dlp output if we used a template
+            // Matches: "[download] Destination: /path/to/file.mp4" or "[download] /path/to/file.mp4 has already been downloaded"
+            const destinationMatch = line.match(/Destination:\s+(.*)$/) || line.match(/\[download\]\s+(.*?)\s+has already been downloaded/);
+            if (destinationMatch && destinationMatch[1]) {
+              resolvedDownloadPath = destinationMatch[1].trim();
+              console.log(`[${downloadId}] Captured actual file path: ${resolvedDownloadPath}`);
+              // Also update the title in the frontend if we can extract it from the filename
+              try {
+                const basename = require('path').basename(resolvedDownloadPath);
+                // Send an update with the likely title (stripping extension)
+                const likelyTitle = basename.substring(0, basename.lastIndexOf('.'));
+                if (likelyTitle) {
+                   event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                     downloadId, 
+                     title: likelyTitle,
+                     message: `Title resolved: ${likelyTitle}`
+                   });
+                }
+              } catch { /* ignore path parsing errors */ }
+            }
+            
+            event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, message: line });
+          });
+
+          downloadProcess.stderr.on('data', (data) => {
+            stallTimeout.reset();
+            const text = data.toString();
+            attemptStderrTail = appendLogTail(attemptStderrTail, text);
+            const errorMessage = text.trim();
+            const stderrIsError = /ERROR:|failed|unable to|not found|forbidden|unsupported/i.test(errorMessage);
+            console.error(`[${downloadLabel}] yt-dlp stderr:`, errorMessage);
+            emitDebugLog({
+              level: stderrIsError ? 'error' : 'warn',
+              source: 'yt-dlp stderr',
+              message: errorMessage,
+              downloadId: downloadLogId
+            }, event.sender);
+            
+            // Check if this is a Twitch authentication error
+            const isTwitchError = errorMessage.includes('[twitch]') && (
+              errorMessage.includes('logged-in') || 
+              errorMessage.includes('cookies') ||
+              errorMessage.includes('OAuth token')
+            );
+            
+            // Check if this is a Dailymotion error
+            const isDailymotionError = errorMessage.includes('[dailymotion]') && (
+              errorMessage.includes('403') || 
+              errorMessage.includes('Forbidden') ||
+              errorMessage.includes('No video formats found') ||
+              errorMessage.includes('Failed to download m3u8')
+            );
+
+            const isInstagramAuthError = errorMessage.includes('[Instagram]') && (
+              errorMessage.includes('empty media response') ||
+              errorMessage.includes('Check if this post is accessible') ||
+              errorMessage.includes('cookies') ||
+              errorMessage.includes('login')
+            );
+            
+            // Check for YouTube-specific errors
+            const isYouTubeUnavailable = errorMessage.includes('[youtube]') && (
+              errorMessage.includes('Video unavailable') ||
+              errorMessage.includes('This video is not available') ||
+              errorMessage.includes('private video') ||
+              errorMessage.includes('members-only') ||
+              errorMessage.includes('age-restricted') ||
+              errorMessage.includes('sign in to view')
+            );
+            const isRetryableYouTubeAuthError =
+              isYouTube &&
+              !attemptedCookieRetry &&
+              !launch.args.includes('--cookies') &&
+              isYouTubeAuthOrRateLimitError(errorMessage);
+            
+            // Check for other common errors
+            const isGeoBlocked = errorMessage.includes('geo') || errorMessage.includes('region') || errorMessage.includes('country') || errorMessage.includes('not available in your country');
+            const isPrivateVideo = errorMessage.includes('private') || errorMessage.includes('members-only');
+            const isNotFoundError = errorMessage.includes('not found') || errorMessage.includes('404');
+            const isNetworkError = errorMessage.includes('network') || errorMessage.includes('connection') || errorMessage.includes('timeout');
+            
+            if (isRetryableYouTubeAuthError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                message: 'YouTube requested sign-in verification. Retrying with saved cookies if available...',
+                details: errorMessage
+              });
+            } else if (isTwitchError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                error: 'This Twitch video requires authentication. Please add Twitch cookies to your browser and try again.',
+                isAuthError: true,
+                details: errorMessage
+              });
+            } else if (isDailymotionError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                error: 'Dailymotion download failed. This may be due to regional restrictions or access limitations. Try visiting the video in your browser first, or ensure yt-dlp is up to date using: yt-dlp -U',
+                isAuthError: true,
+                details: errorMessage
+              });
+            } else if (isInstagramAuthError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                error: 'Instagram requires a logged-in browser session for this post. Open Instagram in Explore, sign in, then retry the download.',
+                isAuthError: true,
+                loginUrl: 'https://www.instagram.com/accounts/login/',
+                details: errorMessage
+              });
+            } else if (isYouTubeUnavailable) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId,
+                error: 'This YouTube video is unavailable. It may be private, deleted, age-restricted, or geo-blocked.',
+                isAuthError: true,
+                details: errorMessage
+              });
+            } else if (isGeoBlocked) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId,
+                error: 'This video is geo-blocked and not available in your region.',
+                details: errorMessage
+              });
+            } else if (isPrivateVideo) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId,
+                error: 'This video is private or requires membership to access.',
+                details: errorMessage
+              });
+            } else if (isNotFoundError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId,
+                error: 'Video not found. The URL may be incorrect or the video may have been removed.',
+                details: errorMessage
+              });
+            } else if (isNetworkError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId,
+                error: 'Network error occurred. Please check your internet connection and try again.',
+                details: errorMessage
+              });
+            } else if (stderrIsError) {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
+                downloadId, 
+                error: errorMessage,
+                details: errorMessage
+              });
+            } else {
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                downloadId,
+                message: errorMessage,
+                details: errorMessage
+              });
+            }
+          });
+
+          downloadProcess.on('error', async (err) => {
+            stallTimeout.clear();
+            delete activeDownloads[downloadId];
+            downloadProcess = null;
+            
+            // Clean up partial file on process error
             if (resolvedDownloadPath) {
               await cleanupPartialFile(resolvedDownloadPath);
             }
+            emitDebugLog({
+              level: 'error',
+              source: 'download',
+              message: 'Could not start yt-dlp',
+              details: err.message,
+              downloadId: downloadLogId
+            }, event.sender);
             
-            // Provide more specific error messages based on common exit codes
-            let errorMessage = `Download failed with code ${code}`;
-            let errorDetails = '';
+            reject(err);
+          });
 
-            if (stallTimeout.timedOut) {
-              errorMessage = 'Download stalled with no output from yt-dlp';
-              errorDetails = `yt-dlp produced no stdout/stderr for ${Math.round(YTDLP_DOWNLOAD_STALL_TIMEOUT_MS / 1000)} seconds.`;
-            } else {
-            
-              switch (code) {
-                case 1:
-                  errorMessage = 'Download failed - General error';
-                  errorDetails = 'This could be due to network issues, invalid URL, or video not available.';
-                  break;
-                case 2:
-                  errorMessage = 'Download failed - No video formats found';
-                  errorDetails = 'The video may not be available in the requested format or quality.';
-                  break;
-                case 3:
-                  errorMessage = 'Download failed - Network error';
-                  errorDetails = 'Check your internet connection and try again.';
-                  break;
-                case 4:
-                  errorMessage = 'Download failed - Authentication required';
-                  errorDetails = 'This video may require login or cookies to access.';
-                  break;
-                default:
-                  errorDetails = `Exit code ${code} indicates an error occurred during download.`;
+          downloadProcess.on('close', async (code) => {
+            stallTimeout.clear();
+            delete activeDownloads[downloadId];
+            downloadProcess = null;
+            console.log(`[${downloadLabel}] yt-dlp closed with code ${code} after ${Date.now() - startedAt}ms`);
+
+            if (code === 0) {
+              emitDebugLog({
+                source: 'download',
+                message: 'Download completed successfully',
+                details: resolvedDownloadPath,
+                downloadId: downloadLogId
+              }, event.sender);
+              event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, status: 'Download complete!', file: resolvedDownloadPath });
+              resolve();
+              return;
+            }
+
+            console.error(`[${downloadLogId}] Download process exited with code ${code}`);
+            const shouldRetryWithCookies =
+              isYouTube &&
+              !attemptedCookieRetry &&
+              !launch.args.includes('--cookies') &&
+              isYouTubeAuthOrRateLimitError(`${attemptStderrTail}\n${attemptStdoutTail}`);
+
+            if (shouldRetryWithCookies) {
+              attemptedCookieRetry = true;
+              try {
+                await updateCookiesFile();
+              } catch (cookieError) {
+                console.warn(`[${downloadLogId}] Failed to refresh cookies before YouTube retry:`, cookieError.message);
+              }
+
+              if (hasValidCookiesForDomain('youtube.com')) {
+                const retryArgs = addCookiesToYtdlpArgs(attemptArgs);
+                const retryMessage = 'Retrying YouTube download with saved browser cookies.';
+                event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, {
+                  downloadId,
+                  message: retryMessage
+                });
+                emitDebugLog({
+                  source: 'download',
+                  message: retryMessage,
+                  details: `Previous attempt exited with code ${code}.`,
+                  downloadId: downloadLogId
+                }, event.sender);
+                startDownloadAttempt(retryArgs, 'download-cookie-retry');
+                return;
               }
             }
+
+            // Clean up partial file on final download failure
+            if (resolvedDownloadPath) {
+              await cleanupPartialFile(resolvedDownloadPath);
+            }
+
+            const failure = classifyYtdlpDownloadFailure({
+              code,
+              stderr: attemptStderrTail,
+              stdout: attemptStdoutTail,
+              timedOut: stallTimeout.timedOut,
+              cookiesPassed: launch.args.includes('--cookies')
+            });
+            const errorDetails = stallTimeout.timedOut
+              ? `yt-dlp produced no stdout/stderr for ${Math.round(YTDLP_DOWNLOAD_STALL_TIMEOUT_MS / 1000)} seconds.`
+              : failure.errorDetails;
 
             const failureDiagnostics = [
               errorDetails,
@@ -3462,30 +3532,34 @@ const startDownload = async (event, options) => {
               `Cookies file: ${existsSync(cookiesPath) ? cookiesPath : 'missing'}`,
               `Cookies passed to yt-dlp: ${launch.args.includes('--cookies') ? 'yes' : 'no'}`,
               `Args: ${getLogSafeYtdlpArgs(launch.args).join(' ')}`,
-              downloadStderrTail.trim()
-                ? `yt-dlp stderr tail:\n${downloadStderrTail.trim()}`
+              attemptStderrTail.trim()
+                ? `yt-dlp stderr tail:\n${attemptStderrTail.trim()}`
                 : 'yt-dlp stderr tail: (empty)',
-              downloadStdoutTail.trim()
-                ? `yt-dlp stdout tail:\n${downloadStdoutTail.trim()}`
+              attemptStdoutTail.trim()
+                ? `yt-dlp stdout tail:\n${attemptStdoutTail.trim()}`
                 : 'yt-dlp stdout tail: (empty)'
             ].filter(Boolean).join('\n\n');
             
             event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { 
               downloadId, 
-              error: errorMessage,
+              error: failure.errorMessage,
               details: failureDiagnostics,
-              exitCode: code
+              exitCode: code,
+              isAuthError: failure.isAuthError,
+              loginUrl: failure.loginUrl
             });
             emitDebugLog({
               level: 'error',
               source: 'download',
-              message: errorMessage,
+              message: failure.errorMessage,
               details: failureDiagnostics,
               downloadId: downloadLogId
             }, event.sender);
-            reject(new Error(`${errorMessage}: ${failureDiagnostics}`));
-          }
-        });
+            reject(new Error(`${failure.errorMessage}: ${failureDiagnostics}`));
+          });
+        };
+
+        startDownloadAttempt(args);
       }).catch((err) => {
         event.sender.send(IPC_EVENTS.DOWNLOAD_PROGRESS, { downloadId, error: err.message });
         reject(err);
