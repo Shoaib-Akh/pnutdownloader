@@ -96,7 +96,7 @@
   .sidebar__menu-item {
     display: flex;
     align-items: center;
-    padding: 12px 5px;
+    padding: 10px 5px;
     border-radius: 8px;
     cursor: pointer;
     margin-bottom: 4px;
@@ -570,7 +570,7 @@
 
 .navbar-logo {
   max-width: 154px !important;
-  max-height: 42px;
+  max-height: 32px;
   margin: 0 !important;
   filter: none !important;
 }
@@ -602,9 +602,9 @@
 .sidebar__menu-item,
 .theme-toggle {
   width: 100% !important;
-  min-height: 42px;
+  min-height: 22px;
   margin: 0 !important;
-  padding: 5px 11px !important;
+  padding: 5px 4px !important;
   border-radius: var(--pnut-radius) !important;
   border: 1px solid transparent !important;
   background: transparent !important;
@@ -1165,7 +1165,7 @@
 
   .sidebar__feedback-footer-button {
     justify-content: center;
-    min-height: 42px;
+    min-height: 22px;
     padding: 9px !important;
   }
 

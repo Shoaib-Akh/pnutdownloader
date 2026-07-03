@@ -1119,6 +1119,62 @@ h1 {
   color: var(--pnut-muted) !important;
 }
 
+.browser-header {
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+}
+
+.browser-header .navigation-controls,
+.browser-header .zoom-controls {
+  flex: 0 0 auto;
+}
+
+.browser-header .url-bar {
+  flex: 1 1 auto;
+  min-width: 0 !important;
+}
+
+.browser-header .url-bar input {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-header .url-btn {
+  flex: 0 0 34px;
+  padding: 0 !important;
+}
+
+.browser-header > .browser-close-btn {
+  position: static !important;
+  inset: auto !important;
+  flex: 0 0 auto;
+  min-width: 82px;
+  height: 38px;
+  margin-left: 0 !important;
+  white-space: nowrap;
+}
+
+.browser-header > .browser-close-btn .ms-2 {
+  margin-left: 6px !important;
+}
+
+@media (max-width: 900px) {
+  .browser-header {
+    flex-wrap: wrap !important;
+  }
+
+  .browser-header .url-bar {
+    order: 3;
+    flex-basis: 100%;
+  }
+
+  .browser-header > .browser-close-btn {
+    margin-left: auto !important;
+  }
+}
+
 .webview-height {
   flex: 1;
   min-height: 0;

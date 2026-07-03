@@ -547,8 +547,9 @@ function BodySection({
               overlay={<Tooltip id="close-tooltip">Close Explore</Tooltip>}
             >
               <button
-                className="btn btn-danger d-flex align-items-center justify-content-center shadow close-webview-btn"
+                className="btn btn-danger d-flex align-items-center justify-content-center shadow close-webview-btn browser-close-btn"
                 onClick={handleCloseWebView}
+                aria-label="Close Explore"
               >
                 <FaTimes size={16} />
                 <span className="ms-2 fw-medium">Close</span>
