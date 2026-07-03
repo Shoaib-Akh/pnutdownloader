@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 
-const THEME_KEY = 'theme';
+const THEME_KEY = 'appTheme';
 
 // Get system preference
 const getSystemTheme = () => {
@@ -10,13 +10,13 @@ const getSystemTheme = () => {
   return 'light';
 };
 
-// Get initial theme (system preference or saved preference)
+// Get initial theme (saved preference or light by default)
 const getInitialTheme = () => {
-  const savedTheme = localStorage.getItem("light");
+  const savedTheme = localStorage.getItem(THEME_KEY);
   if (savedTheme) {
     return savedTheme;
   }
-  return getSystemTheme();
+  return 'light';
 };
 
 export const useTheme = () => {
