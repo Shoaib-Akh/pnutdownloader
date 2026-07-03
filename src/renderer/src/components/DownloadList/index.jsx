@@ -789,13 +789,13 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
     <div className="download-library container-fluid p-0">
       {/* Header Section */}
       <div className="download-library__header">
-        <div>
+        {/* <div>
           <p className="pnut-eyebrow">{screenMeta.eyebrow}</p>
           <h2>
             {screenMeta.title}
           </h2>
           <p className="download-library__subtitle">{screenMeta.subtitle}</p>
-        </div>
+        </div> */}
       </div>
 
       {/* Search Bar */}

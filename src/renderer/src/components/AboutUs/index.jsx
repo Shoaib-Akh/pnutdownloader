@@ -276,9 +276,7 @@ function AboutUs({ onOpenFeedback }) {
       )}
 
       <div className="text-center mb-3">
-        <div className="mb-3 mt-2 pt-1">
-          <img src={Logo} alt="PNUT Downloader Logo" style={{ height: '50px', marginBottom: '10px' }} />
-        </div>
+       
         <h1 className="display-4 fw-bold text-dark mb-2" style={{ fontSize: 22, color: 'var(--pnut-text)' }}>
           About PNUT
         </h1>
