@@ -13,8 +13,8 @@
   --pnut-border-strong: rgba(22, 78, 99, 0.30);
   --pnut-brand: #164E63;
   --pnut-brand-hover: #155E75;
-  --pnut-brand-fill: #06B6D4;
-  --pnut-brand-soft: rgba(6, 182, 212, 0.14);
+  --pnut-brand-fill: #164E63;
+  --pnut-brand-soft: rgba(104, 217, 255, 0.18);
   --pnut-info: #0891B2;
   --pnut-info-soft: rgba(6, 182, 212, 0.10);
   --pnut-success: #22C55E;
@@ -48,10 +48,10 @@
   --pnut-muted: #71717A;
   --pnut-border: rgba(6, 182, 212, 0.20);
   --pnut-border-strong: rgba(6, 182, 212, 0.38);
-  --pnut-brand: #06B6D4;
+  --pnut-brand: #164E63;
   --pnut-brand-hover: #22D3EE;
   --pnut-brand-fill: #22D3EE;
-  --pnut-brand-soft: rgba(6, 182, 212, 0.12);
+  --pnut-brand-soft: rgba(104, 217, 255, 0.22);
   --pnut-info: #22D3EE;
   --pnut-info-soft: rgba(6, 182, 212, 0.12);
   --pnut-success: #22C55E;
@@ -66,7 +66,7 @@
   --pnut-shadow-md: 0 6px 32px rgba(0, 0, 0, 0.55);
   --pnut-shadow-lg: 0 16px 56px rgba(0, 0, 0, 0.70);
   --pnut-ring: 0 0 0 3px rgba(6, 182, 212, 0.22);
-  --pnut-button-bg: #06B6D4;
+  --pnut-button-bg: #164E63;
   --pnut-button-hover: #22D3EE;
   --pnut-button-text: #09090B;
   --pnut-brand-border: rgba(6, 182, 212, 0.28);

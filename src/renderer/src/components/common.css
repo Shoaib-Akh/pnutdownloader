@@ -960,8 +960,8 @@ h1 {
   min-height: 124px;
   padding: 18px;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  /* flex-direction: column;
+  justify-content: space-between; */
   gap: 14px;
   border: 1px solid var(--pnut-border);
   border-radius: var(--pnut-radius-lg);
@@ -1202,7 +1202,7 @@ h1 {
 }
 
 .explore-start-page .platform-card {
-  min-height: 112px;
+  min-height: 40px;
 }
 
 .download-btn {

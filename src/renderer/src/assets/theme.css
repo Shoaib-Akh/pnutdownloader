@@ -12,8 +12,8 @@
   --theme-primary-light: #164E63;
   --theme-primary-rgb: 22, 78, 99;
   --theme-primary-text: #ECFEFF;
-  --theme-primary-glow: #06B6D4;
-  --theme-brand-fill: #06B6D4;
+  --theme-primary-glow: #164E63;
+  --theme-brand-fill: #164E63;
   --theme-accent: #0891B2;
   
   /* Background Colors */
@@ -69,7 +69,7 @@
   --theme-success: #22C55E;
   --theme-error: #EF4444;
   --theme-warning: #164E63;
-  --theme-info: #06B6D4;
+  --theme-info: #164E63;
   
   /* Input Colors */
   --theme-input-bg: #FFFFFF;
@@ -79,7 +79,7 @@
   
   /* Progress Bar */
   --theme-progress-bg: #E0F7FA;
-  --theme-progress-fill: #06B6D4;
+  --theme-progress-fill: #164E63;
   
   /* Dropdown */
   --theme-dropdown-bg: #FFFFFF;
@@ -109,7 +109,7 @@
   --font-mono: "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
   /* Primary Colors - dark mode */
-  --theme-primary: #06B6D4;
+  --theme-primary: #164E63;
   --theme-primary-dark: #22D3EE;
   --theme-primary-light: #22D3EE;
   --theme-primary-rgb: 6, 182, 212;
@@ -156,7 +156,7 @@
   --theme-card-border: rgba(6, 182, 212, 0.20);
   
   /* Button Colors */
-  --theme-button-primary: #06B6D4;
+  --theme-button-primary: #164E63;
   --theme-button-primary-hover: #22D3EE;
   --theme-button-primary-text: #09090B;
   --theme-button-secondary: #18181B;
@@ -176,7 +176,7 @@
   /* Input Colors */
   --theme-input-bg: #18181B;
   --theme-input-border: rgba(6, 182, 212, 0.22);
-  --theme-input-focus: #06B6D4;
+  --theme-input-focus: #164E63;
   --theme-input-placeholder: #71717A;
   
   /* Progress Bar */
@@ -193,11 +193,11 @@
   
   /* Scrollbar */
   --theme-scrollbar-bg: #18181B;
-  --theme-scrollbar-thumb: #06B6D4;
+  --theme-scrollbar-thumb: #164E63;
   --theme-scrollbar-thumb-hover: #22D3EE;
   
   /* Icon Colors */
-  --theme-icon-default: #06B6D4;
+  --theme-icon-default: #164E63;
   --theme-icon-muted: #71717A;
   
   /* Logo */

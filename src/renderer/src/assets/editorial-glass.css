@@ -1435,7 +1435,7 @@ h6,
   --pnut-brand-soft: rgba(104, 217, 255, 0.16);
   --pnut-brand-border: rgba(159, 221, 255, 0.3);
   --pnut-brand-border-strong: rgba(183, 232, 255, 0.52);
-  --pnut-button-bg: #3f86ff;
+  --pnut-button-bg: #164E63;
   --pnut-button-hover: #68d9ff;
   --pnut-button-text: #ffffff;
   --pnut-sidebar-width: 238px;
@@ -1712,7 +1712,7 @@ h6,
 }
 
 .platform-card {
-  min-height: 126px !important;
+  min-height: 46px !important;
   padding: 16px 18px !important;
 }
 

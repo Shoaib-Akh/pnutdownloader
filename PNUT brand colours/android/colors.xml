@@ -6,7 +6,7 @@
     <color name="primary">#164E63</color>
     <color name="primary_hover">#155E75</color>
     <color name="primary_text">#ECFEFF</color>
-    <color name="primary_glow">#06B6D4</color>
+    <color name="primary_glow">#164E63</color>
 
     <!-- Background -->
     <color name="bg_page">#FAFAFA</color>
@@ -24,7 +24,7 @@
 
     <!-- Dark mode overrides — put these in res/values-night/colors.xml -->
     <!--
-    <color name="primary">#06B6D4</color>
+    <color name="primary">#164E63</color>
     <color name="primary_hover">#22D3EE</color>
     <color name="primary_text">#09090B</color>
     <color name="primary_glow">#22D3EE</color>

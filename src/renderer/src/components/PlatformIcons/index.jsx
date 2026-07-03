@@ -140,7 +140,7 @@ const PlatformIcons = ({ handlePlatformClick, variant = 'hub' }) => {
           <div
             key={index}
             onClick={() => handlePlatformClick(url)}
-            className="platform-card"
+            className="platform-card d-flex"
             role="button"
             tabIndex={0}
             onKeyDown={(event) => {

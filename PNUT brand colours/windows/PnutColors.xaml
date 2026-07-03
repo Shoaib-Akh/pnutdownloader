@@ -17,7 +17,7 @@
     <SolidColorBrush x:Key="Primary"        Color="#164E63"/>
     <SolidColorBrush x:Key="PrimaryHover"   Color="#155E75"/>
     <SolidColorBrush x:Key="PrimaryText"    Color="#ECFEFF"/>
-    <SolidColorBrush x:Key="PrimaryGlow"    Color="#06B6D4"/>
+    <SolidColorBrush x:Key="PrimaryGlow"    Color="#164E63"/>
 
     <!-- Background -->
     <SolidColorBrush x:Key="BgPage"         Color="#FAFAFA"/>
@@ -35,7 +35,7 @@
 
     <!-- Dark mode: wrap these in a separate ResourceDictionary and
          load it conditionally when the app theme is Dark.
-    <SolidColorBrush x:Key="Primary"        Color="#06B6D4"/>
+    <SolidColorBrush x:Key="Primary"        Color="#164E63"/>
     <SolidColorBrush x:Key="PrimaryHover"   Color="#22D3EE"/>
     <SolidColorBrush x:Key="PrimaryText"    Color="#09090B"/>
     <SolidColorBrush x:Key="BgPage"         Color="#09090B"/>

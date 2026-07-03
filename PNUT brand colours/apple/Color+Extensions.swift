@@ -7,10 +7,10 @@ import SwiftUI
 extension Color {
 
     // Primary (buttons, links, highlights)
-    static let primary      = Color.adaptive(light: "#164E63", dark: "#06B6D4")
+    static let primary      = Color.adaptive(light: "#164E63", dark: "#164E63")
     static let primaryHover = Color.adaptive(light: "#155E75", dark: "#22D3EE")
     static let primaryText  = Color(hex: "#ECFEFF")
-    static let primaryGlow  = Color(hex: "#06B6D4")
+    static let primaryGlow  = Color(hex: "#164E63")
 
     // Background
     static let bgPage       = Color.adaptive(light: "#FAFAFA", dark: "#09090B")

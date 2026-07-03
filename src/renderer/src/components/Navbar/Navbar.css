@@ -730,7 +730,7 @@
 
 .pnut-dropdown__value,
 .navbar-controls .dropdown-toggle span:last-child {
-  color: var(--theme-primary) !important;
+  color: var(--theme-text) !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   padding-left: 0 !important;
