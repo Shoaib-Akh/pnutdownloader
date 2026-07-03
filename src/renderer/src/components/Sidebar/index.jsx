@@ -44,15 +44,6 @@ function Sidebar({
     { icon: FaInfoCircle, label: 'About us', displayLabel: 'About PNUT' },
   ];
 
-  // Theme toggle item
-  const themeToggleItem = {
-    icon: theme === 'dark' ? FaSun : FaMoon,
-    label: theme === 'dark' ? 'Light Mode' : 'Dark Mode',
-    isThemeToggle: true,
-  };
-
-
-
   const handleClick = () => {
     const donationUrl = 'https://ko-fi.com/pnutdownloader';
     window.api.trackEvent('Buy me a coffee')
@@ -134,11 +125,11 @@ function Sidebar({
 
   return (
     <div className="sidebar">
-      <div className="navbar-logo-container">
+      <div className="sidebar-brand-logo" aria-label="PNUT Downloader">
         <img
           src={theme === 'dark' ? LogoDark : Logo}
-          alt="PNUT Logo"
-          className="navbar-logo"
+          alt="PNUT Downloader"
+          className="sidebar-brand-logo__image"
         />
       </div>
 
@@ -178,13 +169,27 @@ function Sidebar({
         <div className="sidebar__menu">
           {/* Theme Toggle */}
           <div
-            className="theme-toggle"
+            className={`theme-toggle ${theme === 'dark' ? 'theme-toggle--dark' : 'theme-toggle--light'}`}
             onClick={onThemeToggle}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onThemeToggle();
+              }
+            }}
+            role="switch"
+            aria-checked={theme === 'dark'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            tabIndex={0}
           >
             <div className="theme-toggle__icon-container">
-              <themeToggleItem.icon className="sidebar__icon" />
+              <FaMoon className={`sidebar__icon theme-toggle__mode-icon ${theme !== 'dark' ? 'theme-toggle__mode-icon--active' : ''}`} />
+              <FaSun className={`sidebar__icon theme-toggle__mode-icon ${theme === 'dark' ? 'theme-toggle__mode-icon--active' : ''}`} />
             </div>
-            <span className="theme-toggle__label">{themeToggleItem.label}</span>
+            <span className="theme-toggle__label" aria-hidden="true">
+              <span className={`theme-toggle__label-text ${theme !== 'dark' ? 'theme-toggle__label-text--active' : ''}`}>Dark Mode</span>
+              <span className={`theme-toggle__label-text ${theme === 'dark' ? 'theme-toggle__label-text--active' : ''}`}>Light Mode</span>
+            </span>
             <div className={`theme-toggle__switch ${theme === 'dark' ? 'theme-toggle__switch--active' : ''}`}>
               <div className="theme-toggle__switch-thumb"></div>
             </div>

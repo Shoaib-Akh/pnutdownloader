@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'react-bootstrap';
 import { FaPaste, FaDownload, FaTimes } from 'react-icons/fa';
-import Logo from '../../assets/Images/logo.svg';
 import '../common.css';
 import './Navbar.css';
 import CustomDropdown from '../CustomDropdown';
