@@ -72,12 +72,17 @@ function DonationModal({ isOpen, onClose, onDonate, donationUrl }) {
       animation={true}
     >
       <Modal.Header className="custom-modal-header donation-modal__header">
-        <Modal.Title id="donation-modal-title" className="custom-modal-title">
-          <span className="donation-modal__title-icon">
+        <div className="donation-modal__heading">
+          <span className="donation-modal__title-icon" aria-hidden="true">
             <FaHeart />
           </span>
-          Support PNUT
-        </Modal.Title>
+          <div>
+            <Modal.Title id="donation-modal-title" className="custom-modal-title">
+              Support PNUT
+            </Modal.Title>
+            <p className="donation-modal__subtitle">Optional support after a completed download.</p>
+          </div>
+        </div>
         <button type="button" className="custom-close-button" onClick={onClose} aria-label="Close">
           ×
         </button>
@@ -88,32 +93,28 @@ function DonationModal({ isOpen, onClose, onDonate, donationUrl }) {
           Keep PNUT improving
         </div>
         <p className="modal-message">
-          Your download is done. If PNUT helps you, you can support future updates.
+          Your download is done. If PNUT helps you save time, a small contribution helps keep updates moving.
         </p>
         <div className="modal-quote donation-modal__quote">
-          <FaQuoteLeft className="donation-modal__quote-icon" />
+          <FaQuoteLeft className="donation-modal__quote-icon" aria-hidden="true" />
           <span>{quote}</span>
+
         </div>
-        <div className="donation-modal__impact" aria-label="Support impact">
-          {IMPACT_POINTS.map((point) => (
-            <span key={point}>{point}</span>
-          ))}
-        </div>
+
+      
       </Modal.Body>
       <Modal.Footer className="custom-modal-footer donation-modal__footer">
         <Button
+          type="button"
           onClick={handleMaybeLater}
           className="custom-cancel-button donation-later-button"
-          aria-label="Maybe later, I still appreciate PNUT"
+          aria-label="Maybe later"
           variant="secondary"
         >
-          <FaHeart />
-          <span>
-            Maybe later
-            <small>I still appreciate PNUT</small>
-          </span>
+          Maybe later
         </Button>
         <Button
+          type="button"
           onClick={handleFeedback}
           className="donation-feedback-button"
           aria-label="Send Feedback"
@@ -123,12 +124,14 @@ function DonationModal({ isOpen, onClose, onDonate, donationUrl }) {
           Feedback
         </Button>
         <Button
+          type="button"
           onClick={handleSupport}
           className="custom-login-button donation-support-button"
           aria-label="Donate"
           variant="primary"
         >
-          Support
+          <FaHeart />
+          Support PNUT
         </Button>
       </Modal.Footer>
     </Modal>

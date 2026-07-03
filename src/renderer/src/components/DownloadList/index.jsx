@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { FaCheckCircle, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt, FaStopCircle } from 'react-icons/fa'
+import { FaCheckCircle, FaEllipsisV, FaTrash, FaTimesCircle, FaFolderOpen, FaVideo, FaCopy, FaExternalLinkAlt, FaSearch, FaCheckSquare, FaSquare, FaRedoAlt } from 'react-icons/fa'
 import { ProgressBar, Modal } from 'react-bootstrap'
 import Skeleton from 'react-loading-skeleton'
 import 'react-loading-skeleton/dist/skeleton.css'
@@ -16,7 +16,6 @@ function DownloadActionsMenu({
   isOpen,
   setOpenDropdown,
   menuClassName,
-  onStop,
   onMove,
   onRetry,
   onCopy,
@@ -99,9 +98,6 @@ function DownloadActionsMenu({
             visibility: position.visibility,
           }}
         >
-          <button type="button" className="dropdown-item" role="menuitem" onClick={onStop}>
-            Stop <FaStopCircle className="me-2" />
-          </button>
           <button type="button" className="dropdown-item" role="menuitem" onClick={onMove}>
             Move to folder <FaFolderOpen className="me-2" />
           </button>
@@ -199,12 +195,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
 
   const handleDelete = (items) => {
     deleteItem(items)
-  }
-
-  const handleStop = async (item) => {
-    if (window.api?.pauseDownload) {
-      window.api.pauseDownload(item.id)
-    }
   }
 
   // Handle select mode toggle
@@ -453,7 +443,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       menuClassName = '',
       onDeleteClick,
       onRetryClick,
-      onStopClick,
     } = {}
   ) => {
     if (!item) return null
@@ -474,12 +463,6 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
           isOpen={openDropdown === dropdownKey}
           setOpenDropdown={setOpenDropdown}
           menuClassName={menuClassName}
-          onStop={() => {
-            setOpenDropdown(null)
-            setConfirmMessage('Are you sure you want to stop this download?')
-            setPendingCallback(() => typeof onStopClick === 'function' ? onStopClick : () => handleStop(item))
-            setShowConfirmModal(true)
-          }}
           onMove={() => {
             setOpenDropdown(null)
             handleAddToFolder(item)
@@ -525,6 +508,14 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
   //     })
   //     .sort((a, b) => (selectedItem === 'Playlist' ? a.url.localeCompare(b.url) : 0))
   //     .filter((item, index, self) => index === self.findIndex((t) => t.url === item.url))
+  const isActiveDownloadItem = (item) =>
+    Boolean(
+      activeDownloads?.has(item?.id) ||
+      item?.status === 'Downloading' ||
+      item?.status === 'Fetching Info...' ||
+      item?.status === 'Fetching Info'
+    )
+
   // re-read list when lastUpdated changes to reflect background updates
   const filteredList = (downloadListData)
     .filter((item) => {
@@ -542,6 +533,9 @@ function DownloadList({ selectedItem, progressMap, bitrate, downloadType, onRetr
       return false;
     })
     .sort((a, b) => {
+      const activeRank = Number(isActiveDownloadItem(b)) - Number(isActiveDownloadItem(a))
+      if (activeRank !== 0) return activeRank
+
       // Sort by download date (newest first) for All Files
       if (selectedItem === 'All Files' || selectedItem === 'All File') {
         return new Date(b.downloadDate || 0) - new Date(a.downloadDate || 0);
