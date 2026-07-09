@@ -6,202 +6,203 @@
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
+  /* Soft Peanut palette — Source of truth: colors.xml / assets/css/main.css */
   /* Primary Colors */
-  --theme-primary: #164E63;
-  --theme-primary-dark: #155E75;
-  --theme-primary-light: #164E63;
-  --theme-primary-rgb: 22, 78, 99;
-  --theme-primary-text: #ECFEFF;
-  --theme-primary-glow: #164E63;
-  --theme-brand-fill: #164E63;
-  --theme-accent: #0891B2;
-  
+  --theme-primary: #C97A00;
+  --theme-primary-dark: #A66300;
+  --theme-primary-light: #E8A317;
+  --theme-primary-rgb: 201, 122, 0;
+  --theme-primary-text: #2A1B00;
+  --theme-primary-glow: #E8A317;
+  --theme-brand-fill: #C97A00;
+  --theme-accent: #E8A317;
+
   /* Background Colors */
-  --theme-bg-primary: #FAFAFA;
-  --theme-bg-secondary: #E0F7FA;
+  --theme-bg-primary: #FFFDF8;
+  --theme-bg-secondary: #FFF6E9;
   --theme-bg-tertiary: #FFFFFF;
-  --theme-bg-gradient-start: #FAFAFA;
-  --theme-bg-gradient-end: #E0F7FA;
-  
+  --theme-bg-gradient-start: #FFFDF8;
+  --theme-bg-gradient-end: #FFF6E9;
+
   /* Text Colors */
-  --theme-text-primary: #18181B;
-  --theme-text-secondary: #3F3F46;
-  --theme-text-tertiary: #71717A;
-  --theme-text-muted: #71717A;
-  
+  --theme-text-primary: #222222;
+  --theme-text-secondary: #555555;
+  --theme-text-tertiary: #7C7C7C;
+  --theme-text-muted: #7C7C7C;
+
   /* Border Colors */
-  --theme-border: rgba(22, 78, 99, 0.18);
-  --theme-border-light: rgba(22, 78, 99, 0.12);
-  --theme-border-dark: rgba(22, 78, 99, 0.30);
-  
+  --theme-border: #F3E4BE;
+  --theme-border-light: #FFF1DA;
+  --theme-border-dark: #E8CE97;
+
   /* Sidebar Colors */
-  --theme-sidebar-bg: linear-gradient(180deg, #FFFFFF 0%, #E0F7FA 100%);
-  --theme-sidebar-text: #18181B;
-  --theme-sidebar-border: rgba(22, 78, 99, 0.18);
-  --theme-sidebar-hover: #E0F7FA;
-  
+  --theme-sidebar-bg: linear-gradient(180deg, #FFFDF8 0%, #FFF6E9 100%);
+  --theme-sidebar-text: #222222;
+  --theme-sidebar-border: #F3E4BE;
+  --theme-sidebar-hover: #FFF6E9;
+
   /* Navbar Colors */
-  --theme-navbar-bg: linear-gradient(135deg, #FFFFFF 0%, #E0F7FA 100%);
-  --theme-navbar-border: rgba(22, 78, 99, 0.18);
-  --theme-navbar-text: #18181B;
-  --theme-navbar-text-secondary: #3F3F46;
+  --theme-navbar-bg: linear-gradient(135deg, #FFFDF8 0%, #FFF6E9 100%);
+  --theme-navbar-border: #F3E4BE;
+  --theme-navbar-text: #222222;
+  --theme-navbar-text-secondary: #555555;
   --theme-navbar-input-bg: #FFFFFF;
-  --theme-navbar-input-border: rgba(22, 78, 99, 0.22);
-  
+  --theme-navbar-input-border: #E8CE97;
+
   /* Card Colors */
   --theme-card-bg: #FFFFFF;
-  --theme-card-shadow: rgba(22, 78, 99, 0.10);
-  --theme-card-border: rgba(22, 78, 99, 0.18);
-  
+  --theme-card-shadow: rgba(201, 122, 0, 0.10);
+  --theme-card-border: #F3E4BE;
+
   /* Button Colors */
-  --theme-button-primary: #164E63;
-  --theme-button-primary-hover: #155E75;
-  --theme-button-primary-text: #ECFEFF;
+  --theme-button-primary: #C97A00;
+  --theme-button-primary-hover: #A66300;
+  --theme-button-primary-text: #FFFDF8;
   --theme-button-secondary: #FFFFFF;
-  --theme-button-secondary-hover: #E0F7FA;
-  
+  --theme-button-secondary-hover: #FFF6E9;
+
   /* Table Colors */
-  --theme-table-header-bg: linear-gradient(135deg, #FFFFFF 0%, #E0F7FA 100%);
-  --theme-table-row-hover: linear-gradient(135deg, #FFFFFF 0%, #E0F7FA 100%);
-  --theme-table-border: rgba(22, 78, 99, 0.14);
-  
+  --theme-table-header-bg: linear-gradient(135deg, #FFFDF8 0%, #FFF6E9 100%);
+  --theme-table-row-hover: linear-gradient(135deg, #FFFFFF 0%, #FFF6E9 100%);
+  --theme-table-border: #F3E4BE;
+
   /* Status Colors */
   --theme-success: #22C55E;
   --theme-error: #EF4444;
-  --theme-warning: #164E63;
-  --theme-info: #164E63;
-  
+  --theme-warning: #C97A00;
+  --theme-info: #C97A00;
+
   /* Input Colors */
   --theme-input-bg: #FFFFFF;
-  --theme-input-border: rgba(22, 78, 99, 0.22);
-  --theme-input-focus: #164E63;
-  --theme-input-placeholder: #71717A;
-  
+  --theme-input-border: #E8CE97;
+  --theme-input-focus: #C97A00;
+  --theme-input-placeholder: #7C7C7C;
+
   /* Progress Bar */
-  --theme-progress-bg: #E0F7FA;
-  --theme-progress-fill: #164E63;
-  
+  --theme-progress-bg: #FFF6E9;
+  --theme-progress-fill: #C97A00;
+
   /* Dropdown */
   --theme-dropdown-bg: #FFFFFF;
-  --theme-dropdown-border: rgba(22, 78, 99, 0.18);
-  --theme-dropdown-hover: #E0F7FA;
-  
+  --theme-dropdown-border: #F3E4BE;
+  --theme-dropdown-hover: #FFF6E9;
+
   /* Overlay */
-  --theme-overlay: rgba(0, 0, 0, 0.5);
-  
+  --theme-overlay: rgba(42, 27, 0, 0.45);
+
   /* Scrollbar */
-  --theme-scrollbar-bg: #E0F7FA;
-  --theme-scrollbar-thumb: #164E63;
-  --theme-scrollbar-thumb-hover: #155E75;
-  
+  --theme-scrollbar-bg: #FFF6E9;
+  --theme-scrollbar-thumb: #E8CE97;
+  --theme-scrollbar-thumb-hover: #C97A00;
+
   /* Icon Colors */
-  --theme-icon-default: #164E63;
-  --theme-icon-muted: #71717A;
-  
+  --theme-icon-default: #C97A00;
+  --theme-icon-muted: #7C7C7C;
+
   /* Logo */
-  --theme-logo-filter: drop-shadow(0 4px 8px rgba(22, 78, 99, 0.15));
+  --theme-logo-filter: drop-shadow(0 4px 8px rgba(201, 122, 0, 0.18));
 }
 
-/* Dark Theme */
+/* Dark Theme — Soft Peanut "espresso" variant */
 .dark-theme {
   --font-display: "Bricolage Grotesque", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "DM Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 
-  /* Primary Colors - dark mode */
-  --theme-primary: #164E63;
-  --theme-primary-dark: #22D3EE;
-  --theme-primary-light: #22D3EE;
-  --theme-primary-rgb: 6, 182, 212;
-  --theme-primary-text: #09090B;
-  --theme-primary-glow: #22D3EE;
-  --theme-brand-fill: #22D3EE;
-  --theme-accent: #22D3EE;
-  
+  /* Primary Colors - dark mode (brighter peanut for contrast) */
+  --theme-primary: #E8A317;
+  --theme-primary-dark: #C97A00;
+  --theme-primary-light: #F5B73D;
+  --theme-primary-rgb: 232, 163, 23;
+  --theme-primary-text: #1A1206;
+  --theme-primary-glow: #E8A317;
+  --theme-brand-fill: #E8A317;
+  --theme-accent: #C97A00;
+
   /* Background Colors */
-  --theme-bg-primary: #09090B;
-  --theme-bg-secondary: #18181B;
-  --theme-bg-tertiary: #164E63;
-  --theme-bg-gradient-start: #18181B;
-  --theme-bg-gradient-end: #09090B;
-  
+  --theme-bg-primary: #1A1206;
+  --theme-bg-secondary: #241809;
+  --theme-bg-tertiary: #2E2009;
+  --theme-bg-gradient-start: #1A1206;
+  --theme-bg-gradient-end: #241809;
+
   /* Text Colors */
-  --theme-text-primary: #F4F4F5;
-  --theme-text-secondary: #A1A1AA;
-  --theme-text-tertiary: #71717A;
-  --theme-text-muted: #71717A;
-  
+  --theme-text-primary: #FFF6E9;
+  --theme-text-secondary: #E8CE97;
+  --theme-text-tertiary: #B89B6A;
+  --theme-text-muted: #B89B6A;
+
   /* Border Colors */
-  --theme-border: rgba(6, 182, 212, 0.20);
-  --theme-border-light: rgba(6, 182, 212, 0.14);
-  --theme-border-dark: rgba(6, 182, 212, 0.38);
-  
+  --theme-border: #3A2A12;
+  --theme-border-light: #2E2009;
+  --theme-border-dark: #4A3618;
+
   /* Sidebar Colors */
-  --theme-sidebar-bg: linear-gradient(180deg, #18181B 0%, #09090B 100%);
-  --theme-sidebar-text: #F4F4F5;
-  --theme-sidebar-border: rgba(6, 182, 212, 0.20);
-  --theme-sidebar-hover: #164E63;
-  
+  --theme-sidebar-bg: linear-gradient(180deg, #1A1206 0%, #241809 100%);
+  --theme-sidebar-text: #FFF6E9;
+  --theme-sidebar-border: #3A2A12;
+  --theme-sidebar-hover: #2E2009;
+
   /* Navbar Colors */
-  --theme-navbar-bg: linear-gradient(135deg, #18181B 0%, #09090B 100%);
-  --theme-navbar-border: rgba(6, 182, 212, 0.20);
-  --theme-navbar-text: #F4F4F5;
-  --theme-navbar-text-secondary: #A1A1AA;
-  --theme-navbar-input-bg: #18181B;
-  --theme-navbar-input-border: rgba(6, 182, 212, 0.22);
-  
+  --theme-navbar-bg: linear-gradient(135deg, #1A1206 0%, #241809 100%);
+  --theme-navbar-border: #3A2A12;
+  --theme-navbar-text: #FFF6E9;
+  --theme-navbar-text-secondary: #E8CE97;
+  --theme-navbar-input-bg: #241809;
+  --theme-navbar-input-border: #4A3618;
+
   /* Card Colors */
-  --theme-card-bg: #18181B;
+  --theme-card-bg: #241809;
   --theme-card-shadow: rgba(0, 0, 0, 0.45);
-  --theme-card-border: rgba(6, 182, 212, 0.20);
-  
+  --theme-card-border: #3A2A12;
+
   /* Button Colors */
-  --theme-button-primary: #164E63;
-  --theme-button-primary-hover: #22D3EE;
-  --theme-button-primary-text: #09090B;
-  --theme-button-secondary: #18181B;
-  --theme-button-secondary-hover: #164E63;
-  
+  --theme-button-primary: #E8A317;
+  --theme-button-primary-hover: #F5B73D;
+  --theme-button-primary-text: #1A1206;
+  --theme-button-secondary: #241809;
+  --theme-button-secondary-hover: #2E2009;
+
   /* Table Colors */
-  --theme-table-header-bg: linear-gradient(135deg, #164E63 0%, #18181B 100%);
-  --theme-table-row-hover: linear-gradient(135deg, #164E63 0%, #18181B 100%);
-  --theme-table-border: rgba(6, 182, 212, 0.18);
-  
+  --theme-table-header-bg: linear-gradient(135deg, #241809 0%, #1A1206 100%);
+  --theme-table-row-hover: linear-gradient(135deg, #2E2009 0%, #241809 100%);
+  --theme-table-border: #3A2A12;
+
   /* Status Colors */
   --theme-success: #22C55E;
   --theme-error: #EF4444;
-  --theme-warning: #22D3EE;
-  --theme-info: #22D3EE;
-  
+  --theme-warning: #E8A317;
+  --theme-info: #E8A317;
+
   /* Input Colors */
-  --theme-input-bg: #18181B;
-  --theme-input-border: rgba(6, 182, 212, 0.22);
-  --theme-input-focus: #164E63;
-  --theme-input-placeholder: #71717A;
-  
+  --theme-input-bg: #241809;
+  --theme-input-border: #4A3618;
+  --theme-input-focus: #E8A317;
+  --theme-input-placeholder: #B89B6A;
+
   /* Progress Bar */
-  --theme-progress-bg: #164E63;
-  --theme-progress-fill: #22D3EE;
-  
+  --theme-progress-bg: #241809;
+  --theme-progress-fill: #E8A317;
+
   /* Dropdown */
-  --theme-dropdown-bg: #18181B;
-  --theme-dropdown-border: rgba(6, 182, 212, 0.20);
-  --theme-dropdown-hover: #164E63;
-  
+  --theme-dropdown-bg: #241809;
+  --theme-dropdown-border: #3A2A12;
+  --theme-dropdown-hover: #2E2009;
+
   /* Overlay */
   --theme-overlay: rgba(0, 0, 0, 0.7);
-  
+
   /* Scrollbar */
-  --theme-scrollbar-bg: #18181B;
-  --theme-scrollbar-thumb: #164E63;
-  --theme-scrollbar-thumb-hover: #22D3EE;
-  
+  --theme-scrollbar-bg: #241809;
+  --theme-scrollbar-thumb: #4A3618;
+  --theme-scrollbar-thumb-hover: #C97A00;
+
   /* Icon Colors */
-  --theme-icon-default: #164E63;
-  --theme-icon-muted: #71717A;
-  
+  --theme-icon-default: #E8A317;
+  --theme-icon-muted: #B89B6A;
+
   /* Logo */
-  --theme-logo-filter: drop-shadow(0 4px 8px rgba(6, 182, 212, 0.30));
+  --theme-logo-filter: drop-shadow(0 4px 8px rgba(232, 163, 23, 0.30));
 }
 
 /* Theme Toggle Switch Styles */

@@ -1601,6 +1601,7 @@ function createWindow() {
   maxHeight: 750,
   resizable: false,
   maximizable: false,
+  backgroundColor: '#FFFDF8',
     icon: iconPath,
     autoHideMenuBar: true,
     webPreferences: {

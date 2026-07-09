@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Soft Peanut palette — light theme.
+  Place at: res/values/colors.xml
+  Source of truth: assets/css/main.css
+-->
+<resources>
+    <color name="pnut_background">#FFFDF8</color>
+    <color name="pnut_background_alt">#FFF6E9</color>
+    <color name="pnut_surface">#FFFFFF</color>
+    <color name="pnut_surface_alt">#FFF6E0</color>
+    <color name="pnut_border">#F3E4BE</color>
+    <color name="pnut_border_strong">#E8CE97</color>
+    <color name="pnut_primary">#C97A00</color>
+    <color name="pnut_primary_bright">#E8A317</color>
+    <color name="pnut_accent_alt">#A66300</color>
+    <color name="pnut_text_primary">#222222</color>
+    <color name="pnut_text_secondary">#555555</color>
+    <color name="pnut_text_muted">#7C7C7C</color>
+    <color name="pnut_on_primary">#2A1B00</color>
+    <color name="pnut_success">#22C55E</color>
+    <color name="pnut_danger">#EF4444</color>
+
+    <!-- Theme attributes (AndroidManifest / styles.xml) -->
+    <color name="pnut_colorPrimary">#C97A00</color>
+    <color name="pnut_colorPrimaryDark">#A66300</color>
+    <color name="pnut_colorAccent">#E8A317</color>
+    <color name="pnut_colorBackground">#FFFDF8</color>
+    <color name="pnut_statusBarColor">#FFFDF8</color>
+    <color name="pnut_navigationBarColor">#FFFDF8</color>
+    <color name="pnut_splash_background">#FFFDF8</color>
+    <color name="pnut_splash_accent">#C97A00</color>
+    <color name="pnut_ic_launcher_background">#FFFDF8</color>
+</resources>
