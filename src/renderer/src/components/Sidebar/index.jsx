@@ -3,7 +3,7 @@ import { FaFolderOpen, FaMusic, FaVideo, FaList, FaHome, FaCoffee, FaInfoCircle,
 import { Button, Modal } from 'react-bootstrap';
 import './Sidebar.css';
 import Logo from '../../assets/Images/logo.svg';
-import LogoDark from '../../assets/Images/logoDark.svg';
+import LogoDark from '../../assets/Images/logo.svg';
 import { trackDonationButton } from '../../utils/donationService';
 
 const sanitizeRepairError = (message) =>

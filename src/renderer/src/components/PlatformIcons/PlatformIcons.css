@@ -39,6 +39,9 @@
 
 .platform-icon {
   font-size: 48px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: inline-flex;
 }
 
 .platform-icon-text {

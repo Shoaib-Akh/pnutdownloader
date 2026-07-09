@@ -48,6 +48,9 @@
 .modal-icon {
   font-size: 1.2rem;
   animation: pulse 2s ease-in-out infinite;
+  border-radius: 12px;
+  overflow: hidden;
+  display: inline-flex;
 }
 
 @keyframes pulse {

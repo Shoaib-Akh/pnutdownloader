@@ -76,10 +76,11 @@
   flex: 0 0 auto;
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--pnut-brand-soft);
   color: var(--pnut-brand);
   font-size: 20px;
+  overflow: hidden;
 }
 
 .feedback-modal-title {

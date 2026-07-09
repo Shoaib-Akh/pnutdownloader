@@ -270,6 +270,7 @@
     margin-right: 14px;
     color: var(--theme-primary);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
   }
   
   .sidebar__menu-item:hover .sidebar__icon-container {
