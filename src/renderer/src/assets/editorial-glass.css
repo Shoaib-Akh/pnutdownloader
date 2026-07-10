@@ -21,7 +21,7 @@
   --pnut-brand: #C97A00;
   --pnut-brand-hover: #A66300;
   --pnut-brand-fill: #C97A00;
-  --pnut-brand-soft: rgba(201, 122, 0, 0.12);
+  --pnut-brand-soft: rgba(201, 121, 0, 0.74);
   --pnut-brand-border: rgba(201, 122, 0, 0.24);
   --pnut-brand-border-strong: rgba(201, 122, 0, 0.40);
   --pnut-accent: #E8A317;
@@ -49,38 +49,38 @@
 
 .dark-theme {
   --pnut-bg: #1A1206;
-  --pnut-page-bg: #241809;
-  --pnut-surface: rgba(46, 32, 9, 0.66);
-  --pnut-surface-solid: #241809;
-  --pnut-surface-raised: rgba(58, 42, 18, 0.82);
-  --pnut-glass: rgba(42, 27, 6, 0.58);
-  --pnut-glass-strong: rgba(42, 27, 6, 0.84);
+  --pnut-page-bg: #140D04;
+  --pnut-surface: rgba(46, 32, 9, 0.48);
+  --pnut-surface-solid: #1F1505;
+  --pnut-surface-raised: rgba(58, 42, 18, 0.42);
+  --pnut-glass: rgba(42, 27, 6, 0.42);
+  --pnut-glass-strong: rgba(58, 42, 18, 0.54);
   --pnut-text: #FFF6E9;
   --pnut-text-soft: #E8CE97;
   --pnut-muted: #B89B6A;
-  --pnut-border: rgba(232, 163, 23, 0.20);
-  --pnut-border-strong: rgba(232, 163, 23, 0.36);
-  --pnut-brand: #E8A317;
-  --pnut-brand-hover: #F5B73D;
-  --pnut-brand-fill: #E8A317;
-  --pnut-brand-soft: rgba(232, 163, 23, 0.12);
-  --pnut-brand-border: rgba(232, 163, 23, 0.24);
-  --pnut-brand-border-strong: rgba(232, 163, 23, 0.44);
-  --pnut-accent: #F5B73D;
-  --pnut-accent-soft: rgba(232, 163, 23, 0.13);
+  --pnut-border: rgba(201, 122, 0, 0.20);
+  --pnut-border-strong: rgba(201, 122, 0, 0.38);
+  --pnut-brand: #C97A00;
+  --pnut-brand-hover: #E89A1E;
+  --pnut-brand-fill: #C97A00;
+  --pnut-brand-soft: rgba(201, 122, 0, 0.16);
+  --pnut-brand-border: rgba(201, 122, 0, 0.30);
+  --pnut-brand-border-strong: rgba(201, 122, 0, 0.52);
+  --pnut-accent: #E8A317;
+  --pnut-accent-soft: rgba(201, 122, 0, 0.13);
   --pnut-coral: #fb7185;
   --pnut-success: #4ade80;
   --pnut-success-soft: rgba(74, 222, 128, 0.12);
   --pnut-danger: #fb7185;
   --pnut-danger-soft: rgba(251, 113, 133, 0.13);
-  --pnut-warning: #F5B73D;
-  --pnut-warning-soft: rgba(232, 163, 23, 0.13);
-  --pnut-info: #F5B73D;
-  --pnut-info-soft: rgba(232, 163, 23, 0.12);
-  --pnut-button-bg: #E8A317;
-  --pnut-button-hover: #F5B73D;
+  --pnut-warning: #C97A00;
+  --pnut-warning-soft: rgba(201, 122, 0, 0.13);
+  --pnut-info: #C97A00;
+  --pnut-info-soft: rgba(201, 122, 0, 0.12);
+  --pnut-button-bg: #C97A00;
+  --pnut-button-hover: #A66300;
   --pnut-button-text: #1A1206;
-  --pnut-ring: 0 0 0 3px rgba(232, 163, 23, 0.18);
+  --pnut-ring: 0 0 0 3px rgba(201, 122, 0, 0.18);
   --pnut-shadow-sm: 0 10px 28px rgba(0, 0, 0, 0.32);
   --pnut-shadow-md: 0 20px 52px rgba(0, 0, 0, 0.42);
   --pnut-shadow-lg: 0 34px 82px rgba(0, 0, 0, 0.58);
@@ -110,8 +110,8 @@ body {
 
 .dark-theme body {
   background:
-    linear-gradient(140deg, rgba(34, 211, 238, 0.14) 0%, transparent 34%),
-    linear-gradient(220deg, rgba(251, 191, 36, 0.08) 0%, transparent 38%),
+    linear-gradient(140deg, rgba(201, 122, 0, 0.18) 0%, transparent 34%),
+    linear-gradient(220deg, rgba(232, 163, 23, 0.10) 0%, transparent 38%),
     var(--pnut-bg) !important;
 }
 
@@ -143,8 +143,7 @@ h6,
   min-height: 100vh;
   padding: 12px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 42%),
-    var(--pnut-page-bg) !important;
+    red !important;
   color: var(--pnut-text);
   overflow: hidden;
 }
@@ -189,7 +188,7 @@ h6,
 
 .dark-theme .app-main-panel {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+    linear-gradient(180deg, rgba(238, 241, 39, 0.803), rgba(252, 249, 89, 0.881)),
     transparent;
 }
 
@@ -1418,25 +1417,25 @@ h6,
 
 .dark-theme {
   --pnut-bg: #1A1206;
-  --pnut-page-bg: #241809;
+  --pnut-page-bg: #140D04;
   --pnut-surface: rgba(46, 32, 9, 0.48);
-  --pnut-surface-solid: #241809;
+  --pnut-surface-solid: #1F1505;
   --pnut-surface-raised: rgba(58, 42, 18, 0.42);
   --pnut-glass: rgba(42, 27, 6, 0.42);
   --pnut-glass-strong: rgba(58, 42, 18, 0.54);
   --pnut-text: #FFF6E9;
   --pnut-text-soft: rgba(255, 246, 233, 0.82);
   --pnut-muted: rgba(255, 246, 233, 0.66);
-  --pnut-border: rgba(232, 163, 23, 0.20);
-  --pnut-border-strong: rgba(232, 163, 23, 0.38);
-  --pnut-brand: #E8A317;
-  --pnut-brand-hover: #F5B73D;
-  --pnut-brand-fill: #E8A317;
-  --pnut-brand-soft: rgba(232, 163, 23, 0.16);
-  --pnut-brand-border: rgba(232, 163, 23, 0.30);
-  --pnut-brand-border-strong: rgba(232, 163, 23, 0.52);
-  --pnut-button-bg: #E8A317;
-  --pnut-button-hover: #F5B73D;
+  --pnut-border: rgba(201, 122, 0, 0.20);
+  --pnut-border-strong: rgba(201, 122, 0, 0.38);
+  --pnut-brand: #C97A00;
+  --pnut-brand-hover: #E89A1E;
+  --pnut-brand-fill: #C97A00;
+  --pnut-brand-soft: rgba(201, 122, 0, 0.16);
+  --pnut-brand-border: rgba(201, 122, 0, 0.30);
+  --pnut-brand-border-strong: rgba(201, 122, 0, 0.52);
+  --pnut-button-bg: #C97A00;
+  --pnut-button-hover: #A66300;
   --pnut-button-text: #1A1206;
   --pnut-sidebar-width: 238px;
   --pnut-shadow-sm: 0 14px 34px rgba(0, 0, 0, 0.22);
@@ -1447,8 +1446,8 @@ h6,
 .pnut-app {
   padding: 0 !important;
   background:
-    radial-gradient(circle at 16% 0%, rgba(104, 217, 255, 0.2), transparent 30%),
-    radial-gradient(circle at 91% 84%, rgba(186, 82, 226, 0.18), transparent 38%),
+    radial-gradient(circle at 16% 0%, rgba(160, 165, 69, 0.2), transparent 30%),
+    radial-gradient(circle at 91% 84%, rgba(223, 235, 87, 0.18), transparent 38%),
     var(--pnut-page-bg) !important;
 }
 
@@ -1461,9 +1460,9 @@ h6,
 
 .dark-theme .pnut-app {
   background:
-    radial-gradient(circle at 21% 8%, rgba(91, 190, 235, 0.23), transparent 34%),
-    radial-gradient(circle at 100% 80%, rgba(202, 65, 219, 0.48), transparent 46%),
-    linear-gradient(135deg, #08213a 0%, #142c55 46%, #3c1454 100%) !important;
+    radial-gradient(circle at 21% 8%, rgba(201, 122, 0, 0.22), transparent 34%),
+    radial-gradient(circle at 100% 80%, rgba(201, 122, 0, 0.18), transparent 46%),
+    linear-gradient(135deg, #140D04 0%, #1F1505 46%, #2A1B0A 100%) !important;
 }
 
 .app-shell {
@@ -1476,7 +1475,7 @@ h6,
 
 .dark-theme .app-shell {
   background:
-    linear-gradient(135deg, rgba(21, 55, 91, 0.74), rgba(29, 30, 82, 0.62) 55%, rgba(74, 21, 83, 0.58)),
+    linear-gradient(135deg, rgba(201, 122, 0, 0.14), rgba(201, 122, 0, 0.08) 55%, rgba(58, 42, 18, 0.14)),
     var(--pnut-bg) !important;
 }
 
@@ -1488,8 +1487,8 @@ h6,
 
 .dark-theme .app-sidebar-panel {
   background:
-    linear-gradient(180deg, rgba(41, 82, 124, 0.72), rgba(11, 36, 68, 0.84)),
-    var(--pnut-bg) !important;
+    linear-gradient(180deg, rgba(201, 122, 0, 0.10), rgba(31, 21, 6, 0.92)),
+    #1A1206 !important;
 }
 
 .app-main-panel {
@@ -1541,11 +1540,11 @@ h6,
 }
 
 .dark-theme .sidebar__menu-item--selected {
-  border-color: rgba(104, 217, 255, 0.5) !important;
+  border-color: rgba(201, 122, 0, 0.52) !important;
   background:
-    linear-gradient(90deg, rgba(104, 217, 255, 0.78) 0 6px, rgba(53, 125, 230, 0.58) 6px, rgba(63, 134, 255, 0.34) 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 24px rgba(66, 183, 255, 0.28) !important;
+    linear-gradient(90deg, rgba(201, 122, 0, 0.82) 0 6px, rgba(201, 122, 0, 0.40) 6px, rgba(201, 122, 0, 0.20) 100%) !important;
+  color: #fff6e9 !important;
+  box-shadow: 0 0 24px rgba(201, 122, 0, 0.28) !important;
 }
 
 .sidebar__icon-container,
@@ -1594,7 +1593,7 @@ h6,
 }
 
 .dark-theme .navbar-modern {
-  background: rgba(60, 87, 142, 0.34) !important;
+  background: rgba(201, 122, 0, 0.12) !important;
 }
 
 .navbar-input-group {
@@ -1677,13 +1676,13 @@ h6,
   margin-bottom: 20px !important;
   padding: 24px 26px !important;
   background:
-    linear-gradient(115deg, rgba(255, 255, 255, 0.7), rgba(240, 250, 255, 0.5)),
+    linear-gradient(115deg, rgba(201, 122, 0, 0.18), rgba(232, 163, 23, 0.10)),
     var(--pnut-glass-strong) !important;
 }
 
 .dark-theme .download-hub__header {
   background:
-    linear-gradient(115deg, rgba(77, 165, 210, 0.42), rgba(73, 81, 169, 0.43) 55%, rgba(190, 77, 211, 0.48)),
+    linear-gradient(115deg, rgba(201, 122, 0, 0.34), rgba(201, 122, 0, 0.20) 55%, rgba(232, 163, 23, 0.14)),
     var(--pnut-glass-strong) !important;
 }
 
@@ -1724,7 +1723,7 @@ h6,
 
 .dark-theme .platform-card {
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--platform-color) 16%, rgba(255, 255, 255, 0.04)), rgba(100, 84, 185, 0.2) 58%),
+    linear-gradient(145deg, color-mix(in srgb, var(--platform-color) 16%, rgba(201, 122, 0, 0.10)), rgba(58, 42, 18, 0.22) 58%),
     var(--pnut-glass) !important;
 }
 
@@ -1811,14 +1810,14 @@ h6,
 }
 
 .dark-theme .app-sidebar-panel .sidebar-brand-logo {
-  border-color: rgba(104, 217, 255, 0.24) !important;
+  border-color: rgba(201, 122, 0, 0.30) !important;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.13), rgba(104, 217, 255, 0.07)),
-    rgba(255, 255, 255, 0.06) !important;
+    linear-gradient(145deg, rgba(201, 122, 0, 0.14), rgba(255, 246, 233, 0.06)),
+    rgba(255, 246, 233, 0.04) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 1px 0 rgba(255, 246, 233, 0.18),
     0 16px 36px rgba(0, 0, 0, 0.24),
-    0 0 24px rgba(104, 217, 255, 0.10) !important;
+    0 0 24px rgba(201, 122, 0, 0.12) !important;
 }
 
 .app-sidebar-panel .sidebar-brand-logo__image {

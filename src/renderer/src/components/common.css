@@ -28,7 +28,7 @@
   bottom: 0;
   width: 100%;
   /* min-height: 85vh; */
-  background-color: var(--theme-bg-secondary);
+  background-color: var(--theme-bg-secondary) !important;
   height: 100vh;
   text-align: center;
   padding: 15px 20px 40px 20px;
@@ -882,7 +882,7 @@ h1 {
   height: 100% !important;
   min-height: 0 !important;
   padding: 24px 26px 32px !important;
-  background: transparent !important;
+  /* background: transparent !important; */
   justify-content: flex-start !important;
   align-items: stretch !important;
   text-align: left !important;
